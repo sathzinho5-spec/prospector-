@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Playwright
+user_data/
+*.json
+
+# Outputs
+output/
+downloads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+settings.json
+
+# Logs
+*.log
+
+# Test files
+check_*.py
+shot_*.png
+test_*.py
+*.out.txt

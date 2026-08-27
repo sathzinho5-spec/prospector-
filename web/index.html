@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospector</title>
+<link rel="stylesheet" href="/static/styles_v18.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="side-head">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div class="side-body">
+      <div>
+        <div class="side-section-title">Nova busca</div>
+
+        <div class="field">
+          <label for="niche">Nicho</label>
+          <select id="niche"></select>
+        </div>
+
+        <div class="row-2">
+          <div class="field">
+            <label for="bairro">Bairro / cidade</label>
+            <input id="bairro" placeholder="Opcional">
+          </div>
+          <div class="field narrow">
+            <label for="maxResults">Máx/UF</label>
+            <input id="maxResults" type="number" min="1" max="60" value="10">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="state-head">
+          <label>Estados</label>
+          <span id="stateCount" class="hint">0 selecionados</span>
+        </div>
+        <div class="state-actions" style="margin-bottom:8px; display:flex; gap:6px;">
+          <button type="button" class="btn small" id="btnAllStates">Todos</button>
+          <button type="button" class="btn small" id="btnNoStates">Limpar</button>
+        </div>
+        <div id="stateBox" class="state-box"></div>
+      </div>
+
+      <div class="chip on" id="igChipWrap" style="align-self:flex-start;">
+        <span class="dot"></span><span id="igChipText">Instagram: verificando...</span>
+      </div>
+
+      <div class="side-tip">
+        <b>Como funciona</b>
+        1. Escolha o nicho e os estados<br>
+        2. Clique em <span style="color:#ff9aa5">Buscar negócios</span><br>
+        3. Use <span style="color:#d9c0ff">Estratégia</span> para a IA avaliar cada lead
+      </div>
+    </div>
+
+    <div class="side-status">
+      <div id="searchStatus" class="status hidden"></div>
+    </div>
+
+    <div class="side-foot">
+      <div class="field">
+      <label for="customQuery">Ou busca livre (opcional)</label>
+      <input id="customQuery" placeholder="Ex: floricultura, dentista, food truck...">
+    </div>
+
+    <button id="btnSearch" class="fab-btn">Buscar negócios</button>
+      <div class="version-tag">Prospector <b>v18</b></div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <section class="main">
+
+    <div class="toolbar">
+      <div class="toolbar-title">
+        <h2 id="queryTitle">Início</h2>
+        <span id="resultsCount" class="badge hidden">0</span>
+      </div>
+      <div class="toolbar-right" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <div class="chip" id="iaChip"><span class="dot"></span><span id="iaChipText">IA: ...</span></div>
+        <div class="export-group hidden" id="exportGroup">
+          <span class="hint">Exportar:</span>
+          <button class="btn small" data-export="csv">CSV</button>
+          <button class="btn small" data-export="xlsx">Excel</button>
+          <button class="btn small" data-export="json">JSON</button>
+        </div>
+        <button class="btn small" id="btnQueue">Fila de contato</button>
+        <button class="btn small" id="btnPerf">Performance</button>
+        <button class="btn small" id="btnSettings">Configurações IA</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- PERFORMANCE -->
+      <section class="panel hidden" id="perfCard">
+        <div class="card-head">
+          <h3 style="margin-bottom:0;">Performance do funil</h3>
+          <button class="btn small" id="btnClosePerf">Fechar</button>
+        </div>
+        <div id="perfStats" class="perf-grid"></div>
+        <h4 style="margin-top:22px;">Top 3 leads por score</h4>
+        <div id="perfTop" class="hint"></div>
+      </section>
+
+      <!-- FILA DE CONTATO -->
+      <section class="panel hidden" id="queueCard">
+        <div class="card-head">
+          <h3 style="margin-bottom:0;">Fila de contato</h3>
+          <div class="btn-row" style="margin:0;">
+            <span id="queueStats" class="tag"></span>
+            <button class="btn small" id="btnCloseQueue">Fechar</button>
+          </div>
+        </div>
+        <p class="hint" style="margin-bottom:14px;">Ordenada por score de IA. Leads urgentes primeiro. O status fica salvo no navegador.</p>
+        <div id="queueList" class="queue-list"></div>
+      </section>
+
+      <!-- RESULTADOS -->
+      <section class="hidden" id="resultsCard">
+        <div class="filter-bar">
+          <select id="fSite">
+            <option value="all">Site: todos</option>
+            <option value="com">Com site</option>
+            <option value="sem">Sem site</option>
+          </select>
+          <select id="fNota">
+            <option value="0">Nota: qualquer</option>
+            <option value="4">4,0+</option>
+            <option value="4.5">4,5+</option>
+          </select>
+          <input id="fReviews" type="number" min="0" placeholder="Min. avaliações">
+          <select id="fSort">
+            <option value="default">Ordem: busca</option>
+            <option value="score">Score IA</option>
+            <option value="urgencia">Urgência</option>
+            <option value="nota">Melhor nota</option>
+            <option value="avaliacoes">Mais avaliações</option>
+          </select>
+          <button id="btnAnalyzeAll" class="btn primary">Analisar todos (IA)</button>
+          <span id="filterInfo" class="hint" style="margin:0;"></span>
+        </div>
+        <div class="biz-list" id="resultsList"></div>
+      </section>
+
+      <!-- ANALISE -->
+      <section class="panel hidden" id="analyzeCard">
+        <h3 id="bizTitle" style="font-size:16px;color:#fff;"></h3>
+        <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
+        <div class="btn-row">
+          <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
+          <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
+          <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
+          <button id="btnReference" class="btn">Buscar referência</button>
+          <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
+        </div>
+        <div id="strategyOutput" class="hidden"></div>
+        <div id="pitchOutput" class="hidden"></div>
+        <div id="proposalOutput" class="hidden"></div>
+        <div id="refOutput" class="hidden"></div>
+        <div id="igOutput" class="hidden"></div>
+      </section>
+
+      <!-- WELCOME HERO -->
+      <section class="panel" id="emptyCard" style="text-align:center;padding:60px 44px;">
+        <div class="logo-symbol">
+          <svg viewBox="0 0 24 24" style="width:34px;height:34px;">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <h3 style="font-size:20px;color:#fff;">Bem-vindo ao Prospector</h3>
+        <p style="margin-top:12px;color:var(--text2);">Encontre negócios no Google Maps, extraia contatos e receba<br>análise estratégica de IA para cada lead.</p>
+        <div class="welcome-steps">
+          <div class="welcome-step"><b>1. Busque</b><span>Escolha o nicho, marque os estados e defina o limite por UF.</span></div>
+          <div class="welcome-step"><b>2. Extraia</b><span>Contatos do site, WhatsApp, e-mails e imagem do Maps.</span></div>
+          <div class="welcome-step"><b>3. Analise</b><span>A IA gera score de oportunidade e plano de abordagem.</span></div>
+        </div>
+      </section>
+
+      <!-- HOME DASHBOARD -->
+      <section class="home-grid" id="homeExtra">
+        <div class="panel" id="quickCard">
+          <h3>Busca rápida</h3>
+          <p style="margin-bottom:14px;color:var(--text2);">Clique num nicho popular para começar:</p>
+          <div id="quickNiches" class="quick-chips"></div>
+          <h4 style="margin-top:22px;">Estados populares</h4>
+          <div id="quickStates" class="quick-chips"></div>
+          <div class="btn-row" style="margin-top:22px;">
+            <button class="btn danger" id="btnQuickSearch">Buscar agora</button>
+          </div>
+          <p class="hint">Os atalhos preenchem o formulário da sidebar. Ajuste bairro e limite ali se quiser.</p>
+        </div>
+
+        <div class="panel" id="lastCard">
+          <h3>Última busca</h3>
+          <div id="lastSearchInfo" class="hint">Nenhuma busca nesta sessão ainda.</div>
+          <div class="btn-row" style="margin-top:16px;">
+            <button class="btn primary hidden" id="btnReloadLast">Recarregar resultados</button>
+          </div>
+          <h4 style="margin-top:22px;">Status do sistema</h4>
+          <div id="sysStatus" class="hint">Carregando...</div>
+          <div id="schedAlert" class="hint" style="margin-top:10px;"></div>
+        </div>
+      </section>
+
+    </div>
+  </section>
+</div>
+
+<!-- Modal: Configuracoes -->
+<div id="modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2>Configurações da IA</h2>
+      <button id="btnCloseModal" class="modal-close">&times;</button>
+    </div>
+
+    <div class="field">
+      <label for="provider">Provedor de IA</label>
+      <select id="provider">
+        <option value="">Personalizado / atual</option>
+        <option value="groq">Groq (rápido, grátis)</option>
+        <option value="gemini">Gemini (Google — cota grátis generosa)</option>
+        <option value="openai">OpenAI (pago)</option>
+      </select>
+      <p class="hint">Escolher preenche Base URL e Modelo automaticamente. Chave do Google: aistudio.google.com → "Get API key" (grátis).</p>
+    </div>
+
+    <div class="field">
+      <label for="apiKey">Chave da API (OpenAI/Groq/Gemini)</label>
+      <input id="apiKey" type="password" placeholder="sk-... / gsk-... / AIza... (opcional)">
+      <p class="hint">Sem chave, a análise local gratuita é usada automaticamente.</p>
+    </div>
+
+    <div class="field">
+      <label for="baseUrl">Base URL</label>
+      <input id="baseUrl" type="text" placeholder="https://api.groq.com/openai/v1">
+    </div>
+
+    <div class="field">
+      <label for="model">Modelo</label>
+      <input id="model" type="text" placeholder="groq/compound">
+    </div>
+
+    <div class="field">
+      <label for="igSession">Cookie de sessão do Instagram (sessionid)</label>
+      <input id="igSession" type="password" placeholder="Opcional - dados do Instagram">
+      <p class="hint">F12 → Application → Cookies → instagram.com → valor de "sessionid".</p>
+    </div>
+
+    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Busca agendada automática</h4>
+
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--text);">
+        <input type="checkbox" id="schedEnabled" style="width:auto;accent-color:var(--accent);">
+        Ativar busca automática diária
+      </label>
+    </div>
+    <div class="field">
+      <label for="schedTime">Horário</label>
+      <input id="schedTime" type="time" value="08:00">
+    </div>
+    <div class="field">
+      <label for="schedNiche">Nicho da busca agendada</label>
+      <select id="schedNiche"></select>
+    </div>
+    <div class="field">
+      <label for="schedStates">Estados (separados por vírgula)</label>
+      <input id="schedStates" placeholder="Ex: São Paulo, Rio de Janeiro">
+    </div>
+
+    <div class="btn-row">
+      <button id="btnSaveSettings" class="btn primary">Salvar</button>
+    </div>
+    <div id="settingsStatus" class="status hidden"></div>
+  </div>
+</div>
+
+<!-- Modal: Detalhes -->
+<div id="detailModal" class="modal-overlay hidden">
+  <div class="modal-box wide">
+    <div class="modal-head">
+      <h2>Detalhes do negócio</h2>
+      <button id="btnCloseDetail" class="modal-close">&times;</button>
+    </div>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<!-- Loader -->
+<div id="loader" class="loader-overlay hidden">
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <p id="loaderText">Trabalhando...</p>
+    <p id="loaderTimer" class="loader-timer"></p>
+  </div>
+</div>
+
+<script src="/static/app_v18.js"></script>
+</body>
+</html>

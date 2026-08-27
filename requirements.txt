@@ -1,0 +1,6 @@
+fastapi>=0.110
+uvicorn[standard]>=0.29
+playwright>=1.44
+requests>=2.31
+pandas>=2.0
+openpyxl>=3.1
