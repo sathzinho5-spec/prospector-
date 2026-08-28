@@ -396,3 +396,47 @@ def api_export(format: str = "csv"):
         return FileResponse(path, filename="negocios.xlsx", media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     path = export_csv(businesses, "negocios")
     return FileResponse(path, filename="negocios.csv", media_type="text/csv; charset=utf-8")
+
+
+# ==================== CNPJ GIGANTES INVISIVEIS (Supabase) ====================
+
+class CnpjGrandesRequest(BaseModel):
+    uf: str = ""
+    cidade: str = ""
+    capital_min: int = 500000
+    limite: int = 20
+    apenas_nao_vistos: bool = True
+
+
+@app.get("/api/cnpj/grandes")
+def api_cnpj_grandes(uf: str = "", cidade: str = "", capital_min: int = 500000, limite: int = 20, apenas_nao_vistos: bool = True):
+    from scrapers import cnpj_supabase
+
+    try:
+        rows = cnpj_supabase.buscar_grandes_supabase(
+            uf=uf or None, cidade=cidade or None, capital_min=capital_min, limite=limite, apenas_nao_vistos=apenas_nao_vistos
+        )
+        return {"total": len(rows), "empresas": rows}
+    except Exception as e:
+        raise HTTPException(502, f"Erro ao consultar Supabase: {e}")
+
+
+@app.post("/api/cnpj/marcar-vistos")
+def api_cnpj_marcar(cnpjs: list):
+    from scrapers import cnpj_supabase
+
+    try:
+        cnpj_supabase.marcar_vistos(cnpjs)
+        return {"vistos": len(cnpjs)}
+    except Exception as e:
+        raise HTTPException(502, str(e))
+
+
+@app.post("/api/cnpj/sync")
+async def api_cnpj_sync(capital_min: int = 500000):
+    from scrapers import cnpj_supabase
+
+    # Roda em background para não bloquear
+    loop = asyncio.get_event_loop()
+    count = await loop.run_in_executor(None, lambda: cnpj_supabase.sync_completo(capital_min=capital_min))
+    return {"sincronizadas": count, "capital_min": capital_min}
