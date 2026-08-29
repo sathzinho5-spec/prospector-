@@ -437,10 +437,9 @@ def api_cnpj_marcar(req: CnpjMarcarRequest):
 
 
 @app.post("/api/cnpj/sync")
-async def api_cnpj_sync(capital_min: int = 500000):
+async def api_cnpj_sync(capital_min: int = 500000, max_arquivos: int = 2):
     from scrapers import cnpj_supabase
 
-    # Roda em background para não bloquear
     loop = asyncio.get_event_loop()
-    count = await loop.run_in_executor(None, lambda: cnpj_supabase.sync_completo(capital_min=capital_min))
-    return {"sincronizadas": count, "capital_min": capital_min}
+    count = await loop.run_in_executor(None, lambda: cnpj_supabase.sync_completo(capital_min=capital_min, max_arquivos=max_arquivos))
+    return {"sincronizadas": count, "capital_min": capital_min, "max_arquivos": max_arquivos}
