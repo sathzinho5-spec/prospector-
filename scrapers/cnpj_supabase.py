@@ -16,10 +16,9 @@ from config import load_settings
 
 # Tenta vários espelhos/meses até achar um que responde
 BASE_CANDIDATOS = [
-    "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2025-08",
-    "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2025-07",
-    "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/2025-06",
-    "https://dadosabertos.rfb.gov.br/CNPJ",
+    "https://dados-abertos-rf-cnpj.casadosdados.com.br/arquivos/2026-05-10",
+    "https://dados-abertos-rf-cnpj.casadosdados.com.br/arquivos/2026-04-12",
+    "https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj",
 ]
 
 ARQUIVOS_EMPRESAS = [f"Empresas{i}.zip" for i in range(10)]
