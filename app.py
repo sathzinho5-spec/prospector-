@@ -408,6 +408,10 @@ class CnpjGrandesRequest(BaseModel):
     apenas_nao_vistos: bool = True
 
 
+class CnpjMarcarRequest(BaseModel):
+    cnpjs: list
+
+
 @app.get("/api/cnpj/grandes")
 def api_cnpj_grandes(uf: str = "", cidade: str = "", capital_min: int = 500000, limite: int = 20, apenas_nao_vistos: bool = True):
     from scrapers import cnpj_supabase
@@ -422,12 +426,12 @@ def api_cnpj_grandes(uf: str = "", cidade: str = "", capital_min: int = 500000, 
 
 
 @app.post("/api/cnpj/marcar-vistos")
-def api_cnpj_marcar(cnpjs: list):
+def api_cnpj_marcar(req: CnpjMarcarRequest):
     from scrapers import cnpj_supabase
 
     try:
-        cnpj_supabase.marcar_vistos(cnpjs)
-        return {"vistos": len(cnpjs)}
+        cnpj_supabase.marcar_vistos(req.cnpjs)
+        return {"vistos": len(req.cnpjs)}
     except Exception as e:
         raise HTTPException(502, str(e))
 
