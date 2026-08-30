@@ -126,6 +126,13 @@ def baixar_e_filtrar(tmpdir, capital_min=500000, max_arquivos=2):
                                 uf = row[19] if len(row) > 19 else ""
                                 cidade = row[20] if len(row) > 20 else ""
                                 cnae = row[11] if len(row) > 11 else ""
+                                ddd1 = row[21] if len(row) > 21 else ""
+                                tel1 = row[22] if len(row) > 22 else ""
+                                ddd2 = row[23] if len(row) > 23 else ""
+                                tel2 = row[24] if len(row) > 24 else ""
+                                email = row[27] if len(row) > 27 else ""
+                                telefone = f"({ddd1}) {tel1}" if ddd1 and tel1 else (f"({ddd2}) {tel2}" if ddd2 and tel2 else "")
+                                telefone2 = f"({ddd2}) {tel2}" if ddd2 and tel2 else ""
                                 razao, capital, porte = empresas[cnpj_base]
                                 cnpj_full = row[0] + row[1] + row[2] if len(row) > 2 else cnpj_base
                                 filtrados.append({
@@ -138,6 +145,9 @@ def baixar_e_filtrar(tmpdir, capital_min=500000, max_arquivos=2):
                                     "cidade": cidade,
                                     "cnae": cnae,
                                     "situacao": situacao,
+                                    "telefone": telefone,
+                                    "telefone2": telefone2,
+                                    "email": email.strip().lower() if email else None,
                                 })
                             except Exception:
                                 continue
