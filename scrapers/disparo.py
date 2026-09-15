@@ -101,6 +101,40 @@ def limpar_finalizados():
         con.close()
 
 
+def telefones_na_fila():
+    con = _conn()
+    try:
+        return set(r[0] for r in con.execute("SELECT DISTINCT telefone FROM fila").fetchall())
+    finally:
+        con.close()
+
+
+def enviar_agora(item_id, provider):
+    """Envia um item específico na hora (modo manual). Retorna (ok, err)."""
+    con = _conn()
+    try:
+        row = con.execute("SELECT * FROM fila WHERE id=?", (item_id,)).fetchone()
+        if not row:
+            return False, "Item não encontrado na fila"
+        item = dict(row)
+        msg = item["mensagem"]
+        ok, err = provider.send(item["telefone"], msg)
+        if ok:
+            con.execute(
+                "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP WHERE id=?",
+                (item_id,))
+        else:
+            tent = item.get("tentativas", 0) + 1
+            status = "falha" if tent >= 3 else "pendente"
+            con.execute(
+                "UPDATE fila SET status=?, tentativas=?, erro=? WHERE id=?",
+                (status, tent, err, item_id))
+        con.commit()
+        return ok, err
+    finally:
+        con.close()
+
+
 def _enviados_hoje(con):
     row = con.execute(
         "SELECT COUNT(*) FROM fila WHERE status='enviado' AND date(enviado_em)=date('now')"

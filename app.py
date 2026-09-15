@@ -114,6 +114,7 @@ class SettingsRequest(BaseModel):
     disparo_evo_instance: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
+    disparo_modo: str = ""
     supabase_url: str = ""
     supabase_secret: str = ""
 
@@ -168,6 +169,8 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
         new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
+    if req.disparo_modo in ("auto", "manual"):
+        new["disparo_modo"] = req.disparo_modo
     if req.supabase_url:
         new["supabase_url"] = req.supabase_url.strip()
     if req.supabase_secret:
@@ -392,6 +395,78 @@ def api_disparo_enqueue(req: DisparoEnqueueRequest):
     return {"enfileirados": n}
 
 
+class DisparoMigrarRequest(BaseModel):
+    origem: str = "minerados"
+
+
+@app.post("/api/disparo/migrar")
+def api_disparo_migrar(req: DisparoMigrarRequest):
+    """Puxa TODOS os leads já minerados (nuvem, ou sessão) para a fila, sem repetir telefone."""
+    from scrapers import cloud_store, disparo
+
+    leads = []
+    try:
+        leads = cloud_store.listar_leads(limite=500)
+    except Exception:
+        leads = []
+    if not leads:
+        leads = STATE.get("businesses") or []
+    if not leads:
+        raise HTTPException(404, "Nenhum lead minerado encontrado.")
+
+    na_fila = disparo.telefones_na_fila()
+    itens = []
+    for b in leads:
+        tel = disparo._norm_phone(b.get("telefone"))
+        if not tel or tel in na_fila:
+            continue
+        try:
+            pitch = analyzer._local_pitch(b)
+            msg = pitch.get("whatsapp", "")
+        except Exception:
+            msg = ""
+        if not msg:
+            continue
+        itens.append({"nome": b.get("nome", ""), "telefone": b.get("telefone", ""), "mensagem": msg})
+        na_fila.add(tel)
+
+    n = disparo.enfileirar(itens, origem=req.origem or "minerados")
+    return {"enfileirados": n, "total_minerados": len(leads)}
+
+
+class DisparoAgoraRequest(BaseModel):
+    id: int
+
+
+@app.post("/api/disparo/enviar-agora")
+def api_disparo_agora(req: DisparoAgoraRequest):
+    from scrapers import disparo
+
+    s = config.load_settings()
+    prov = disparo._make_provider({
+        "provider": s.get("disparo_provider", "simulado"),
+        "evo_url": s.get("disparo_evo_url", ""),
+        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_instance": s.get("disparo_evo_instance", ""),
+        "meta_token": s.get("disparo_meta_token", ""),
+        "meta_phone_id": s.get("disparo_meta_phone_id", ""),
+    })
+    ok, err = disparo.enviar_agora(req.id, prov)
+    try:
+        if ok:
+            from scrapers import cloud_store
+            row = None
+            for f in disparo.listar(limite=500):
+                if f["id"] == req.id:
+                    row = f
+                    break
+            if row:
+                cloud_store.set_contato_status(row.get("nome", ""), "", row.get("telefone", ""), "enviado")
+    except Exception:
+        pass
+    return {"ok": ok, "erro": err, "provider": prov.name}
+
+
 @app.get("/api/disparo/fila")
 def api_disparo_fila(status: str = "", limite: int = 200):
     from scrapers import disparo
@@ -404,6 +479,8 @@ def api_disparo_iniciar(req: DisparoStartRequest):
     from scrapers import disparo
 
     s = config.load_settings()
+    if (s.get("disparo_modo") or "auto") == "manual":
+        return {"iniciado": False, "motivo": "modo manual ativo — envie item por item", **disparo.status()}
     cfg = {
         "provider": req.provider,
         "delay_min": max(5, req.delay_min),
