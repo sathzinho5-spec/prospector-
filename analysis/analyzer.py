@@ -412,32 +412,36 @@ Responda SOMENTE com JSON valido:
 
 
 def _local_pitch(business):
+    from analysis.copy_sdr import _angle
+
     nome = business.get("nome") or "aí"
+    cidade = business.get("cidade") or "sua região"
     nota = business.get("nota")
     av = business.get("avaliacoes")
     site = business.get("website")
+    ang = _angle(None, business.get("categoria"))
 
     dado = f"nota {nota} com {av} avaliações no Google" if nota else "presença no Google Maps"
-    gancho = (
-        "notei que vocês ainda não têm um site próprio — isso está deixando clientes irem pros concorrentes"
-        if not site else "vi que vocês já têm site, mas dá pra extrair muito mais clientes dele"
+    ponto = (
+        "vocês ainda não têm um site próprio, então quem pesquisa acaba escolhendo o concorrente"
+        if not site else "dá para transformar essas buscas em muito mais contato"
     )
 
     whatsapp = (
-        f"Olá, tudo bem? Falo do time de marketing digital. "
-        f"Pesquisei {nome} no Google e {dado} — parabéns! "
-        f"Mas {gancho}. "
-        f"Trabalho colocando negócios como o seu na frente de quem está procurando agora. "
-        f"Posso te mandar uma análise rápida e gratuita de como melhorar?"
+        f"Olá, tudo bem? Aqui é do time de marketing para negócios locais. "
+        f"Vi {nome} no Google, {dado}, parabéns pelo trabalho. "
+        f"Reparei que {ponto}. "
+        f"A gente resolve exatamente isso para casos de {ang['dor']}: {ang['promessa']}. "
+        f"Posso te mandar uma análise rápida e gratuita?"
     )
 
-    assunto = f"{nome}: {av or 'vários'} clientes procurando você no Google (dica dentro)"
+    assunto = f"{nome}: {ang['promessa']} em {cidade}?"
     corpo = (
         f"Olá!\n\nPesquisando {nome} no Google, encontrei {dado}. "
-        f"{gancho.capitalize()}.\n\n"
-        "Ajudo negócios locais a aparecerem primeiro no Google e transformarem buscas em clientes.\n\n"
-        "Posso te enviar uma análise gratuita do seu perfil (sem compromisso)?\n\n"
-        "Abraços!"
+        f"Notei que {ponto}.\n\n"
+        f"Trabalhamos com negócios que sofrem com {ang['dor']}, e o caminho costuma ser: {ang['promessa']}.\n\n"
+        f"Posso te enviar uma análise gratuita do perfil, sem compromisso?\n\n"
+        f"Abraços!"
     )
 
     return {

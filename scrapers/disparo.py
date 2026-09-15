@@ -109,6 +109,16 @@ def telefones_na_fila():
         con.close()
 
 
+def atualizar_mensagem(item_id, mensagem):
+    con = _conn()
+    try:
+        con.execute("UPDATE fila SET mensagem=? WHERE id=?", (mensagem, item_id))
+        con.commit()
+        return True
+    finally:
+        con.close()
+
+
 def enviar_agora(item_id, provider):
     """Envia um item específico na hora (modo manual). Retorna (ok, err)."""
     con = _conn()

@@ -438,6 +438,10 @@ class DisparoAgoraRequest(BaseModel):
     id: int
 
 
+class DisparoRefazerRequest(BaseModel):
+    id: int
+
+
 @app.post("/api/disparo/enviar-agora")
 def api_disparo_agora(req: DisparoAgoraRequest):
     from scrapers import disparo
@@ -465,6 +469,43 @@ def api_disparo_agora(req: DisparoAgoraRequest):
     except Exception:
         pass
     return {"ok": ok, "erro": err, "provider": prov.name}
+
+
+@app.post("/api/disparo/refazer")
+def api_disparo_refazer(req: DisparoRefazerRequest):
+    """Regenera a mensagem de um item da fila com IA completa (não o template rápido)."""
+    from scrapers import disparo
+
+    item = None
+    for f in disparo.listar(limite=1000):
+        if f["id"] == req.id:
+            item = f
+            break
+    if not item:
+        raise HTTPException(404, "Item não encontrado na fila.")
+
+    business = {"nome": item.get("nome", ""), "telefone": item.get("telefone", "")}
+    try:
+        from scrapers import cloud_store
+        for b in cloud_store.listar_leads(limite=500):
+            if disparo._norm_phone(b.get("telefone")) == item.get("telefone"):
+                business = dict(b)
+                break
+        else:
+            for b in STATE.get("businesses") or []:
+                if disparo._norm_phone(b.get("telefone")) == item.get("telefone"):
+                    business = dict(b)
+                    break
+    except Exception:
+        pass
+
+    settings = config.load_settings()
+    pitch = analyzer.pitch_message(business, settings)
+    msg = (pitch.get("whatsapp") or "").strip()
+    if not msg:
+        raise HTTPException(502, "A IA não retornou mensagem.")
+    disparo.atualizar_mensagem(req.id, msg)
+    return {"mensagem": msg, "engine": pitch.get("engine")}
 
 
 @app.get("/api/disparo/fila")
