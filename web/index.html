@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v22.css">
+<link rel="stylesheet" href="/static/styles_v23.css">
 </head>
 <body>
 
 <div class="app">
 
-  <!-- ===== SIDEBAR ===== -->
+  <!-- ===== SIDEBAR: BUSCA ===== -->
   <aside class="sidebar">
     <div class="side-head">
       <div class="logo-symbol">
@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v22</b></div>
+      <div class="version-tag">Prospector <b>v23</b></div>
     </div>
   </aside>
 
@@ -105,174 +105,183 @@
           <button class="btn small" data-export="xlsx">Excel</button>
           <button class="btn small" data-export="json">JSON</button>
         </div>
-        <div class="toolbar-group">
-          <button class="btn small" id="btnQueue" title="Fila de contato">Fila</button>
-          <button class="btn small" id="btnPerf" title="Performance do funil">Stats</button>
-          <button class="btn small danger" id="btnDisparo" title="Disparo automático">Disparo</button>
-        </div>
         <button class="btn small" id="btnSettings">Configurações IA</button>
       </div>
     </div>
 
+    <div class="tabs">
+      <button class="tabbtn active" data-tab="home">Início</button>
+      <button class="tabbtn" data-tab="results">Resultados <span id="tabResultsBadge" class="badge hidden">0</span></button>
+      <button class="tabbtn" data-tab="comercial">Comercial <span id="tabQueueBadge" class="badge hidden">0</span></button>
+    </div>
+
     <div class="content">
 
-      <!-- DISPARO AUTOMATICO -->
-      <section class="panel hidden" id="disparoCard">
-        <div class="card-head">
-          <h3 style="margin-bottom:0;">Disparo automático</h3>
-          <div class="btn-row" style="margin:0;">
+      <!-- ===== ABA: INÍCIO ===== -->
+      <div class="tabsec" id="secHome">
+
+        <section class="panel" id="emptyCard" style="text-align:center;padding:60px 44px;">
+          <div class="logo-symbol">
+            <svg viewBox="0 0 24 24" style="width:34px;height:34px;">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          <h3 style="font-size:20px;color:#fff;">Bem-vindo ao Prospector</h3>
+          <p style="margin-top:12px;color:var(--text2);">Encontre negócios no Google Maps, extraia contatos e receba<br>análise estratégica de IA para cada lead.</p>
+          <div class="welcome-steps">
+            <div class="welcome-step"><b>1. Busque</b><span>Escolha o nicho, marque os estados e defina o limite por UF.</span></div>
+            <div class="welcome-step"><b>2. Extraia</b><span>Contatos do site, WhatsApp, e-mails e imagem do Maps.</span></div>
+            <div class="welcome-step"><b>3. Analise</b><span>A IA gera score de oportunidade e plano de abordagem.</span></div>
+          </div>
+        </section>
+
+        <section class="home-grid" id="homeExtra">
+          <div class="panel" id="quickCard">
+            <h3>Busca rápida</h3>
+            <p style="margin-bottom:14px;color:var(--text2);">Clique num nicho popular para começar:</p>
+            <div id="quickNiches" class="quick-chips"></div>
+            <h4 style="margin-top:22px;">Estados populares</h4>
+            <div id="quickStates" class="quick-chips"></div>
+            <div class="btn-row" style="margin-top:22px;">
+              <button class="btn danger" id="btnQuickSearch">Buscar agora</button>
+            </div>
+            <p class="hint">Os atalhos preenchem o formulário da sidebar. Ajuste bairro e limite ali se quiser.</p>
+          </div>
+
+          <div class="panel" id="lastCard">
+            <h3>Última busca</h3>
+            <div id="lastSearchInfo" class="hint">Nenhuma busca nesta sessão ainda.</div>
+            <div class="btn-row" style="margin-top:16px;">
+              <button class="btn primary hidden" id="btnReloadLast">Recarregar resultados</button>
+            </div>
+            <h4 style="margin-top:22px;">Status do sistema</h4>
+            <div id="sysStatus" class="hint">Carregando...</div>
+            <div id="schedAlert" class="hint" style="margin-top:10px;"></div>
+          </div>
+        </section>
+
+      </div><!-- /secHome -->
+
+      <!-- ===== ABA: RESULTADOS ===== -->
+      <div class="tabsec hidden" id="secResults">
+
+        <section id="resultsCard">
+          <div class="filter-bar">
+            <select id="fSite">
+              <option value="all">Site: todos</option>
+              <option value="com">Com site</option>
+              <option value="sem">Sem site</option>
+            </select>
+            <select id="fNota">
+              <option value="0">Nota: qualquer</option>
+              <option value="4">4,0+</option>
+              <option value="4.5">4,5+</option>
+            </select>
+            <input id="fReviews" type="number" min="0" placeholder="Min. avaliações">
+            <select id="fSort">
+              <option value="default">Ordem: busca</option>
+              <option value="score">Score IA</option>
+              <option value="urgencia">Urgência</option>
+              <option value="nota">Melhor nota</option>
+              <option value="avaliacoes">Mais avaliações</option>
+            </select>
+            <button id="btnAnalyzeAll" class="btn primary">Analisar todos (IA)</button>
+            <span id="filterInfo" class="hint" style="margin:0;"></span>
+          </div>
+          <div class="biz-list" id="resultsList"></div>
+        </section>
+
+        <section class="panel hidden" id="analyzeCard">
+          <h3 id="bizTitle" style="font-size:16px;color:#fff;"></h3>
+          <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
+          <div class="btn-row">
+            <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
+            <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
+            <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
+            <button id="btnReference" class="btn">Buscar referência</button>
+            <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
+          </div>
+          <div class="subtabs hidden" id="analyzeTabs">
+            <button class="subtab" data-out="strategyOutput">Estratégia</button>
+            <button class="subtab" data-out="pitchOutput">Mensagem</button>
+            <button class="subtab" data-out="proposalOutput">Proposta</button>
+            <button class="subtab" data-out="refOutput">Referência</button>
+            <button class="subtab" data-out="igOutput">Instagram</button>
+          </div>
+          <div id="strategyOutput" class="aout hidden"></div>
+          <div id="pitchOutput" class="aout hidden"></div>
+          <div id="proposalOutput" class="aout hidden"></div>
+          <div id="refOutput" class="aout hidden"></div>
+          <div id="igOutput" class="aout hidden"></div>
+        </section>
+
+      </div><!-- /secResults -->
+
+      <!-- ===== ABA: COMERCIAL ===== -->
+      <div class="tabsec hidden" id="secComercial">
+
+        <section class="panel" id="queueCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Fila de contato</h3>
+            <span id="queueStats" class="tag"></span>
+          </div>
+          <p class="hint" style="margin-bottom:14px;">Ordenada por score de IA. Leads urgentes primeiro. O status fica salvo no navegador.</p>
+          <div id="queueList" class="queue-list"></div>
+        </section>
+
+        <section class="panel" id="disparoCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Disparo automático</h3>
             <span id="disparoStatusLine" class="tag">parado</span>
-            <button class="btn small" id="btnCloseDisparo">Fechar</button>
           </div>
-        </div>
-        <p class="hint" style="margin-bottom:14px;">
-          Envia sozinho, com pausas aleatórias, limite diário e janela de horário.
-          Comece pelo modo <b>Simulado</b>. Disparo em massa no WhatsApp normal pode
-          derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
-        </p>
-        <div class="disparo-grid">
-          <div class="field">
-            <label for="dispDelayMin">Pausa mín (seg)</label>
-            <input id="dispDelayMin" type="number" min="5" value="45">
-          </div>
-          <div class="field">
-            <label for="dispDelayMax">Pausa máx (seg)</label>
-            <input id="dispDelayMax" type="number" min="5" value="120">
-          </div>
-          <div class="field">
-            <label for="dispLimite">Limite por dia</label>
-            <input id="dispLimite" type="number" min="1" max="500" value="30">
-          </div>
-          <div class="field">
-            <label for="dispHora">Janela (início-fim)</label>
-            <div style="display:flex;gap:8px;">
-              <input id="dispHoraIni" type="time" value="08:00">
-              <input id="dispHoraFim" type="time" value="20:00">
+          <p class="hint" style="margin-bottom:14px;">
+            Envia sozinho, com pausas aleatórias, limite diário e janela de horário.
+            Comece pelo modo <b>Simulado</b>. Disparo em massa no WhatsApp normal pode
+            derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
+          </p>
+          <div class="disparo-grid">
+            <div class="field">
+              <label for="dispDelayMin">Pausa mín (seg)</label>
+              <input id="dispDelayMin" type="number" min="5" value="45">
+            </div>
+            <div class="field">
+              <label for="dispDelayMax">Pausa máx (seg)</label>
+              <input id="dispDelayMax" type="number" min="5" value="120">
+            </div>
+            <div class="field">
+              <label for="dispLimite">Limite por dia</label>
+              <input id="dispLimite" type="number" min="1" max="500" value="30">
+            </div>
+            <div class="field">
+              <label for="dispHora">Janela (início-fim)</label>
+              <div style="display:flex;gap:8px;">
+                <input id="dispHoraIni" type="time" value="08:00">
+                <input id="dispHoraFim" type="time" value="20:00">
+              </div>
             </div>
           </div>
-        </div>
-        <div class="btn-row">
-          <button id="btnEnqueue" class="btn primary">1. Enfileirar resultados</button>
-          <button id="btnStartDisp" class="btn danger">2. Iniciar disparo</button>
-          <button id="btnPauseDisp" class="btn">Pausar</button>
-          <button id="btnTestDisp" class="btn">Testar no meu número</button>
-          <button id="btnClearDisp" class="btn">Limpar finalizados</button>
-        </div>
-        <div id="disparoTable" class="hint"></div>
-      </section>
-
-      <!-- PERFORMANCE -->
-      <section class="panel hidden" id="perfCard">
-        <div class="card-head">
-          <h3 style="margin-bottom:0;">Performance do funil</h3>
-          <button class="btn small" id="btnClosePerf">Fechar</button>
-        </div>
-        <div id="perfStats" class="perf-grid"></div>
-        <h4 style="margin-top:22px;">Top 3 leads por score</h4>
-        <div id="perfTop" class="hint"></div>
-      </section>
-
-      <!-- FILA DE CONTATO -->
-      <section class="panel hidden" id="queueCard">
-        <div class="card-head">
-          <h3 style="margin-bottom:0;">Fila de contato</h3>
-          <div class="btn-row" style="margin:0;">
-            <span id="queueStats" class="tag"></span>
-            <button class="btn small" id="btnCloseQueue">Fechar</button>
+          <div class="btn-row">
+            <button id="btnEnqueue" class="btn primary">1. Enfileirar resultados</button>
+            <button id="btnStartDisp" class="btn danger">2. Iniciar disparo</button>
+            <button id="btnPauseDisp" class="btn">Pausar</button>
+            <button id="btnTestDisp" class="btn">Testar no meu número</button>
+            <button id="btnClearDisp" class="btn">Limpar finalizados</button>
           </div>
-        </div>
-        <p class="hint" style="margin-bottom:14px;">Ordenada por score de IA. Leads urgentes primeiro. O status fica salvo no navegador.</p>
-        <div id="queueList" class="queue-list"></div>
-      </section>
+          <div id="disparoTable" class="hint"></div>
+        </section>
 
-      <!-- RESULTADOS -->
-      <section class="hidden" id="resultsCard">
-        <div class="filter-bar">
-          <select id="fSite">
-            <option value="all">Site: todos</option>
-            <option value="com">Com site</option>
-            <option value="sem">Sem site</option>
-          </select>
-          <select id="fNota">
-            <option value="0">Nota: qualquer</option>
-            <option value="4">4,0+</option>
-            <option value="4.5">4,5+</option>
-          </select>
-          <input id="fReviews" type="number" min="0" placeholder="Min. avaliações">
-          <select id="fSort">
-            <option value="default">Ordem: busca</option>
-            <option value="score">Score IA</option>
-            <option value="urgencia">Urgência</option>
-            <option value="nota">Melhor nota</option>
-            <option value="avaliacoes">Mais avaliações</option>
-          </select>
-          <button id="btnAnalyzeAll" class="btn primary">Analisar todos (IA)</button>
-          <span id="filterInfo" class="hint" style="margin:0;"></span>
-        </div>
-        <div class="biz-list" id="resultsList"></div>
-      </section>
-
-      <!-- ANALISE -->
-      <section class="panel hidden" id="analyzeCard">
-        <h3 id="bizTitle" style="font-size:16px;color:#fff;"></h3>
-        <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
-        <div class="btn-row">
-          <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
-          <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
-          <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
-          <button id="btnReference" class="btn">Buscar referência</button>
-          <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
-        </div>
-        <div id="strategyOutput" class="hidden"></div>
-        <div id="pitchOutput" class="hidden"></div>
-        <div id="proposalOutput" class="hidden"></div>
-        <div id="refOutput" class="hidden"></div>
-        <div id="igOutput" class="hidden"></div>
-      </section>
-
-      <!-- WELCOME HERO -->
-      <section class="panel" id="emptyCard" style="text-align:center;padding:60px 44px;">
-        <div class="logo-symbol">
-          <svg viewBox="0 0 24 24" style="width:34px;height:34px;">
-            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-            <path d="M2 17l10 5 10-5"/>
-            <path d="M2 12l10 5 10-5"/>
-          </svg>
-        </div>
-        <h3 style="font-size:20px;color:#fff;">Bem-vindo ao Prospector</h3>
-        <p style="margin-top:12px;color:var(--text2);">Encontre negócios no Google Maps, extraia contatos e receba<br>análise estratégica de IA para cada lead.</p>
-        <div class="welcome-steps">
-          <div class="welcome-step"><b>1. Busque</b><span>Escolha o nicho, marque os estados e defina o limite por UF.</span></div>
-          <div class="welcome-step"><b>2. Extraia</b><span>Contatos do site, WhatsApp, e-mails e imagem do Maps.</span></div>
-          <div class="welcome-step"><b>3. Analise</b><span>A IA gera score de oportunidade e plano de abordagem.</span></div>
-        </div>
-      </section>
-
-      <!-- HOME DASHBOARD -->
-      <section class="home-grid" id="homeExtra">
-        <div class="panel" id="quickCard">
-          <h3>Busca rápida</h3>
-          <p style="margin-bottom:14px;color:var(--text2);">Clique num nicho popular para começar:</p>
-          <div id="quickNiches" class="quick-chips"></div>
-          <h4 style="margin-top:22px;">Estados populares</h4>
-          <div id="quickStates" class="quick-chips"></div>
-          <div class="btn-row" style="margin-top:22px;">
-            <button class="btn danger" id="btnQuickSearch">Buscar agora</button>
+        <section class="panel" id="perfCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Performance do funil</h3>
           </div>
-          <p class="hint">Os atalhos preenchem o formulário da sidebar. Ajuste bairro e limite ali se quiser.</p>
-        </div>
+          <div id="perfStats" class="perf-grid"></div>
+          <h4 style="margin-top:22px;">Top 3 leads por score</h4>
+          <div id="perfTop" class="hint"></div>
+        </section>
 
-        <div class="panel" id="lastCard">
-          <h3>Última busca</h3>
-          <div id="lastSearchInfo" class="hint">Nenhuma busca nesta sessão ainda.</div>
-          <div class="btn-row" style="margin-top:16px;">
-            <button class="btn primary hidden" id="btnReloadLast">Recarregar resultados</button>
-          </div>
-          <h4 style="margin-top:22px;">Status do sistema</h4>
-          <div id="sysStatus" class="hint">Carregando...</div>
-          <div id="schedAlert" class="hint" style="margin-top:10px;"></div>
-        </div>
-      </section>
+      </div><!-- /secComercial -->
 
     </div>
   </section>
@@ -410,6 +419,6 @@
   </div>
 </div>
 
-<script src="/static/app_v22.js"></script>
+<script src="/static/app_v23.js"></script>
 </body>
 </html>
