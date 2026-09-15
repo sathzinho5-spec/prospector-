@@ -365,6 +365,21 @@ async def api_objection(req: ObjectionRequest):
     return await asyncio.to_thread(analyzer.handle_objection, req.business, req.objection.strip(), settings)
 
 
+class SequenciaRequest(BaseModel):
+    business: dict
+    niche_id: str = ""
+
+
+@app.post("/api/business/sequencia")
+async def api_sequencia(req: SequenciaRequest):
+    if not req.business:
+        raise HTTPException(400, "Informe o negocio.")
+    from analysis import copy_sdr
+
+    settings = config.load_settings()
+    return await asyncio.to_thread(copy_sdr.gerar_sequencia, req.business, settings, req.niche_id or None)
+
+
 # ==================== DISPARADOR ====================
 
 @app.post("/api/disparo/enfileirar")

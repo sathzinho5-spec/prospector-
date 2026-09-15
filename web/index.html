@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v23.css">
+<link rel="stylesheet" href="/static/styles_v24.css">
 </head>
 <body>
 
@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v23</b></div>
+      <div class="version-tag">Prospector <b>v24</b></div>
     </div>
   </aside>
 
@@ -197,14 +197,16 @@
           <h3 id="bizTitle" style="font-size:16px;color:#fff;"></h3>
           <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
           <div class="btn-row">
-            <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
-            <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
+          <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
+          <button id="btnSequencia" class="btn primary">Sequência SDR (skill)</button>
+          <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
             <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
             <button id="btnReference" class="btn">Buscar referência</button>
             <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
           </div>
           <div class="subtabs hidden" id="analyzeTabs">
             <button class="subtab" data-out="strategyOutput">Estratégia</button>
+            <button class="subtab" data-out="sdrOutput">Sequência SDR</button>
             <button class="subtab" data-out="pitchOutput">Mensagem</button>
             <button class="subtab" data-out="proposalOutput">Proposta</button>
             <button class="subtab" data-out="refOutput">Referência</button>
@@ -212,6 +214,7 @@
           </div>
           <div id="strategyOutput" class="aout hidden"></div>
           <div id="pitchOutput" class="aout hidden"></div>
+          <div id="sdrOutput" class="aout hidden"></div>
           <div id="proposalOutput" class="aout hidden"></div>
           <div id="refOutput" class="aout hidden"></div>
           <div id="igOutput" class="aout hidden"></div>
@@ -419,6 +422,6 @@
   </div>
 </div>
 
-<script src="/static/app_v23.js"></script>
+<script src="/static/app_v24.js"></script>
 </body>
 </html>
