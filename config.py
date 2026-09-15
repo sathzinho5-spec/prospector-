@@ -28,6 +28,9 @@ DEFAULT_SETTINGS = {
     "disparo_evo_instance": "",
     "disparo_meta_token": "",
     "disparo_meta_phone_id": "",
+    "supabase_url": "",
+    "supabase_secret": "",
+    "supabase_publishable": "",
 }
 
 

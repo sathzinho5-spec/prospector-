@@ -113,6 +113,8 @@ class SettingsRequest(BaseModel):
     disparo_evo_instance: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
+    supabase_url: str = ""
+    supabase_secret: str = ""
 
 
 @app.get("/")
@@ -134,6 +136,7 @@ def api_get_settings():
         "instagram_sessionid": ("*" * 8) if s.get("instagram_sessionid") else "",
         "disparo_evo_key": ("*" * 8) if s.get("disparo_evo_key") else "",
         "disparo_meta_token": ("*" * 8) if s.get("disparo_meta_token") else "",
+        "supabase_secret": ("*" * 8) if s.get("supabase_secret") else "",
     }
 
 
@@ -164,6 +167,10 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
         new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
+    if req.supabase_url:
+        new["supabase_url"] = req.supabase_url.strip()
+    if req.supabase_secret:
+        new["supabase_secret"] = req.supabase_secret.strip()
     saved = config.save_settings(new)
     return {
         **saved,
@@ -200,6 +207,12 @@ async def api_search(req: SearchRequest):
     STATE["businesses"] = businesses
     STATE["last_search"] = f"{req.query.strip()} | {', '.join(locations)}"
     path = save_businesses(businesses, "negocios")
+
+    try:
+        from scrapers import cloud_store
+        cloud_store.save_leads(businesses)
+    except Exception:
+        pass
 
     por_local = {}
     for b in businesses:
@@ -273,6 +286,16 @@ async def api_strategy_batch(req: BatchRequest):
             "oportunidades": (r.get("oportunidades") or [])[:3],
             "engine": r.get("engine"),
         })
+        b["score_oportunidade"] = r.get("score_oportunidade")
+        b["nivel"] = r.get("nivel")
+        b["oportunidades"] = r.get("oportunidades")
+
+    try:
+        from scrapers import cloud_store
+        cloud_store.update_analise(req.businesses)
+    except Exception:
+        pass
+
     return {"results": out}
 
 
@@ -283,7 +306,36 @@ async def api_pitch(req: StrategyRequest, rapido: int = 0):
     if rapido:
         return analyzer._local_pitch(req.business)
     settings = config.load_settings()
-    return await asyncio.to_thread(analyzer.pitch_message, req.business, settings)
+    result = await asyncio.to_thread(analyzer.pitch_message, req.business, settings)
+    try:
+        from scrapers import cloud_store
+        req.business["_pitch"] = result
+        cloud_store.update_analise([req.business])
+    except Exception:
+        pass
+    return result
+
+
+@app.get("/api/cloud/status")
+def api_cloud_status():
+    try:
+        from scrapers import cloud_store
+        online = cloud_store.ping()
+    except Exception:
+        online = False
+    return {"online": online}
+
+
+@app.get("/api/cloud/leads")
+def api_cloud_leads(estado: str = "", min_score: int = 0, apenas_pendentes: bool = False, limite: int = 200):
+    from scrapers import cloud_store
+
+    return {"leads": cloud_store.listar_leads(
+        estado=estado or None,
+        min_score=min_score or None,
+        apenas_pendentes=apenas_pendentes,
+        limite=min(500, limite),
+    )}
 
 
 @app.post("/api/business/proposal")

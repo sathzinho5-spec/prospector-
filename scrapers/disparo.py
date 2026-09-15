@@ -257,6 +257,14 @@ def _worker_loop():
             finally:
                 con.close()
 
+            if ok:
+                try:
+                    from scrapers import cloud_store
+                    cloud_store.set_contato_status(
+                        item.get("nome", ""), "", item.get("telefone", ""), "enviado")
+                except Exception:
+                    pass
+
             espera = random.uniform(delay_min, delay_max)
             _worker_state["proximo_em"] = (
                 datetime.datetime.now() + datetime.timedelta(seconds=espera)

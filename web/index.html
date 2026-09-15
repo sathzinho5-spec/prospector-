@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v19.css">
+<link rel="stylesheet" href="/static/styles_v21.css">
 </head>
 <body>
 
@@ -35,6 +35,11 @@
           <select id="niche"></select>
         </div>
 
+        <div class="field" style="margin-top:12px;">
+          <label for="customQuery">Ou termo livre</label>
+          <input id="customQuery" placeholder="Ex: floricultura, food truck...">
+        </div>
+
         <div class="row-2">
           <div class="field">
             <label for="bairro">Bairro / cidade</label>
@@ -59,15 +64,10 @@
         <div id="stateBox" class="state-box"></div>
       </div>
 
+      <button id="btnSearch" class="fab-btn">Buscar negócios</button>
+
       <div class="chip on" id="igChipWrap" style="align-self:flex-start;">
         <span class="dot"></span><span id="igChipText">Instagram: verificando...</span>
-      </div>
-
-      <div class="side-tip">
-        <b>Como funciona</b>
-        1. Escolha o nicho e os estados<br>
-        2. Clique em <span style="color:#ff9aa5">Buscar negócios</span><br>
-        3. Use <span style="color:#d9c0ff">Estratégia</span> para a IA avaliar cada lead
       </div>
     </div>
 
@@ -76,13 +76,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="field">
-      <label for="customQuery">Ou busca livre (opcional)</label>
-      <input id="customQuery" placeholder="Ex: floricultura, dentista, food truck...">
-    </div>
-
-    <button id="btnSearch" class="fab-btn">Buscar negócios</button>
-      <div class="version-tag">Prospector <b>v19</b></div>
+      <div class="version-tag">Prospector <b>v21</b></div>
     </div>
   </aside>
 
@@ -94,17 +88,20 @@
         <h2 id="queryTitle">Início</h2>
         <span id="resultsCount" class="badge hidden">0</span>
       </div>
-      <div class="toolbar-right" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <div class="toolbar-right">
         <div class="chip" id="iaChip"><span class="dot"></span><span id="iaChipText">IA: ...</span></div>
+        <div class="chip" id="cloudChip"><span class="dot"></span><span id="cloudChipText">Nuvem: ...</span></div>
         <div class="export-group hidden" id="exportGroup">
           <span class="hint">Exportar:</span>
           <button class="btn small" data-export="csv">CSV</button>
           <button class="btn small" data-export="xlsx">Excel</button>
           <button class="btn small" data-export="json">JSON</button>
         </div>
-        <button class="btn small" id="btnQueue">Fila de contato</button>
-        <button class="btn small" id="btnPerf">Performance</button>
-        <button class="btn small danger" id="btnDisparo">Disparo auto</button>
+        <div class="toolbar-group">
+          <button class="btn small" id="btnQueue" title="Fila de contato">Fila</button>
+          <button class="btn small" id="btnPerf" title="Performance do funil">Stats</button>
+          <button class="btn small danger" id="btnDisparo" title="Disparo automático">Disparo</button>
+        </div>
         <button class="btn small" id="btnSettings">Configurações IA</button>
       </div>
     </div>
@@ -345,6 +342,18 @@
       <input id="dispMetaPhone" type="text" placeholder="1234567890">
     </div>
 
+    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Nuvem (Supabase)</h4>
+
+    <div class="field">
+      <label for="sbUrl">Project URL</label>
+      <input id="sbUrl" type="text" placeholder="https://xyz.supabase.co">
+    </div>
+    <div class="field">
+      <label for="sbSecret">Service role key (secret)</label>
+      <input id="sbSecret" type="password" placeholder="sb_secret_... (opcional)">
+      <p class="hint">Conecta leads, análises e disparo à nuvem. Rode antes o supabase_prospector.sql no SQL Editor.</p>
+    </div>
+
     <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Busca agendada automática</h4>
 
     <div class="field">
@@ -393,6 +402,6 @@
   </div>
 </div>
 
-<script src="/static/app_v19.js"></script>
+<script src="/static/app_v21.js"></script>
 </body>
 </html>
