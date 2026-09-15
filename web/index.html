@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v21.css">
+<link rel="stylesheet" href="/static/styles_v22.css">
 </head>
 <body>
 
@@ -64,6 +64,14 @@
         <div id="stateBox" class="state-box"></div>
       </div>
 
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--text);">
+          <input type="checkbox" id="onlyNew" checked style="width:auto;accent-color:var(--accent);">
+          Apenas leads novos (nunca repetir)
+        </label>
+        <p class="hint">Compara com a nuvem e oculta quem você já coletou.</p>
+      </div>
+
       <button id="btnSearch" class="fab-btn">Buscar negócios</button>
 
       <div class="chip on" id="igChipWrap" style="align-self:flex-start;">
@@ -76,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v21</b></div>
+      <div class="version-tag">Prospector <b>v22</b></div>
     </div>
   </aside>
 
@@ -402,6 +410,6 @@
   </div>
 </div>
 
-<script src="/static/app_v21.js"></script>
+<script src="/static/app_v22.js"></script>
 </body>
 </html>

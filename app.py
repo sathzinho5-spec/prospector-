@@ -40,6 +40,7 @@ class SearchRequest(BaseModel):
     locations: list = []
     filter: str = ""
     max_results: int = 15
+    apenas_novos: bool = True
 
 
 class ReferenceRequest(BaseModel):
@@ -204,15 +205,24 @@ async def api_search(req: SearchRequest):
     if not businesses:
         raise HTTPException(404, "Nenhum negócio encontrado para essa busca.")
 
-    STATE["businesses"] = businesses
-    STATE["last_search"] = f"{req.query.strip()} | {', '.join(locations)}"
-    path = save_businesses(businesses, "negocios")
-
+    repetidos_ocultos = 0
     try:
         from scrapers import cloud_store
+        # 1. checa quem JÁ estava salvo ANTES desta busca
+        if req.apenas_novos:
+            ids = [cloud_store.lead_id(b) for b in businesses]
+            vistos = cloud_store.existing_ids(ids)
+            if vistos:
+                repetidos_ocultos = sum(1 for b in businesses if cloud_store.lead_id(b) in vistos)
+                businesses = [b for b in businesses if cloud_store.lead_id(b) not in vistos]
+        # 2. salva tudo (upsert) para as próximas buscas saberem
         cloud_store.save_leads(businesses)
     except Exception:
         pass
+
+    STATE["businesses"] = businesses
+    STATE["last_search"] = f"{req.query.strip()} | {', '.join(locations)}"
+    path = save_businesses(businesses, "negocios")
 
     por_local = {}
     for b in businesses:
@@ -224,6 +234,7 @@ async def api_search(req: SearchRequest):
         "locations": locations,
         "total": len(businesses),
         "por_local": por_local,
+        "repetidos_ocultos": repetidos_ocultos,
         "businesses": businesses,
         "csv": path,
     }

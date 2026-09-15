@@ -146,15 +146,42 @@ def update_analise(businesses):
 
 
 def set_contato_status(nome, endereco, telefone, status):
-    try:
+    def _do():
         sb = _client()
         if not sb:
             return False
         _id = lead_id({"nome": nome, "endereco": endereco, "telefone": telefone})
         sb.table("leads").update({"contato_status": status}).eq("id", _id).execute()
         return True
+    try:
+        return _with_timeout(_do, timeout=10)
     except Exception:
         return False
+
+
+def existing_ids(ids):
+    """Retorna o subconjunto de ids que já existem na tabela leads."""
+    if not ids:
+        return set()
+    found = set()
+
+    def _do():
+        sb = _client()
+        if not sb:
+            return set()
+        out = set()
+        ids_list = list(ids)
+        for i in range(0, len(ids_list), 100):
+            chunk = ids_list[i:i + 100]
+            res = sb.table("leads").select("id").in_("id", chunk).execute()
+            for r in res.data or []:
+                out.add(r["id"])
+        return out
+
+    try:
+        return _with_timeout(_do, timeout=15)
+    except Exception:
+        return set()
 
 
 def listar_leads(estado=None, min_score=None, apenas_pendentes=False, limite=200):
