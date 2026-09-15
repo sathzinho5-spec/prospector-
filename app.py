@@ -73,6 +73,26 @@ class ObjectionRequest(BaseModel):
     objection: str
 
 
+class DisparoEnqueueRequest(BaseModel):
+    itens: list
+    origem: str = ""
+
+
+class DisparoStartRequest(BaseModel):
+    provider: str = "simulado"
+    delay_min: float = 45
+    delay_max: float = 120
+    limite_dia: int = 50
+    hora_ini: str = "08:00"
+    hora_fim: str = "20:00"
+    optout: bool = True
+
+
+class DisparoTestRequest(BaseModel):
+    phone: str
+    mensagem: str = "Teste do Prospector: mensagem de teste do disparador."
+
+
 class InstagramRequest(BaseModel):
     name: str
     username: str = ""
@@ -87,6 +107,12 @@ class SettingsRequest(BaseModel):
     instagram_sessionid: str = ""
     headless: bool | None = None
     request_delay: float | None = None
+    disparo_provider: str = ""
+    disparo_evo_url: str = ""
+    disparo_evo_key: str = ""
+    disparo_evo_instance: str = ""
+    disparo_meta_token: str = ""
+    disparo_meta_phone_id: str = ""
 
 
 @app.get("/")
@@ -106,6 +132,8 @@ def api_get_settings():
         **s,
         "openai_api_key": ("*" * 8) if s.get("openai_api_key") else "",
         "instagram_sessionid": ("*" * 8) if s.get("instagram_sessionid") else "",
+        "disparo_evo_key": ("*" * 8) if s.get("disparo_evo_key") else "",
+        "disparo_meta_token": ("*" * 8) if s.get("disparo_meta_token") else "",
     }
 
 
@@ -124,6 +152,18 @@ def api_save_settings(req: SettingsRequest):
         new["headless"] = req.headless
     if req.request_delay is not None:
         new["request_delay"] = max(0.0, req.request_delay)
+    if req.disparo_provider:
+        new["disparo_provider"] = req.disparo_provider.strip()
+    if req.disparo_evo_url:
+        new["disparo_evo_url"] = req.disparo_evo_url.strip()
+    if req.disparo_evo_key:
+        new["disparo_evo_key"] = req.disparo_evo_key.strip()
+    if req.disparo_evo_instance:
+        new["disparo_evo_instance"] = req.disparo_evo_instance.strip()
+    if req.disparo_meta_token:
+        new["disparo_meta_token"] = req.disparo_meta_token.strip()
+    if req.disparo_meta_phone_id:
+        new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
     saved = config.save_settings(new)
     return {
         **saved,
@@ -237,9 +277,11 @@ async def api_strategy_batch(req: BatchRequest):
 
 
 @app.post("/api/business/pitch")
-async def api_pitch(req: StrategyRequest):
+async def api_pitch(req: StrategyRequest, rapido: int = 0):
     if not req.business:
         raise HTTPException(400, "Informe o negocio.")
+    if rapido:
+        return analyzer._local_pitch(req.business)
     settings = config.load_settings()
     return await asyncio.to_thread(analyzer.pitch_message, req.business, settings)
 
@@ -258,6 +300,88 @@ async def api_objection(req: ObjectionRequest):
         raise HTTPException(400, "Informe o negocio e a objecao.")
     settings = config.load_settings()
     return await asyncio.to_thread(analyzer.handle_objection, req.business, req.objection.strip(), settings)
+
+
+# ==================== DISPARADOR ====================
+
+@app.post("/api/disparo/enfileirar")
+def api_disparo_enqueue(req: DisparoEnqueueRequest):
+    from scrapers import disparo
+
+    if not req.itens:
+        raise HTTPException(400, "Nenhum item recebido.")
+    n = disparo.enfileirar(req.itens, origem=req.origem)
+    return {"enfileirados": n}
+
+
+@app.get("/api/disparo/fila")
+def api_disparo_fila(status: str = "", limite: int = 200):
+    from scrapers import disparo
+
+    return {"fila": disparo.listar(status or None, limite=int(limite))}
+
+
+@app.post("/api/disparo/iniciar")
+def api_disparo_iniciar(req: DisparoStartRequest):
+    from scrapers import disparo
+
+    s = config.load_settings()
+    cfg = {
+        "provider": req.provider,
+        "delay_min": max(5, req.delay_min),
+        "delay_max": max(req.delay_min, req.delay_max),
+        "limite_dia": max(1, min(500, req.limite_dia)),
+        "hora_ini": req.hora_ini,
+        "hora_fim": req.hora_fim,
+        "optout": req.optout,
+        "evo_url": s.get("disparo_evo_url", ""),
+        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_instance": s.get("disparo_evo_instance", ""),
+        "meta_token": s.get("disparo_meta_token", ""),
+        "meta_phone_id": s.get("disparo_meta_phone_id", ""),
+    }
+    ok = disparo.iniciar(cfg)
+    return {"iniciado": ok, **disparo.status()}
+
+
+@app.post("/api/disparo/pausar")
+def api_disparo_pausar():
+    from scrapers import disparo
+
+    disparo.pausar()
+    return disparo.status()
+
+
+@app.get("/api/disparo/status")
+def api_disparo_status():
+    from scrapers import disparo
+
+    return disparo.status()
+
+
+@app.post("/api/disparo/testar")
+def api_disparo_testar(req: DisparoTestRequest):
+    from scrapers import disparo
+
+    s = config.load_settings()
+    prov = disparo._make_provider({
+        "provider": s.get("disparo_provider", "simulado"),
+        "evo_url": s.get("disparo_evo_url", ""),
+        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_instance": s.get("disparo_evo_instance", ""),
+        "meta_token": s.get("disparo_meta_token", ""),
+        "meta_phone_id": s.get("disparo_meta_phone_id", ""),
+    })
+    ok, err = prov.send(disparo._norm_phone(req.phone), req.mensagem)
+    return {"ok": ok, "erro": err, "provider": prov.name}
+
+
+@app.post("/api/disparo/limpar")
+def api_disparo_limpar():
+    from scrapers import disparo
+
+    disparo.limpar_finalizados()
+    return disparo.status()
 
 
 @app.get("/api/schedule")

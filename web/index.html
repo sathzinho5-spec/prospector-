@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v18.css">
+<link rel="stylesheet" href="/static/styles_v19.css">
 </head>
 <body>
 
@@ -82,7 +82,7 @@
     </div>
 
     <button id="btnSearch" class="fab-btn">Buscar negócios</button>
-      <div class="version-tag">Prospector <b>v18</b></div>
+      <div class="version-tag">Prospector <b>v19</b></div>
     </div>
   </aside>
 
@@ -104,11 +104,57 @@
         </div>
         <button class="btn small" id="btnQueue">Fila de contato</button>
         <button class="btn small" id="btnPerf">Performance</button>
+        <button class="btn small danger" id="btnDisparo">Disparo auto</button>
         <button class="btn small" id="btnSettings">Configurações IA</button>
       </div>
     </div>
 
     <div class="content">
+
+      <!-- DISPARO AUTOMATICO -->
+      <section class="panel hidden" id="disparoCard">
+        <div class="card-head">
+          <h3 style="margin-bottom:0;">Disparo automático</h3>
+          <div class="btn-row" style="margin:0;">
+            <span id="disparoStatusLine" class="tag">parado</span>
+            <button class="btn small" id="btnCloseDisparo">Fechar</button>
+          </div>
+        </div>
+        <p class="hint" style="margin-bottom:14px;">
+          Envia sozinho, com pausas aleatórias, limite diário e janela de horário.
+          Comece pelo modo <b>Simulado</b>. Disparo em massa no WhatsApp normal pode
+          derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
+        </p>
+        <div class="disparo-grid">
+          <div class="field">
+            <label for="dispDelayMin">Pausa mín (seg)</label>
+            <input id="dispDelayMin" type="number" min="5" value="45">
+          </div>
+          <div class="field">
+            <label for="dispDelayMax">Pausa máx (seg)</label>
+            <input id="dispDelayMax" type="number" min="5" value="120">
+          </div>
+          <div class="field">
+            <label for="dispLimite">Limite por dia</label>
+            <input id="dispLimite" type="number" min="1" max="500" value="30">
+          </div>
+          <div class="field">
+            <label for="dispHora">Janela (início-fim)</label>
+            <div style="display:flex;gap:8px;">
+              <input id="dispHoraIni" type="time" value="08:00">
+              <input id="dispHoraFim" type="time" value="20:00">
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button id="btnEnqueue" class="btn primary">1. Enfileirar resultados</button>
+          <button id="btnStartDisp" class="btn danger">2. Iniciar disparo</button>
+          <button id="btnPauseDisp" class="btn">Pausar</button>
+          <button id="btnTestDisp" class="btn">Testar no meu número</button>
+          <button id="btnClearDisp" class="btn">Limpar finalizados</button>
+        </div>
+        <div id="disparoTable" class="hint"></div>
+      </section>
 
       <!-- PERFORMANCE -->
       <section class="panel hidden" id="perfCard">
@@ -268,6 +314,37 @@
       <p class="hint">F12 → Application → Cookies → instagram.com → valor de "sessionid".</p>
     </div>
 
+    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Disparo automático</h4>
+
+    <div class="field">
+      <label for="dispProvider">Provedor de envio</label>
+      <select id="dispProvider">
+        <option value="simulado">Simulado (teste, não envia)</option>
+        <option value="evolution">Evolution API (QR code)</option>
+        <option value="meta">Meta Cloud API (oficial)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="dispEvoUrl">Evolution — URL base</label>
+      <input id="dispEvoUrl" type="text" placeholder="http://localhost:8080">
+    </div>
+    <div class="field">
+      <label for="dispEvoKey">Evolution — API key</label>
+      <input id="dispEvoKey" type="password" placeholder="sua apikey">
+    </div>
+    <div class="field">
+      <label for="dispEvoInstance">Evolution — Instância</label>
+      <input id="dispEvoInstance" type="text" placeholder="nome da instancia">
+    </div>
+    <div class="field">
+      <label for="dispMetaToken">Meta — Token</label>
+      <input id="dispMetaToken" type="password" placeholder="token permanente">
+    </div>
+    <div class="field">
+      <label for="dispMetaPhone">Meta — Phone Number ID</label>
+      <input id="dispMetaPhone" type="text" placeholder="1234567890">
+    </div>
+
     <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Busca agendada automática</h4>
 
     <div class="field">
@@ -316,6 +393,6 @@
   </div>
 </div>
 
-<script src="/static/app_v18.js"></script>
+<script src="/static/app_v19.js"></script>
 </body>
 </html>

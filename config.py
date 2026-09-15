@@ -22,6 +22,12 @@ DEFAULT_SETTINGS = {
     "schedule_last_run": "",
     "schedule_new_count": 0,
     "schedule_total_count": 0,
+    "disparo_provider": "simulado",
+    "disparo_evo_url": "",
+    "disparo_evo_key": "",
+    "disparo_evo_instance": "",
+    "disparo_meta_token": "",
+    "disparo_meta_phone_id": "",
 }
 
 
