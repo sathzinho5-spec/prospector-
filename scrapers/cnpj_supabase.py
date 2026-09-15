@@ -168,30 +168,41 @@ def subir_para_supabase(dados):
 
 
 def buscar_grandes_supabase(uf=None, capital_min=500000, cidade=None, limite=50, apenas_nao_vistos=True):
-    supabase = get_supabase()
-    q = supabase.table("empresas_grandes").select("*").gte("capital", capital_min)
-    if uf:
-        q = q.eq("uf", uf.upper())
-    if cidade:
-        q = q.ilike("cidade", f"%{cidade}%")
-    q = q.order("capital", desc=True).limit(limite * 3 if apenas_nao_vistos else limite)
-    res = q.execute()
-    rows = res.data or []
+    try:
+        supabase = get_supabase()
+        q = supabase.table("empresas_grandes").select("*").gte("capital", capital_min)
+        if uf:
+            q = q.eq("uf", uf.upper())
+        if cidade:
+            q = q.ilike("cidade", f"%{cidade}%")
+        q = q.order("capital", desc=True).limit(limite * 3 if apenas_nao_vistos else limite)
+        res = q.execute()
+        rows = res.data or []
 
-    if apenas_nao_vistos and rows:
-        vistos = supabase.table("vistos_cnpj").select("cnpj").execute()
-        vistos_set = set(r["cnpj"] for r in (vistos.data or []))
-        rows = [r for r in rows if r["cnpj"] not in vistos_set][:limite]
-    else:
-        rows = rows[:limite]
-    return rows
+        if apenas_nao_vistos and rows:
+            vistos = supabase.table("vistos_cnpj").select("cnpj").execute()
+            vistos_set = set(r["cnpj"] for r in (vistos.data or []))
+            rows = [r for r in rows if r["cnpj"] not in vistos_set][:limite]
+        else:
+            rows = rows[:limite]
+        return rows
+    except Exception as e:
+        print(f"[CNPJ] Supabase fora do ar, usando banco local: {e}")
+        from scrapers import cnpj_store
+        return cnpj_store.buscar(uf=uf, capital_min=capital_min, cidade=cidade,
+                                 limite=limite, apenas_nao_vistos=apenas_nao_vistos)
 
 
 def marcar_vistos(cnpjs):
-    supabase = get_supabase()
-    lote = [{"cnpj": c} for c in cnpjs]
-    if lote:
-        supabase.table("vistos_cnpj").upsert(lote, on_conflict="cnpj").execute()
+    try:
+        supabase = get_supabase()
+        lote = [{"cnpj": c} for c in cnpjs]
+        if lote:
+            supabase.table("vistos_cnpj").upsert(lote, on_conflict="cnpj").execute()
+    except Exception as e:
+        print(f"[CNPJ] Supabase fora do ar, marcando no banco local: {e}")
+        from scrapers import cnpj_store
+        cnpj_store.marcar(cnpjs)
 
 
 def sync_completo(capital_min=500000, max_arquivos=2):
@@ -199,8 +210,14 @@ def sync_completo(capital_min=500000, max_arquivos=2):
     try:
         dados = baixar_e_filtrar(tmpdir, capital_min=capital_min, max_arquivos=max_arquivos)
         if dados:
-            subir_para_supabase(dados)
-            print(f"[OK] {len(dados)} empresas enviadas ao Supabase")
+            try:
+                subir_para_supabase(dados)
+                print(f"[OK] {len(dados)} empresas enviadas ao Supabase")
+            except Exception as e:
+                print(f"[CNPJ] Supabase fora do ar, salvando no banco local: {e}")
+                from scrapers import cnpj_store
+                n = cnpj_store.subir(dados)
+                print(f"[OK] {n} empresas salvas no banco local (output/cnpj.db)")
         else:
             print("[aviso] nenhum dado para enviar (verifique capital_min ou conexão)")
         return len(dados)
