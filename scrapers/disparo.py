@@ -170,13 +170,22 @@ class EvolutionProvider:
         self.apikey = apikey or ""
         self.instance = instance or ""
 
-    def send(self, phone, message):
+    def _headers(self):
+        return {"apikey": self.apikey, "Content-Type": "application/json"}
+
+    def _check_cfg(self):
         if not self.base_url or not self.apikey or not self.instance:
             return False, "Evolution não configurado (url/key/instance)"
+        return True, ""
+
+    def send(self, phone, message):
+        ok, err = self._check_cfg()
+        if not ok:
+            return False, err
         try:
             r = requests.post(
                 f"{self.base_url}/message/sendText/{self.instance}",
-                headers={"apikey": self.apikey, "Content-Type": "application/json"},
+                headers=self._headers(),
                 json={"number": phone, "text": message},
                 timeout=30,
             )
@@ -185,6 +194,45 @@ class EvolutionProvider:
             return False, f"Evolution HTTP {r.status_code}: {r.text[:200]}"
         except Exception as e:
             return False, str(e)[:200]
+
+    def criar_instancia(self):
+        ok, err = self._check_cfg()
+        if not ok:
+            return False, err, ""
+        try:
+            r = requests.post(
+                f"{self.base_url}/instance/create",
+                headers=self._headers(),
+                json={"instanceName": self.instance, "qrcode": True,
+                      "integration": "WHATSAPP-BAILEYS"},
+                timeout=30,
+            )
+            if r.status_code not in (200, 201):
+                return False, f"HTTP {r.status_code}: {r.text[:200]}", ""
+            data = r.json()
+            qr = ((data.get("qrcode") or {}).get("base64")
+                  or data.get("base64") or "")
+            return True, "", qr
+        except Exception as e:
+            return False, str(e)[:200], ""
+
+    def estado(self):
+        ok, err = self._check_cfg()
+        if not ok:
+            return {"conectado": False, "erro": err, "estado": "nao_configurado"}
+        try:
+            r = requests.get(
+                f"{self.base_url}/instance/connectionState/{self.instance}",
+                headers=self._headers(),
+                timeout=15,
+            )
+            if r.status_code not in (200, 201):
+                return {"conectado": False, "estado": f"http_{r.status_code}",
+                        "erro": r.text[:200]}
+            st = (r.json().get("instance") or {}).get("state") or r.json().get("state", "")
+            return {"conectado": st == "open", "estado": st, "erro": ""}
+        except Exception as e:
+            return {"conectado": False, "estado": "offline", "erro": str(e)[:200]}
 
 
 class MetaCloudProvider:

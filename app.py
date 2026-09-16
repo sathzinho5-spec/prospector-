@@ -580,6 +580,33 @@ def api_disparo_limpar():
     return disparo.status()
 
 
+def _evo_provider():
+    from scrapers import disparo
+
+    s = config.load_settings()
+    return disparo.EvolutionProvider(
+        s.get("disparo_evo_url", ""),
+        s.get("disparo_evo_key", ""),
+        s.get("disparo_evo_instance", ""),
+    )
+
+
+@app.post("/api/disparo/evolution/qrcode")
+def api_evo_qrcode():
+    prov = _evo_provider()
+    ok, err, qr = prov.criar_instancia()
+    if not ok:
+        raise HTTPException(502, err)
+    if not qr and "base64," in err:
+        pass
+    return {"ok": True, "qrcode": qr}
+
+
+@app.get("/api/disparo/evolution/estado")
+def api_evo_estado():
+    return _evo_provider().estado()
+
+
 @app.get("/api/schedule")
 def api_schedule_status():
     s = config.load_settings()
