@@ -767,7 +767,6 @@ async def api_instagram(req: InstagramRequest):
         "relatorio": report,
     }
     save_json(f"analise_{username}.json", payload)
-    STATE["report"] = payload
     return payload
 
 

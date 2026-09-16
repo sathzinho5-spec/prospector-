@@ -1,28 +1,28 @@
 NICHES = [
-    {"id": "restaurantes", "label": "Restaurantes", "keywords": ["restaurantes", "restaurante"]},
-    {"id": "bares", "label": "Bares e Lanchonetes", "keywords": ["bares", "lanchonetes"]},
-    {"id": "hamburguerias", "label": "Hamburguerias", "keywords": ["hamburguerias", "hamburguer"]},
-    {"id": "pizzarias", "label": "Pizzarias", "keywords": ["pizzarias"]},
-    {"id": "cafeterias", "label": "Cafeterias", "keywords": ["cafeterias", "café"]},
-    {"id": "acai", "label": "Açaí e Sorveterias", "keywords": ["açaí", "sorveterias"]},
-    {"id": "beleza", "label": "Salões de Beleza", "keywords": ["salão de beleza"]},
-    {"id": "barbearias", "label": "Barbearias", "keywords": ["barbearias", "barbeiro"]},
-    {"id": "estetica", "label": "Clínicas de Estética", "keywords": ["clínica de estética", "estética"]},
-    {"id": "academias", "label": "Academias", "keywords": ["academias", "musculação"]},
-    {"id": "padarias", "label": "Padarias e Confeitarias", "keywords": ["padarias", "confeitarias"]},
-    {"id": "petshop", "label": "Petshops e Veterinárias", "keywords": ["petshops", "veterinária"]},
-    {"id": "advocacia", "label": "Escritórios de Advocacia", "keywords": ["advocacia", "advogados"]},
-    {"id": "imobiliarias", "label": "Imobiliárias", "keywords": ["imobiliárias", "corretores"]},
-    {"id": "odontologia", "label": "Clínicas Odontológicas", "keywords": ["dentista", "clínica odontológica"]},
-    {"id": "moda", "label": "Lojas de Roupas", "keywords": ["lojas de roupas", "boutique"]},
-    {"id": "mecanica", "label": "Mecânicas de Automóveis", "keywords": ["oficina mecânica", "mecânica de automóveis"]},
-    {"id": "moveis", "label": "Lojas de Móveis", "keywords": ["lojas de móveis", "móveis planejados"]},
-    {"id": "cursos", "label": "Escolas e Cursos", "keywords": ["cursos", "escolas de idiomas"]},
-    {"id": "farmacias", "label": "Farmácias", "keywords": ["farmácias"]},
-    {"id": "reformas", "label": "Reformas e Construção", "keywords": ["reformas", "construção civil"]},
-    {"id": "limpeza", "label": "Serviços de Limpeza", "keywords": ["serviços de limpeza", "dedetização"]},
-    {"id": "floricultura", "label": "Floriculturas", "keywords": ["floriculturas", "flores"]},
-    {"id": "fotografia", "label": "Fotógrafos", "keywords": ["fotógrafos", "fotografia"]},
+    {"id": "restaurantes", "label": "Restaurantes"},
+    {"id": "bares", "label": "Bares e Lanchonetes"},
+    {"id": "hamburguerias", "label": "Hamburguerias"},
+    {"id": "pizzarias", "label": "Pizzarias"},
+    {"id": "cafeterias", "label": "Cafeterias"},
+    {"id": "acai", "label": "Açaí e Sorveterias"},
+    {"id": "beleza", "label": "Salões de Beleza"},
+    {"id": "barbearias", "label": "Barbearias"},
+    {"id": "estetica", "label": "Clínicas de Estética"},
+    {"id": "academias", "label": "Academias"},
+    {"id": "padarias", "label": "Padarias e Confeitarias"},
+    {"id": "petshop", "label": "Petshops e Veterinárias"},
+    {"id": "advocacia", "label": "Escritórios de Advocacia"},
+    {"id": "imobiliarias", "label": "Imobiliárias"},
+    {"id": "odontologia", "label": "Clínicas Odontológicas"},
+    {"id": "moda", "label": "Lojas de Roupas"},
+    {"id": "mecanica", "label": "Mecânicas de Automóveis"},
+    {"id": "moveis", "label": "Lojas de Móveis"},
+    {"id": "cursos", "label": "Escolas e Cursos"},
+    {"id": "farmacias", "label": "Farmácias"},
+    {"id": "reformas", "label": "Reformas e Construção"},
+    {"id": "limpeza", "label": "Serviços de Limpeza"},
+    {"id": "floricultura", "label": "Floriculturas"},
+    {"id": "fotografia", "label": "Fotógrafos"},
 ]
 
 ESTADOS = [
@@ -61,10 +61,3 @@ def get_public():
         "nichos": [{"id": n["id"], "label": n["label"]} for n in NICHES],
         "estados": ESTADOS,
     }
-
-
-def keyword_for(niche_id):
-    for n in NICHES:
-        if n["id"] == niche_id:
-            return n["keywords"][0]
-    return niche_id
