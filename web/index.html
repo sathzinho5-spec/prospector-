@@ -37,13 +37,13 @@
 
         <div class="field" style="margin-top:12px;">
           <label for="customQuery">Ou termo livre</label>
-          <input id="customQuery" placeholder="Ex: floricultura, food truck...">
+          <input id="customQuery" placeholder="Ex: floricultura, food truck..." autocomplete="off" name="busca-termo-x">
         </div>
 
         <div class="row-2">
           <div class="field">
             <label for="bairro">Bairro / cidade</label>
-            <input id="bairro" placeholder="Opcional">
+            <input id="bairro" placeholder="Opcional" autocomplete="off" name="bairro-x">
           </div>
           <div class="field narrow">
             <label for="maxResults">Máx/UF</label>
@@ -180,7 +180,7 @@
 
         <section class="panel" id="crmFilterCard">
           <div class="filter-bar" style="margin-bottom:0;">
-            <input id="crmBusca" placeholder="Buscar nome, cidade, categoria..." style="flex:1;min-width:200px;">
+            <input id="crmBusca" placeholder="Buscar nome, cidade, categoria..." style="flex:1;min-width:200px;" autocomplete="off" autocapitalize="off" spellcheck="false" name="crm-busca-x">
             <select id="crmUf">
               <option value="">UF: todas</option>
             </select>
