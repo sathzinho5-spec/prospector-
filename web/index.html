@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
-<link rel="stylesheet" href="/static/styles_v29.css">
+<link rel="stylesheet" href="/static/styles_v30.css">
 </head>
 <body>
 
@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v29</b></div>
+      <div class="version-tag">Prospector <b>v30</b></div>
     </div>
   </aside>
 
@@ -199,6 +199,26 @@
               <option value="45">45+</option>
               <option value="70">70+</option>
             </select>
+            <select id="crmSortSel">
+              <option value="score">Ordenar: score</option>
+              <option value="nome">Ordenar: nome</option>
+              <option value="recentes">Ordenar: recentes</option>
+            </select>
+          </div>
+          <div id="crmBulkBar" class="bulk-bar hidden">
+            <b id="crmBulkCount">0 selecionados</b>
+            <select id="crmBulkStage">
+              <option value="">Mover para...</option>
+              <option value="novo">Novos</option>
+              <option value="enviado">Enviados</option>
+              <option value="contatado">Contatados</option>
+              <option value="respondido">Responderam</option>
+              <option value="negociando">Negociando</option>
+              <option value="fechado">Fechados</option>
+              <option value="perdido">Perdidos</option>
+            </select>
+            <button class="btn small primary" onclick="crmBulkMove()">Mover</button>
+            <button class="btn small" onclick="crmBulkClear()">Limpar seleção</button>
           </div>
         </section>
 
@@ -490,6 +510,6 @@
   </div>
 </div>
 
-<script src="/static/app_v29.js"></script>
+<script src="/static/app_v30.js"></script>
 </body>
 </html>
