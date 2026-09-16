@@ -1669,11 +1669,16 @@ async function loadCrm() {
   const board = $("crmBoard");
   board.innerHTML = "<p class='hint'>Carregando leads da nuvem...</p>";
   let leads = [];
+  let erroCarga = "";
   try {
     const r = await fetch("/api/crm/leads?limite=500");
+    if (!r.ok) throw new Error("HTTP " + r.status);
     const d = await r.json();
     leads = d.leads || [];
-  } catch (e) { leads = []; }
+  } catch (e) {
+    leads = [];
+    erroCarga = e.message;
+  }
 
   if (!leads.length && bizCache.length) {
     leads = bizCache.map(function (b) {
@@ -1706,6 +1711,13 @@ async function loadCrm() {
   if (badge) {
     badge.textContent = leads.length;
     badge.classList.toggle("hidden", !leads.length);
+  }
+
+  if (erroCarga && !leads.length && !bizCache.length) {
+    board.innerHTML = "<div class='crm-empty-col' style='padding:26px;'>Falha ao carregar da nuvem: " +
+      esc(erroCarga) + "<br><br><button class='btn small primary' onclick='loadCrm()'>Tentar de novo</button></div>";
+    renderCrmKpis([]);
+    return;
   }
 
   renderCrmBoard();
