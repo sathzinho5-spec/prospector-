@@ -1737,9 +1737,14 @@ function renderCrmBoard() {
     arr = arr.slice().sort(function (a, b) { return String(b.created_at || "") < String(a.created_at || "") ? -1 : 1; });
   }
   const board = $("crmBoard");
-  if (!arr.length) {
-    board.innerHTML = "<p class='hint'>Nenhum lead. Faça uma busca para minerar — tudo cai aqui automaticamente.</p>";
+  if (!crmCache.length) {
+    board.innerHTML = "<div class='crm-empty-col' style='padding:26px;'>Nenhum lead na nuvem ainda.<br>Faça uma busca para minerar — tudo cai aqui automaticamente.</div>";
     renderCrmKpis([]);
+    return;
+  }
+  if (!arr.length) {
+    board.innerHTML = "<div class='crm-empty-col' style='padding:26px;'>Nenhum lead com esses filtros.<br><br><button class='btn small primary' onclick='clearCrmFilters()'>Limpar filtros</button></div>";
+    renderCrmKpis(crmCache);
     return;
   }
   renderCrmKpis(arr);
@@ -1874,6 +1879,14 @@ window.crmBulkClear = function () {
   crmSelected = {};
   document.querySelectorAll(".crm-check").forEach(function (cb) { cb.checked = false; });
   renderBulkBar();
+};
+
+window.clearCrmFilters = function () {
+  $("crmBusca").value = "";
+  $("crmUf").value = "";
+  $("crmStatus").value = "";
+  $("crmScore").value = "0";
+  renderCrmBoard();
 };
 
 function renderCrmKpis(arr) {
