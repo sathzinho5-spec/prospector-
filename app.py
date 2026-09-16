@@ -352,6 +352,47 @@ def api_cloud_leads(estado: str = "", min_score: int = 0, apenas_pendentes: bool
     )}
 
 
+class CrmStatusRequest(BaseModel):
+    id: str = ""
+    nome: str = ""
+    endereco: str = ""
+    telefone: str = ""
+    status: str = "novo"
+    observacao: str | None = None
+
+
+@app.get("/api/crm/leads")
+def api_crm_leads(busca: str = "", uf: str = "", status: str = "", min_score: int = 0, limite: int = 500):
+    from scrapers import cloud_store
+
+    leads = cloud_store.listar_leads(limite=min(500, limite))
+    q = (busca or "").strip().lower()
+    if q:
+        leads = [l for l in leads if q in str(l.get("nome", "")).lower()
+                 or q in str(l.get("cidade", "")).lower()
+                 or q in str(l.get("categoria", "")).lower()]
+    if uf:
+        leads = [l for l in leads if str(l.get("estado", "")).upper() == uf.upper()]
+    if status:
+        leads = [l for l in leads if str(l.get("contato_status") or "novo") == status]
+    if min_score:
+        leads = [l for l in leads if (l.get("score_oportunidade") or 0) >= min_score]
+    return {"total": len(leads), "leads": leads}
+
+
+@app.post("/api/crm/status")
+def api_crm_status(req: CrmStatusRequest):
+    from scrapers import cloud_store
+
+    if not req.id and not req.nome:
+        raise HTTPException(400, "Informe o lead.")
+    _id = req.id
+    if not _id:
+        _id = cloud_store.lead_id({"nome": req.nome, "endereco": req.endereco, "telefone": req.telefone})
+    ok = cloud_store.set_contato_status_by_id(_id, req.status, req.observacao)
+    return {"ok": ok}
+
+
 @app.post("/api/business/proposal")
 async def api_proposal(req: StrategyRequest):
     if not req.business:

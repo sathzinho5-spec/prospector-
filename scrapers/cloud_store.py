@@ -12,7 +12,9 @@ _leads_cols = ["id", "nome", "categoria", "nota", "avaliacoes", "endereco",
                "status_funcionamento", "preco", "plus_code", "atributos",
                "latitude", "longitude", "foto", "descricao", "consulta", "url",
                "score_oportunidade", "nivel", "oportunidades", "pitch_whatsapp",
-               "contato_status"]
+               "contato_status", "observacao"]
+
+CRM_STAGES = ["novo", "enviado", "contatado", "respondido", "negociando", "fechado", "perdido"]
 
 
 def _client():
@@ -145,13 +147,32 @@ def update_analise(businesses):
         return 0
 
 
-def set_contato_status(nome, endereco, telefone, status):
+def set_contato_status_by_id(_id, status, observacao=None):
+    def _do():
+        sb = _client()
+        if not sb:
+            return False
+        patch = {"contato_status": status}
+        if observacao is not None:
+            patch["observacao"] = observacao
+        sb.table("leads").update(patch).eq("id", _id).execute()
+        return True
+    try:
+        return _with_timeout(_do, timeout=10)
+    except Exception:
+        return False
+
+
+def set_contato_status(nome, endereco, telefone, status, observacao=None):
     def _do():
         sb = _client()
         if not sb:
             return False
         _id = lead_id({"nome": nome, "endereco": endereco, "telefone": telefone})
-        sb.table("leads").update({"contato_status": status}).eq("id", _id).execute()
+        patch = {"contato_status": status}
+        if observacao is not None:
+            patch["observacao"] = observacao
+        sb.table("leads").update(patch).eq("id", _id).execute()
         return True
     try:
         return _with_timeout(_do, timeout=10)

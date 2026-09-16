@@ -29,6 +29,7 @@ create table if not exists leads (
   oportunidades text,
   pitch_whatsapp text,
   contato_status text default 'novo',
+  observacao text,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
