@@ -6,7 +6,7 @@ echo  Iniciando Prospector - Scraping de Negócios
 echo ============================================
 echo.
 chcp 65001 >nul
-cd C:\Users\pedro\Desktop\scraping pro
+cd /d "%~dp0"
 echo.
 echo [1/3] Verificando dependências do Python...
 echo.

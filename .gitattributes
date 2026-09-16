@@ -1,0 +1,8 @@
+# O que roda no Linux vai com quebra de linha do Linux, sempre.
+# Script de publicacao com quebra do Windows nao da erro claro: o servidor
+# reclama de arquivo inexistente, e o motivo real e o "\r" grudado no comando.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.service text eol=lf
+*.timer text eol=lf
+requirements.txt text eol=lf

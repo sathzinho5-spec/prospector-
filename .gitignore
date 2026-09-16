@@ -13,6 +13,7 @@ env/
 # Playwright
 user_data/
 *.json
+!package.json
 
 # Outputs
 output/

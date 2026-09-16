@@ -1,0 +1,9 @@
+{
+  "name": "prospector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prospeccao de negocios locais via Google Maps, Google e Instagram. O projeto e Python; este manifesto existe so pra padronizar o comando de partida.",
+  "scripts": {
+    "dev": "node scripts/dev.js"
+  }
+}

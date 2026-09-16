@@ -2,9 +2,16 @@ import json
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
-DOWNLOADS_DIR = os.path.join(BASE_DIR, "downloads")
-OUTPUT_DIR = os.path.join(BASE_DIR, "output")
+
+# No servidor os dados vivem num volume, fora da imagem: sem isso cada
+# publicacao apagaria as configuracoes e as contas. Na maquina local a
+# variavel nao existe e tudo continua ao lado do codigo, como sempre foi.
+DADOS_DIR = os.environ.get("PROSPECTOR_DADOS") or BASE_DIR
+os.makedirs(DADOS_DIR, exist_ok=True)
+
+SETTINGS_FILE = os.path.join(DADOS_DIR, "settings.json")
+DOWNLOADS_DIR = os.path.join(DADOS_DIR, "downloads")
+OUTPUT_DIR = os.path.join(DADOS_DIR, "output")
 
 DEFAULT_SETTINGS = {
     "openai_api_key": "",

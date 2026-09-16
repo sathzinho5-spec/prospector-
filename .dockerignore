@@ -1,0 +1,14 @@
+.git
+venv
+__pycache__
+**/__pycache__
+output
+downloads
+user_data
+settings.json
+analysis/__pycache__
+scrapers/__pycache__
+*.log
+deploy
+scripts
+node_modules

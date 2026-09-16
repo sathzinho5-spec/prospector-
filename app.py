@@ -124,6 +124,12 @@ def index():
     return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
+@app.get("/api/saude")
+def api_saude():
+    """Usado pela publicacao automatica pra saber se a versao nova respondeu."""
+    return {"ok": True}
+
+
 @app.get("/api/niches")
 def api_niches():
     return niches.get_public()
