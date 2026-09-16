@@ -556,6 +556,16 @@ def api_disparo_fila(status: str = "", limite: int = 200):
     return {"fila": disparo.listar(status or None, limite=int(limite))}
 
 
+@app.get("/api/disparo/item/{item_id}")
+def api_disparo_item(item_id: int):
+    from scrapers import disparo
+
+    for f in disparo.listar(limite=1000):
+        if f["id"] == item_id:
+            return f
+    raise HTTPException(404, "Item não encontrado na fila.")
+
+
 @app.post("/api/disparo/iniciar")
 def api_disparo_iniciar(req: DisparoStartRequest):
     from scrapers import disparo

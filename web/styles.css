@@ -1155,6 +1155,7 @@ img.crm-avatar {
 .disp-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
 .st-pendente { color: #ffce54; }
 .st-enviado { color: var(--green); }
+.st-enviando { color: #2ea6ff; }
 .st-falha { color: var(--danger); }
 
 /* ===== FILTER BAR ===== */

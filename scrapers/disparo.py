@@ -37,6 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_fila_status ON fila(status);
 _worker_thread = None
 _worker_stop = threading.Event()
 _worker_cfg = {}
+_worker_lock = threading.Lock()
 _worker_state = {"rodando": False, "provider": "simulado", "enviados_hoje": 0,
                  "proximo_em": None, "ultimo_erro": ""}
 
@@ -57,19 +58,28 @@ def _norm_phone(raw):
 
 
 def enfileirar(itens, origem=""):
-    """itens: [{nome, telefone, mensagem}]. Retorna qtd enfileirada."""
+    """itens: [{nome, telefone, mensagem}]. Retorna qtd enfileirada.
+    Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando)."""
     con = _conn()
     n = 0
     try:
+        existentes = set(
+            r[0] for r in con.execute(
+                "SELECT telefone || '|' || mensagem FROM fila WHERE status IN ('pendente','enviando')"
+            ).fetchall()
+        )
         for it in itens:
             tel = _norm_phone(it.get("telefone"))
             msg = (it.get("mensagem") or "").strip()
             if not tel or not msg:
                 continue
+            if f"{tel}|{msg}" in existentes:
+                continue
             con.execute(
                 "INSERT INTO fila (nome, telefone, mensagem, origem) VALUES (?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem),
             )
+            existentes.add(f"{tel}|{msg}")
             n += 1
         con.commit()
     finally:
@@ -101,6 +111,36 @@ def limpar_finalizados():
         con.close()
 
 
+def _reivindicar(item_id):
+    """Marca o item como 'enviando' de forma atômica.
+    Retorna True só para quem conseguiu a trava (impede 2 robôs no mesmo item)."""
+    con = _conn()
+    try:
+        cur = con.execute(
+            "UPDATE fila SET status='enviando', agendado_para=CURRENT_TIMESTAMP "
+            "WHERE id=? AND status='pendente'",
+            (item_id,))
+        con.commit()
+        return cur.rowcount > 0
+    finally:
+        con.close()
+
+
+def _devolver_travados(minutos=15):
+    """Devolve para pendente os 'enviando' travados (robô morreu no meio)."""
+    con = _conn()
+    try:
+        con.execute(
+            "UPDATE fila SET status='pendente' WHERE status='enviando' "
+            "AND datetime(agendado_para) < datetime('now', ?)",
+            (f"-{int(minutos)} minutes",))
+        con.commit()
+    except Exception:
+        pass
+    finally:
+        con.close()
+
+
 def telefones_na_fila():
     con = _conn()
     try:
@@ -120,7 +160,10 @@ def atualizar_mensagem(item_id, mensagem):
 
 
 def enviar_agora(item_id, provider):
-    """Envia um item específico na hora (modo manual). Retorna (ok, err)."""
+    """Envia um item específico na hora (modo manual). Retorna (ok, err).
+    Usa a mesma trava atômica do worker."""
+    if not _reivindicar(item_id):
+        return False, "Item já está sendo enviado por outro processo"
     con = _conn()
     try:
         row = con.execute("SELECT * FROM fila WHERE id=?", (item_id,)).fetchone()
@@ -187,7 +230,7 @@ class EvolutionProvider:
                 f"{self.base_url}/message/sendText/{self.instance}",
                 headers=self._headers(),
                 json={"number": phone, "text": message},
-                timeout=30,
+                timeout=60,
             )
             if r.status_code in (200, 201):
                 return True, ""
@@ -252,7 +295,7 @@ class MetaCloudProvider:
                          "Content-Type": "application/json"},
                 json={"messaging_product": "whatsapp", "to": phone,
                       "type": "text", "text": {"body": message}},
-                timeout=30,
+                timeout=60,
             )
             if r.status_code in (200, 201):
                 return True, ""
@@ -295,6 +338,7 @@ def _worker_loop():
     optout_txt = "\n\nResponda SAIR para não receber mais mensagens."
 
     _worker_state.update({"rodando": True, "provider": provider.name, "ultimo_erro": ""})
+    _devolver_travados(15)
 
     while not _worker_stop.is_set():
         try:
@@ -326,6 +370,10 @@ def _worker_loop():
                     con.close()
                 except Exception:
                     pass
+
+            # trava atômica: se outro robô pegou primeiro, pula
+            if not _reivindicar(item["id"]):
+                continue
 
             msg = item["mensagem"] + (optout_txt if optout else "")
             ok, err = provider.send(item["telefone"], msg)
@@ -372,14 +420,15 @@ def _worker_loop():
 
 def iniciar(cfg):
     global _worker_thread
-    if _worker_thread and _worker_thread.is_alive():
-        return False
-    _worker_stop.clear()
-    _worker_cfg.clear()
-    _worker_cfg.update(cfg or {})
-    _worker_thread = threading.Thread(target=_worker_loop, daemon=True)
-    _worker_thread.start()
-    return True
+    with _worker_lock:
+        if _worker_thread and _worker_thread.is_alive():
+            return False
+        _worker_stop.clear()
+        _worker_cfg.clear()
+        _worker_cfg.update(cfg or {})
+        _worker_thread = threading.Thread(target=_worker_loop, daemon=True)
+        _worker_thread.start()
+        return True
 
 
 def pausar():
@@ -390,7 +439,7 @@ def pausar():
 def status():
     con = _conn()
     try:
-        pend = con.execute("SELECT COUNT(*) FROM fila WHERE status='pendente'").fetchone()[0]
+        pend = con.execute("SELECT COUNT(*) FROM fila WHERE status IN ('pendente','enviando')").fetchone()[0]
         env = con.execute("SELECT COUNT(*) FROM fila WHERE status='enviado'").fetchone()[0]
         falha = con.execute("SELECT COUNT(*) FROM fila WHERE status='falha'").fetchone()[0]
         hoje = _enviados_hoje(con)

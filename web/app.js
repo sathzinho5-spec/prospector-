@@ -403,6 +403,7 @@ function bindEvents() {
   $("btnSettings").addEventListener("click", function () { $("modal").classList.remove("hidden"); });
   $("btnCloseModal").addEventListener("click", function () { $("modal").classList.add("hidden"); });
   $("btnCloseDetail").addEventListener("click", function () { $("detailModal").classList.add("hidden"); });
+  $("btnCloseMsg").addEventListener("click", function () { $("msgModal").classList.add("hidden"); });
   $("btnSaveSettings").addEventListener("click", saveSettings);
   $("btnAllStates").addEventListener("click", function () {
     document.querySelectorAll("#stateBox input").forEach(function (cb) {
@@ -1502,6 +1503,36 @@ window.refazerMensagem = async function (id, btn) {
   refreshDisparo();
 };
 
+window.verMensagem = async function (id) {
+  try {
+    const r = await fetch("/api/disparo/item/" + id);
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    let html = "<div class='detail-hero'>";
+    html += "<div class='avatar'>" + esc(initials(d.nome)) + "</div>";
+    html += "<div><div class='detail-name'>" + esc(d.nome) + "</div>";
+    html += "<div class='biz-sub2'>" + esc(d.telefone) + " · <span class='st-" + d.status + "'>" + d.status + "</span></div></div>";
+    html += "</div>";
+    if (d.enviado_em) html += "<p class='hint'>Enviada em: " + esc(d.enviado_em) + "</p>";
+    if (d.tentativas) html += "<p class='hint'>Tentativas: " + d.tentativas + "</p>";
+    if (d.erro) html += "<p class='status error'>" + esc(d.erro) + "</p>";
+    html += "<h4>Mensagem que " + (d.status === "enviado" ? "foi enviada" : "será enviada") + "</h4>";
+    html += "<div class='pitch-box' style='white-space:pre-wrap;'>" + esc(d.mensagem || "(vazia)") + "</div>";
+    if (d.status === "pendente") {
+      html += "<div class='btn-row'><button class='btn small wa' onclick='enviarAgora(" + d.id + ");closeMsgModal();'>Enviar agora</button>" +
+        "<button class='btn small' onclick='refazerMensagem(" + d.id + ", null);closeMsgModal();'>Refazer com IA</button></div>";
+    }
+    $("msgBody").innerHTML = html;
+    $("msgModal").classList.remove("hidden");
+  } catch (e) {
+    showStatus("searchStatus", "Falha: " + e.message, "error");
+  }
+};
+
+window.closeMsgModal = function () {
+  $("msgModal").classList.add("hidden");
+};
+
 async function enqueueAll() {
   if (!bizCache.length) {
     showStatus("searchStatus", "Faça uma busca primeiro.", "error");
@@ -1575,7 +1606,7 @@ async function refreshDisparo() {
       return "<tr><td>" + esc(f.nome) + "</td><td>" + esc(f.telefone) + "</td>" +
         "<td class='st-" + f.status + "'>" + f.status + "</td>" +
         "<td>" + esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
-        "<td><div class='row-actions'>" + action + "</div></td></tr>";
+        "<td><div class='row-actions'><button class='btn small' onclick='verMensagem(" + f.id + ")'>Ver</button>" + action + "</div></td></tr>";
     }).join("");
     $("disparoTable").innerHTML = rows
       ? "<table class='disp-table'><thead><tr><th>Lead</th><th>Telefone</th><th>Status</th><th>Mensagem</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
