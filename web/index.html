@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v33</b> · anti-duplicata + ver mensagem</div>
+      <div class="version-tag">Prospector <b>v34</b> · conversas WhatsApp</div>
     </div>
   </aside>
 
@@ -114,6 +114,7 @@
       <button class="tabbtn" data-tab="results">Resultados <span id="tabResultsBadge" class="badge hidden">0</span></button>
       <button class="tabbtn" data-tab="crm">CRM <span id="tabCrmBadge" class="badge hidden">0</span></button>
       <button class="tabbtn" data-tab="comercial">Comercial <span id="tabQueueBadge" class="badge hidden">0</span></button>
+      <button class="tabbtn" data-tab="conversas">Conversas <span id="tabWaBadge" class="badge hidden">0</span></button>
     </div>
 
     <div class="content">
@@ -359,6 +360,35 @@
         </section>
 
       </div><!-- /secComercial -->
+
+      <div class="tabsec hidden" id="secConversas">
+
+        <section class="panel" id="waCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Conversas do WhatsApp</h3>
+            <div class="btn-row" style="margin:0;">
+              <span id="waStatus" class="tag">desconectado</span>
+              <button class="btn small" id="btnWaRefresh">Atualizar</button>
+            </div>
+          </div>
+          <div class="wa-layout">
+            <div class="wa-chats" id="waChats">
+              <p class="hint">Carregando conversas...</p>
+            </div>
+            <div class="wa-thread">
+              <div class="wa-thread-head" id="waThreadHead">
+                <span class="hint">Selecione uma conversa</span>
+              </div>
+              <div class="wa-msgs" id="waMsgs"></div>
+              <div class="wa-reply hidden" id="waReply">
+                <input id="waInput" placeholder="Responder..." autocomplete="off">
+                <button class="btn small primary" id="btnWaSend">Enviar</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div><!-- /secConversas -->
 
     </div>
   </section>

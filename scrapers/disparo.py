@@ -277,6 +277,112 @@ class EvolutionProvider:
         except Exception as e:
             return {"conectado": False, "estado": "offline", "erro": str(e)[:200]}
 
+    @staticmethod
+    def _texto(msg):
+        if not isinstance(msg, dict):
+            return ""
+        if msg.get("conversation"):
+            return msg["conversation"]
+        ext = msg.get("extendedTextMessage") or {}
+        if ext.get("text"):
+            return ext["text"]
+        for k in ("imageMessage", "videoMessage", "documentMessage", "audioMessage"):
+            m = msg.get(k) or {}
+            if m.get("caption"):
+                return "[img] " + m["caption"]
+            if k in msg:
+                return f"[{k.replace('Message', '').lower()}]"
+        if msg.get("buttonsResponseMessage"):
+            return msg["buttonsResponseMessage"].get("selectedDisplayText", "[botão]")
+        if msg.get("listResponseMessage"):
+            return msg["listResponseMessage"].get("title", "[lista]")
+        if msg.get("reactionMessage"):
+            return msg["reactionMessage"].get("text", "[reação]")
+        pt = msg.get("protocolMessage") or {}
+        if pt.get("type"):
+            return f"[sistema: {pt['type']}]"
+        return ""
+
+    @staticmethod
+    def _quando(ts):
+        try:
+            import datetime as _dt
+            return _dt.datetime.fromtimestamp(int(ts)).strftime("%d/%m %H:%M")
+        except Exception:
+            return ""
+
+    def listar_chats(self):
+        ok, err = self._check_cfg()
+        if not ok:
+            return False, err, []
+        try:
+            r = requests.post(
+                f"{self.base_url}/chat/findChats/{self.instance}",
+                headers=self._headers(),
+                json={},
+                timeout=30,
+            )
+            if r.status_code not in (200, 201):
+                return False, f"HTTP {r.status_code}: {r.text[:200]}", []
+            data = r.json()
+            chats = data if isinstance(data, list) else data.get("chats", [])
+            out = []
+            for c in chats or []:
+                jid = c.get("remoteJid", "")
+                if not jid or "@g.us" in jid or "status@" in jid:
+                    continue
+                fone = re.sub(r"\D", "", jid.split("@")[0])
+                nome = c.get("pushName") or c.get("name") or fone
+                lm = c.get("lastMessage")
+                if isinstance(lm, dict):
+                    ultima = self._texto(lm.get("message", {}))
+                else:
+                    ultima = str(lm or "")
+                out.append({
+                    "jid": jid,
+                    "telefone": fone,
+                    "nome": nome,
+                    "foto": c.get("profilePicUrl") or "",
+                    "ultima": (ultima or "")[:120],
+                    "quando": c.get("updatedAt") or "",
+                    "nao_lidas": c.get("unreadCount", 0),
+                })
+            return True, "", out
+        except Exception as e:
+            return False, str(e)[:200], []
+
+    def mensagens(self, jid, limite=50):
+        ok, err = self._check_cfg()
+        if not ok:
+            return False, err, []
+        try:
+            r = requests.post(
+                f"{self.base_url}/chat/findMessages/{self.instance}",
+                headers=self._headers(),
+                json={"where": {"key": {"remoteJid": jid}}, "limit": int(limite)},
+                timeout=30,
+            )
+            if r.status_code not in (200, 201):
+                return False, f"HTTP {r.status_code}: {r.text[:200]}", []
+            data = r.json() or {}
+            recs = ((data.get("messages") or {}).get("records")
+                    if isinstance(data.get("messages"), dict)
+                    else data.get("messages")) or []
+            out = []
+            for m in recs:
+                key = m.get("key") or {}
+                out.append({
+                    "de_mim": bool(key.get("fromMe")),
+                    "texto": self._texto(m.get("message", {})),
+                    "quando": self._quando(m.get("messageTimestamp")),
+                    "ts": m.get("messageTimestamp", 0),
+                    "tipo": m.get("messageType", ""),
+                })
+            out.sort(key=lambda x: x["ts"] or 0)
+            return True, "", out
+        except Exception as e:
+            return False, str(e)[:200], []
+
 
 class MetaCloudProvider:
     name = "meta"

@@ -447,6 +447,11 @@ function bindEvents() {
   $("btnPauseDisp").addEventListener("click", pauseDisp);
   $("btnTestDisp").addEventListener("click", testDisp);
   $("btnClearDisp").addEventListener("click", clearDisp);
+  $("btnWaRefresh").addEventListener("click", loadWaChats);
+  $("btnWaSend").addEventListener("click", sendWaReply);
+  $("waInput").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter") sendWaReply();
+  });
   document.querySelectorAll("#modoSeg .seg-btn").forEach(function (b) {
     b.addEventListener("click", function () { setModo(b.dataset.modo); });
   });
@@ -471,7 +476,7 @@ function bindEvents() {
 }
 
 window.switchTab = function (name) {
-  ["home", "results", "crm", "comercial"].forEach(function (t) {
+  ["home", "results", "crm", "comercial", "conversas"].forEach(function (t) {
     const sec = $("sec" + t.charAt(0).toUpperCase() + t.slice(1));
     if (sec) sec.classList.toggle("hidden", t !== name);
   });
@@ -492,6 +497,9 @@ window.switchTab = function (name) {
   }
   if (name === "crm") {
     loadCrm();
+  }
+  if (name === "conversas") {
+    loadWaChats();
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -1681,6 +1689,99 @@ async function testDisp() {
 async function clearDisp() {
   await fetch("/api/disparo/limpar", { method: "POST" });
   refreshDisparo();
+}
+
+// ===== CONVERSAS WHATSAPP =====
+let waJid = "";
+let waPoll = null;
+let waChatsCache = [];
+
+async function loadWaChats() {
+  const box = $("waChats");
+  box.innerHTML = "<p class='hint'>Carregando conversas...</p>";
+  try {
+    const r = await fetch("/api/wa/chats");
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    waChatsCache = d.chats || [];
+    const unread = waChatsCache.reduce(function (s, c) { return s + (c.nao_lidas || 0); }, 0);
+    const badge = $("tabWaBadge");
+    if (badge) {
+      badge.textContent = unread;
+      badge.classList.toggle("hidden", !unread);
+    }
+    $("waStatus").textContent = waChatsCache.length + " conversas";
+    if (!waChatsCache.length) {
+      box.innerHTML = "<p class='hint'>Nenhuma conversa. Conecte o WhatsApp no painel Disparo.</p>";
+      return;
+    }
+    box.innerHTML = waChatsCache.map(function (c) {
+      return (
+        "<div class='wa-chat" + (c.jid === waJid ? " selected" : "") + "' onclick=\"openWaChat('" + c.jid.replace(/'/g, "") + "')\">" +
+        (c.foto ? "<img src='" + esc(c.foto) + "' class='crm-avatar' loading='lazy' alt=''>" : "<div class='crm-avatar'>" + esc(initials(c.nome)) + "</div>") +
+        "<div style='min-width:0;flex:1;'>" +
+        "<div class='crm-name'>" + esc(c.nome) +
+        (c.nao_lidas ? " <span class='pill low'>" + c.nao_lidas + "</span>" : "") + "</div>" +
+        "<div class='biz-sub2'>" + esc(c.ultima || "") + "</div>" +
+        "</div></div>"
+      );
+    }).join("");
+  } catch (e) {
+    box.innerHTML = "<p class='status error'>Falha: " + esc(e.message) + "</p>";
+    $("waStatus").textContent = "offline";
+  }
+}
+
+window.openWaChat = async function (jid) {
+  waJid = jid;
+  document.querySelectorAll(".wa-chat").forEach(function (el) {
+    el.classList.toggle("selected", el.getAttribute("onclick").indexOf(jid) !== -1);
+  });
+  const c = waChatsCache.find(function (x) { return x.jid === jid; });
+  $("waThreadHead").innerHTML = "<b>" + esc(c ? c.nome : jid) + "</b>";
+  $("waReply").classList.remove("hidden");
+  await loadWaMsgs();
+  clearInterval(waPoll);
+  waPoll = setInterval(function () {
+    if (!$("secConversas").classList.contains("hidden") && waJid) loadWaMsgs(true);
+  }, 8000);
+};
+
+async function loadWaMsgs(quiet) {
+  if (!waJid) return;
+  try {
+    const r = await fetch("/api/wa/mensagens?jid=" + encodeURIComponent(waJid) + "&limite=50");
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    const box = $("waMsgs");
+    const msgs = d.mensagens || [];
+    box.innerHTML = msgs.length ? msgs.map(function (m) {
+      return "<div class='wa-msg " + (m.de_mim ? "mine" : "theirs") + "'>" +
+        (m.texto ? esc(m.texto) : "<i class='hint'>[mídia]</i>") +
+        "<span class='wa-time'>" + esc(m.quando || "") + "</span></div>";
+    }).join("") : "<p class='hint'>Sem mensagens.</p>";
+    box.scrollTop = box.scrollHeight;
+  } catch (e) {
+    if (!quiet) $("waMsgs").innerHTML = "<p class='status error'>Falha: " + esc(e.message) + "</p>";
+  }
+}
+
+async function sendWaReply() {
+  const txt = $("waInput").value.trim();
+  if (!txt || !waJid) return;
+  $("waInput").value = "";
+  try {
+    const r = await fetch("/api/wa/responder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jid: waJid, texto: txt })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    await loadWaMsgs(true);
+  } catch (e) {
+    showStatus("searchStatus", "Falha ao responder: " + e.message, "error");
+  }
 }
 
 // ===== CRM =====
