@@ -33,6 +33,7 @@ DEFAULT_SETTINGS = {
     "disparo_evo_url": "",
     "disparo_evo_key": "",
     "disparo_evo_instance": "",
+    "disparo_evo_instances": "",
     "disparo_meta_token": "",
     "disparo_meta_phone_id": "",
     "disparo_modo": "auto",

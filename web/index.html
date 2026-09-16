@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v35</b> · central de conversas</div>
+      <div class="version-tag">Prospector <b>v36</b> · multi-chip</div>
     </div>
   </aside>
 
@@ -309,7 +309,8 @@
             Comece pelo modo <b>Simulado</b>. Disparo em massa no WhatsApp normal pode
             derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
           </p>
-          <div class="disparo-grid">
+          <div id="instList" class="hint" style="margin-bottom:12px;"></div>
+        <div class="disparo-grid">
             <div class="field">
               <label for="dispDelayMin">Pausa mín (seg)</label>
               <input id="dispDelayMin" type="number" min="5" value="45">
@@ -459,6 +460,11 @@
     <div class="field">
       <label for="dispEvoInstance">Evolution — Instância</label>
       <input id="dispEvoInstance" type="text" placeholder="nome da instancia">
+    </div>
+    <div class="field">
+      <label for="dispEvoInstances">Evolution — Outras instâncias (chips extras, vírgula)</label>
+      <input id="dispEvoInstances" type="text" placeholder="Ex: chip2, chip3">
+      <p class="hint">O disparo reveza sozinho entre os chips conectados.</p>
     </div>
     <div class="field">
       <label for="dispMetaToken">Meta — Token</label>

@@ -47,6 +47,13 @@ def _conn():
     con = sqlite3.connect(DB_PATH)
     con.row_factory = sqlite3.Row
     con.executescript(_SCHEMA)
+    try:
+        cols = [r[1] for r in con.execute("PRAGMA table_info(fila)").fetchall()]
+        if "instancia" not in cols:
+            con.execute("ALTER TABLE fila ADD COLUMN instancia TEXT")
+            con.commit()
+    except Exception:
+        pass
     return con
 
 
@@ -172,10 +179,12 @@ def enviar_agora(item_id, provider):
         item = dict(row)
         msg = item["mensagem"]
         ok, err = provider.send(item["telefone"], msg)
+        nome_chip = getattr(provider, "instance", provider.name)
         if ok:
             con.execute(
-                "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP WHERE id=?",
-                (item_id,))
+                "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
+                "instancia=? WHERE id=?",
+                (nome_chip, item_id,))
         else:
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
@@ -424,13 +433,34 @@ class MetaCloudProvider:
             return False, str(e)[:200]
 
 
-def _make_provider(cfg):
+def _eh_falha_conexao(err):
+    """Distingue problema na CONEXÃO/conta (troca de chip) de problema no LEAD (ex: número inexistente)."""
+    t = str(err or "").lower()
+    chaves = ["timed out", "timeout", "failed to establish", "connection",
+              "desconectado", "offline", "autentica", "nao_configurado",
+              "name or service not known", "getaddrinfo", "max retries"]
+    return any(k in t for k in chaves)
+
+
+def _build_providers(cfg):
+    """Monta a lista de provedores (1 por chip no modo Evolution)."""
     which = (cfg.get("provider") or "simulado").lower()
-    if which == "evolution":
-        return EvolutionProvider(cfg.get("evo_url"), cfg.get("evo_key"), cfg.get("evo_instance"))
     if which == "meta":
-        return MetaCloudProvider(cfg.get("meta_token"), cfg.get("meta_phone_id"))
-    return SimuladoProvider()
+        return [MetaCloudProvider(cfg.get("meta_token"), cfg.get("meta_phone_id"))]
+    if which == "evolution":
+        insts = [i.strip() for i in (cfg.get("evo_instances") or []) if i.strip()]
+        if not insts and cfg.get("evo_instance"):
+            insts = [cfg["evo_instance"].strip()]
+        if not insts:
+            insts = [""]
+        return [EvolutionProvider(cfg.get("evo_url"), cfg.get("evo_key"), inst) for inst in insts]
+    return [SimuladoProvider()]
+
+
+def _make_provider(cfg):
+    """Compat: retorna o primeiro provedor (usado em teste/envio avulso)."""
+    lst = _build_providers(cfg)
+    return lst[0] if lst else SimuladoProvider()
 
 
 # ---------------- Worker ----------------
@@ -448,7 +478,10 @@ def _in_window(now, ini, fim):
 def _worker_loop():
     global _worker_state
     cfg = _worker_cfg
-    provider = _make_provider(cfg)
+    providers = _build_providers(cfg)
+    prov_idx = 0
+    ruim_ate = {}
+    nomes = ",".join(getattr(p, "instance", p.name) for p in providers)
     delay_min = float(cfg.get("delay_min", 45))
     delay_max = float(cfg.get("delay_max", 120))
     limite_dia = int(cfg.get("limite_dia", 50))
@@ -457,7 +490,17 @@ def _worker_loop():
     optout = bool(cfg.get("optout", True))
     optout_txt = "\n\nResponda SAIR para não receber mais mensagens."
 
-    _worker_state.update({"rodando": True, "provider": provider.name, "ultimo_erro": ""})
+    def _escolher():
+        nonlocal prov_idx
+        agora = time.time()
+        for _ in range(len(providers)):
+            i = prov_idx % len(providers)
+            prov_idx += 1
+            if ruim_ate.get(i, 0) < agora:
+                return i, providers[i]
+        return None, None
+
+    _worker_state.update({"rodando": True, "provider": nomes, "ultimo_erro": ""})
     _devolver_travados(15)
 
     while not _worker_stop.is_set():
@@ -495,15 +538,25 @@ def _worker_loop():
             if not _reivindicar(item["id"]):
                 continue
 
+            pi, provider = _escolher()
+            if provider is None:
+                _worker_state["proximo_em"] = "chips indisponíveis, tentando de novo"
+                _worker_stop.wait(60)
+                continue
+            nome_chip = getattr(provider, "instance", provider.name)
+
             msg = item["mensagem"] + (optout_txt if optout else "")
             ok, err = provider.send(item["telefone"], msg)
+            if not ok and _eh_falha_conexao(err):
+                ruim_ate[pi] = time.time() + 600
 
             con = _conn()
             try:
                 if ok:
                     con.execute(
-                        "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP WHERE id=?",
-                        (item["id"],))
+                        "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
+                        "instancia=? WHERE id=?",
+                        (nome_chip, item["id"]))
                 else:
                     tent = item.get("tentativas", 0) + 1
                     status = "falha" if tent >= 3 else "pendente"

@@ -112,6 +112,7 @@ class SettingsRequest(BaseModel):
     disparo_evo_url: str = ""
     disparo_evo_key: str = ""
     disparo_evo_instance: str = ""
+    disparo_evo_instances: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
     disparo_modo: str = ""
@@ -171,6 +172,8 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_evo_key"] = req.disparo_evo_key.strip()
     if req.disparo_evo_instance:
         new["disparo_evo_instance"] = req.disparo_evo_instance.strip()
+    if req.disparo_evo_instances:
+        new["disparo_evo_instances"] = req.disparo_evo_instances.strip()
     if req.disparo_meta_token:
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
@@ -590,6 +593,7 @@ def api_disparo_iniciar(req: DisparoStartRequest):
         "evo_url": s.get("disparo_evo_url", ""),
         "evo_key": s.get("disparo_evo_key", ""),
         "evo_instance": s.get("disparo_evo_instance", ""),
+        "evo_instances": [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()],
         "meta_token": s.get("disparo_meta_token", ""),
         "meta_phone_id": s.get("disparo_meta_phone_id", ""),
     }
@@ -637,31 +641,63 @@ def api_disparo_limpar():
     return disparo.status()
 
 
-def _evo_provider():
+def _evo_provider(instance=None):
     from scrapers import disparo
 
     s = config.load_settings()
+    inst = (instance or "").strip() or s.get("disparo_evo_instance", "")
     return disparo.EvolutionProvider(
         s.get("disparo_evo_url", ""),
         s.get("disparo_evo_key", ""),
-        s.get("disparo_evo_instance", ""),
+        inst,
     )
 
 
+def _evo_instances():
+    from scrapers import disparo  # noqa: F401 (garante módulo carregado)
+
+    s = config.load_settings()
+    insts = [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()]
+    if not insts and s.get("disparo_evo_instance"):
+        insts = [s["disparo_evo_instance"].strip()]
+    seen, out = set(), []
+    for i in insts:
+        if i not in seen:
+            seen.add(i)
+            out.append(i)
+    return out
+
+
 @app.post("/api/disparo/evolution/qrcode")
-def api_evo_qrcode():
-    prov = _evo_provider()
+def api_evo_qrcode(instance: str = ""):
+    prov = _evo_provider(instance)
     ok, err, qr = prov.criar_instancia()
     if not ok:
         raise HTTPException(502, err)
-    if not qr and "base64," in err:
-        pass
-    return {"ok": True, "qrcode": qr}
+    return {"ok": True, "qrcode": qr, "instance": prov.instance}
 
 
 @app.get("/api/disparo/evolution/estado")
-def api_evo_estado():
-    return _evo_provider().estado()
+def api_evo_estado(instance: str = ""):
+    return _evo_provider(instance).estado()
+
+
+@app.get("/api/disparo/instancias")
+def api_disparo_instancias():
+    provs = []
+    for inst in _evo_instances():
+        from scrapers import disparo
+
+        s = config.load_settings()
+        p = disparo.EvolutionProvider(s.get("disparo_evo_url", ""), s.get("disparo_evo_key", ""), inst)
+        st = p.estado()
+        provs.append({"instance": inst, **st})
+    if not provs:
+        s = config.load_settings()
+        provs.append({"instance": s.get("disparo_evo_instance", ""),
+                      "conectado": False, "estado": "nao_configurado",
+                      "erro": "Cadastre as instâncias nas Configurações."})
+    return {"instancias": provs}
 
 
 class WaResponderRequest(BaseModel):

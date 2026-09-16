@@ -1318,6 +1318,7 @@ async function saveSettings() {
     if ($("dispEvoUrl").value.trim()) body.disparo_evo_url = $("dispEvoUrl").value.trim();
     if ($("dispEvoKey").value.trim()) body.disparo_evo_key = $("dispEvoKey").value.trim();
     if ($("dispEvoInstance").value.trim()) body.disparo_evo_instance = $("dispEvoInstance").value.trim();
+    if ($("dispEvoInstances").value.trim()) body.disparo_evo_instances = $("dispEvoInstances").value.trim();
     if ($("dispMetaToken").value.trim()) body.disparo_meta_token = $("dispMetaToken").value.trim();
     if ($("dispMetaPhone").value.trim()) body.disparo_meta_phone_id = $("dispMetaPhone").value.trim();
   }
@@ -1357,6 +1358,7 @@ async function saveSettings() {
       $("dispProvider").value = s.disparo_provider || "simulado";
       $("dispEvoUrl").value = s.disparo_evo_url || "";
       $("dispEvoInstance").value = s.disparo_evo_instance || "";
+      $("dispEvoInstances").value = s.disparo_evo_instances || "";
       $("dispMetaPhone").value = s.disparo_meta_phone_id || "";
       $("dispEvoKey").placeholder = s.disparo_evo_key ? "Key configurada" : "sua apikey";
       $("dispMetaToken").placeholder = s.disparo_meta_token ? "Token configurado" : "token permanente";
@@ -1392,14 +1394,37 @@ async function saveSettings() {
 // ===== CONEXÃO WHATSAPP (Evolution QR) =====
 let qrPoll = null;
 
-async function connectWhatsApp() {
+async function refreshInstances() {
+  const box = $("instList");
+  if (!box) return;
+  try {
+    const r = await fetch("/api/disparo/instancias");
+    const d = await r.json();
+    const arr = d.instancias || [];
+    if (!arr.length) {
+      box.innerHTML = "<span class='hint'>Nenhuma instância cadastrada. Configure nas Configurações.</span>";
+      return;
+    }
+    box.innerHTML = arr.map(function (it) {
+      const dot = it.conectado ? "on" : "off";
+      return "<span class='chip " + dot + "' style='margin:2px;'>" +
+        "<span class='dot'></span><b>" + esc(it.instance || "?") + "</b>&nbsp;" +
+        esc(it.conectado ? "conectado" : (it.estado || "off")) +
+        " <a class='link' href='#' onclick='connectWhatsApp(\"" + esc(it.instance || "") + "\");return false;'>conectar</a></span>";
+    }).join("");
+  } catch (e) {
+    box.innerHTML = "<span class='hint'>Falha ao ver instâncias.</span>";
+  }
+}
+
+async function connectWhatsApp(instance) {
   $("qrModal").classList.remove("hidden");
-  $("qrHint").textContent = "Gerando QR code...";
+  $("qrHint").textContent = "Gerando QR code" + (instance ? " para " + instance : "") + "...";
   $("qrBox").innerHTML = "";
   $("qrStatus").textContent = "aguardando...";
   clearInterval(qrPoll);
   try {
-    const r = await fetch("/api/disparo/evolution/qrcode", { method: "POST" });
+    const r = await fetch("/api/disparo/evolution/qrcode" + (instance ? "?instance=" + encodeURIComponent(instance) : ""), { method: "POST" });
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");
     if (d.qrcode) {
@@ -1522,7 +1547,7 @@ window.verMensagem = async function (id) {
     html += "<div><div class='detail-name'>" + esc(d.nome) + "</div>";
     html += "<div class='biz-sub2'>" + esc(d.telefone) + " · <span class='st-" + d.status + "'>" + d.status + "</span></div></div>";
     html += "</div>";
-    if (d.enviado_em) html += "<p class='hint'>Enviada em: " + esc(d.enviado_em) + "</p>";
+    if (d.enviado_em) html += "<p class='hint'>Enviada em: " + esc(d.enviado_em) + (d.instancia ? " · via chip <b>" + esc(d.instancia) + "</b>" : "") + "</p>";
     if (d.tentativas) html += "<p class='hint'>Tentativas: " + d.tentativas + "</p>";
     if (d.erro) html += "<p class='status error'>" + esc(d.erro) + "</p>";
     html += "<h4>Mensagem que " + (d.status === "enviado" ? "foi enviada" : "será enviada") + "</h4>";
@@ -1591,6 +1616,10 @@ async function enqueueAll() {
 
 async function refreshDisparo() {
   try {
+    if (typeof window._instLast === "undefined" || Date.now() - window._instLast > 30000) {
+      window._instLast = Date.now();
+      refreshInstances();
+    }
     const s = await (await fetch("/api/settings")).json();
     if (s.disparo_modo) {
       dispModo = s.disparo_modo;
@@ -1614,11 +1643,12 @@ async function refreshDisparo() {
         : "";
       return "<tr><td>" + esc(f.nome) + "</td><td>" + esc(f.telefone) + "</td>" +
         "<td class='st-" + f.status + "'>" + f.status + "</td>" +
+        "<td>" + (f.instancia ? esc(f.instancia) : "<span class='hint'>—</span>") + "</td>" +
         "<td>" + esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
         "<td><div class='row-actions'><button class='btn small' onclick='verMensagem(" + f.id + ")'>Ver</button>" + action + "</div></td></tr>";
     }).join("");
     $("disparoTable").innerHTML = rows
-      ? "<table class='disp-table'><thead><tr><th>Lead</th><th>Telefone</th><th>Status</th><th>Mensagem</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
+      ? "<table class='disp-table'><thead><tr><th>Lead</th><th>Telefone</th><th>Status</th><th>Chip</th><th>Mensagem</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
       : "<p class='hint'>Fila vazia. Clique em 'Enfileirar resultados' ou 'Puxar todos os minerados'.</p>";
 
     clearInterval(dispPoll);
