@@ -714,6 +714,26 @@ def api_wa_responder(req: WaResponderRequest):
     return {"ok": True}
 
 
+@app.get("/api/wa/lead")
+def api_wa_lead(telefone: str = ""):
+    """Acha o lead da nuvem pelo telefone da conversa."""
+    from scrapers import cloud_store, disparo
+
+    d = "".join(ch for ch in str(telefone or "") if ch.isdigit())
+    if d.startswith("55"):
+        d = d[2:]
+    try:
+        for b in cloud_store.listar_leads(limite=500):
+            if "".join(ch for ch in str(b.get("telefone") or "") if ch.isdigit()).endswith(d[-11:]):
+                return {"lead": b}
+    except Exception:
+        pass
+    for b in STATE.get("businesses") or []:
+        if "".join(ch for ch in str(b.get("telefone") or "") if ch.isdigit()).endswith(d[-11:]):
+            return {"lead": b}
+    return {"lead": None}
+
+
 @app.get("/api/schedule")
 def api_schedule_status():
     s = config.load_settings()

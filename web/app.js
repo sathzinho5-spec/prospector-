@@ -449,6 +449,7 @@ function bindEvents() {
   $("btnClearDisp").addEventListener("click", clearDisp);
   $("btnWaRefresh").addEventListener("click", loadWaChats);
   $("btnWaSend").addEventListener("click", sendWaReply);
+  $("waSearch").addEventListener("input", renderWaChats);
   $("waInput").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") sendWaReply();
   });
@@ -1695,6 +1696,54 @@ async function clearDisp() {
 let waJid = "";
 let waPoll = null;
 let waChatsCache = [];
+let waLimit = 50;
+
+function tempoRel(iso) {
+  if (!iso) return "";
+  const t = new Date(iso).getTime();
+  if (isNaN(t)) return String(iso).slice(0, 16).replace("T", " ");
+  const diff = Date.now() - t;
+  if (diff < 0) return "agora";
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "agora";
+  if (min < 60) return "há " + min + "min";
+  const h = Math.floor(min / 60);
+  if (h < 24) return "há " + h + "h";
+  const d = Math.floor(h / 24);
+  if (d === 1) return "ontem";
+  if (d < 7) return "há " + d + " dias";
+  const dt = new Date(t);
+  return ("0" + dt.getDate()).slice(-2) + "/" + ("0" + (dt.getMonth() + 1)).slice(-2);
+}
+
+function renderWaChats() {
+  const box = $("waChats");
+  const q = ($("waSearch").value || "").trim().toLowerCase();
+  const qDigits = q.replace(/\D/g, "");
+  const arr = waChatsCache.filter(function (c) {
+    if (!q) return true;
+    if ((c.nome || "").toLowerCase().indexOf(q) !== -1) return true;
+    if (qDigits && (c.telefone || "").indexOf(qDigits) !== -1) return true;
+    return false;
+  });
+  if (!arr.length) {
+    box.innerHTML = "<p class='hint'>" + (waChatsCache.length ? "Nenhuma conversa bate com a busca." : "Nenhuma conversa.") + "</p>";
+    return;
+  }
+  box.innerHTML = arr.map(function (c) {
+    return (
+      "<div class='wa-chat" + (c.jid === waJid ? " selected" : "") + (c.nao_lidas ? " unread" : "") + "' onclick=\"openWaChat('" + c.jid.replace(/'/g, "") + "')\">" +
+      (c.foto ? "<img src='" + esc(c.foto) + "' class='crm-avatar' loading='lazy' alt=''>" : "<div class='crm-avatar'>" + esc(initials(c.nome)) + "</div>") +
+      "<div style='min-width:0;flex:1;'>" +
+      "<div class='crm-name'>" + esc(c.nome) +
+      (c.nao_lidas ? " <span class='wa-unread'>" + c.nao_lidas + "</span>" : "") + "</div>" +
+      "<div class='biz-sub2'>" + esc(c.ultima || "") + "</div>" +
+      "</div>" +
+      "<span class='wa-when'>" + esc(tempoRel(c.quando)) + "</span>" +
+      "</div>"
+    );
+  }).join("");
+}
 
 async function loadWaChats() {
   const box = $("waChats");
@@ -1711,21 +1760,7 @@ async function loadWaChats() {
       badge.classList.toggle("hidden", !unread);
     }
     $("waStatus").textContent = waChatsCache.length + " conversas";
-    if (!waChatsCache.length) {
-      box.innerHTML = "<p class='hint'>Nenhuma conversa. Conecte o WhatsApp no painel Disparo.</p>";
-      return;
-    }
-    box.innerHTML = waChatsCache.map(function (c) {
-      return (
-        "<div class='wa-chat" + (c.jid === waJid ? " selected" : "") + "' onclick=\"openWaChat('" + c.jid.replace(/'/g, "") + "')\">" +
-        (c.foto ? "<img src='" + esc(c.foto) + "' class='crm-avatar' loading='lazy' alt=''>" : "<div class='crm-avatar'>" + esc(initials(c.nome)) + "</div>") +
-        "<div style='min-width:0;flex:1;'>" +
-        "<div class='crm-name'>" + esc(c.nome) +
-        (c.nao_lidas ? " <span class='pill low'>" + c.nao_lidas + "</span>" : "") + "</div>" +
-        "<div class='biz-sub2'>" + esc(c.ultima || "") + "</div>" +
-        "</div></div>"
-      );
-    }).join("");
+    renderWaChats();
   } catch (e) {
     box.innerHTML = "<p class='status error'>Falha: " + esc(e.message) + "</p>";
     $("waStatus").textContent = "offline";
@@ -1734,11 +1769,19 @@ async function loadWaChats() {
 
 window.openWaChat = async function (jid) {
   waJid = jid;
+  waLimit = 50;
   document.querySelectorAll(".wa-chat").forEach(function (el) {
     el.classList.toggle("selected", el.getAttribute("onclick").indexOf(jid) !== -1);
   });
   const c = waChatsCache.find(function (x) { return x.jid === jid; });
-  $("waThreadHead").innerHTML = "<b>" + esc(c ? c.nome : jid) + "</b>";
+  const fone = c ? (c.telefone || "") : "";
+  $("waThreadHead").innerHTML =
+    "<div style='display:flex;align-items:center;gap:10px;'>" +
+    (c && c.foto ? "<img src='" + esc(c.foto) + "' class='crm-avatar' style='width:36px;height:36px;min-width:36px;min-height:36px;' alt=''>" : "") +
+    "<div style='min-width:0;'><b>" + esc(c ? c.nome : jid) + "</b>" +
+    (fone ? "<div class='hint' style='margin:0;'>" + esc(fone) + "</div>" : "") + "</div>" +
+    (fone ? "<button class='btn small' style='margin-left:auto;' onclick='verLeadWa(\"" + esc(fone) + "\")'>Ver lead</button>" : "") +
+    "</div>";
   $("waReply").classList.remove("hidden");
   await loadWaMsgs();
   clearInterval(waPoll);
@@ -1747,19 +1790,61 @@ window.openWaChat = async function (jid) {
   }, 8000);
 };
 
+window.verLeadWa = async function (fone) {
+  try {
+    const r = await fetch("/api/wa/lead?telefone=" + encodeURIComponent(fone));
+    const d = await r.json();
+    if (d.lead) {
+      lastBusiness = d.lead;
+      switchTab("crm");
+      showStatus("searchStatus", "Lead da conversa: " + d.lead.nome, "info");
+    } else {
+      showStatus("searchStatus", "Este contato ainda não é um lead minerado.", "info");
+      switchTab("crm");
+    }
+  } catch (e) {
+    showStatus("searchStatus", "Falha: " + e.message, "error");
+  }
+};
+
+function diaKey(ts) {
+  try {
+    const d = new Date(Number(ts) * 1000);
+    if (isNaN(d.getTime())) return "";
+    return ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
+  } catch (e) { return ""; }
+}
+
 async function loadWaMsgs(quiet) {
   if (!waJid) return;
   try {
-    const r = await fetch("/api/wa/mensagens?jid=" + encodeURIComponent(waJid) + "&limite=50");
+    const r = await fetch("/api/wa/mensagens?jid=" + encodeURIComponent(waJid) + "&limite=" + waLimit);
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");
     const box = $("waMsgs");
     const msgs = d.mensagens || [];
-    box.innerHTML = msgs.length ? msgs.map(function (m) {
-      return "<div class='wa-msg " + (m.de_mim ? "mine" : "theirs") + "'>" +
+    let html = "<button class='btn small' id='waMore'>Carregar mais antigas</button>";
+    let lastDay = "";
+    html += msgs.map(function (m) {
+      let div = "";
+      const day = diaKey(m.ts);
+      if (day && day !== lastDay) {
+        lastDay = day;
+        div += "<div class='wa-day'>" + day + "</div>";
+      }
+      div += "<div class='wa-msg " + (m.de_mim ? "mine" : "theirs") + "'>" +
         (m.texto ? esc(m.texto) : "<i class='hint'>[mídia]</i>") +
         "<span class='wa-time'>" + esc(m.quando || "") + "</span></div>";
-    }).join("") : "<p class='hint'>Sem mensagens.</p>";
+      return div;
+    }).join("");
+    box.innerHTML = msgs.length ? html : "<p class='hint'>Sem mensagens.</p>";
+    const more = $("waMore");
+    if (more) {
+      more.addEventListener("click", function () {
+        waLimit += 50;
+        loadWaMsgs(true);
+      });
+    }
     box.scrollTop = box.scrollHeight;
   } catch (e) {
     if (!quiet) $("waMsgs").innerHTML = "<p class='status error'>Falha: " + esc(e.message) + "</p>";
