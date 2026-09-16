@@ -205,6 +205,20 @@ class SimuladoProvider:
         return True, ""
 
 
+def _erro_amigavel(status, body):
+    """Traduz erros da Evolution para linguagem humana."""
+    txt = str(body or "")
+    if '"exists":false' in txt.replace(" ", "") or '"exists": false' in txt:
+        return "Este número não existe no WhatsApp (conta desativada ou inválida)."
+    if status in (401, 403):
+        return "Evolution recusou a autenticação — confira a API key nas Configurações."
+    if status == 404:
+        return "Instância não encontrada — confira o nome da instância nas Configurações."
+    if "not connected" in txt.lower() or "connection" in txt.lower() and "closed" in txt.lower():
+        return "WhatsApp desconectado — escaneie o QR de novo no painel Disparo."
+    return f"Evolution HTTP {status}: {txt[:150]}"
+
+
 class EvolutionProvider:
     name = "evolution"
 
@@ -234,7 +248,7 @@ class EvolutionProvider:
             )
             if r.status_code in (200, 201):
                 return True, ""
-            return False, f"Evolution HTTP {r.status_code}: {r.text[:200]}"
+            return False, _erro_amigavel(r.status_code, r.text)
         except Exception as e:
             return False, str(e)[:200]
 
@@ -405,7 +419,7 @@ class MetaCloudProvider:
             )
             if r.status_code in (200, 201):
                 return True, ""
-            return False, f"Meta HTTP {r.status_code}: {r.text[:200]}"
+            return False, _erro_amigavel(r.status_code, r.text)
         except Exception as e:
             return False, str(e)[:200]
 
