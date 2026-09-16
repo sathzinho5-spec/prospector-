@@ -2,12 +2,13 @@ import asyncio
 import json
 import os
 
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 import config
+import contas
 import niches
 from analysis import analyzer
 from scrapers import google_maps, google_search, instagram
@@ -33,6 +34,48 @@ STATE = {"businesses": [], "last_search": ""}
 WEB_DIR = os.path.join(config.BASE_DIR, "web")
 os.makedirs(WEB_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+
+# ===================== PORTA DE ACESSO =====================
+# Ate 16/09/2026 o Prospector so rodava no computador do fundador e a protecao
+# era essa. Agora ele responde na internet, entao tudo passa por aqui.
+
+# O que abre sem sessao. Nao entra nada que mostre dado: so as proprias telas de
+# acesso, os arquivos que elas carregam e a rota de saude da publicacao.
+LIVRES = {"/entrar", "/criar-conta", "/aguardando", "/api/saude", "/favicon.ico"}
+PREFIXOS_LIVRES = ("/static/", "/api/acesso/")
+
+
+def _origem(request):
+    return (request.client.host if request.client else "") or "desconhecida"
+
+
+def _quem(request):
+    return contas.ler_cookie(request.cookies.get(contas.NOME_COOKIE))
+
+
+@app.middleware("http")
+async def porta_de_acesso(request: Request, call_next):
+    caminho = request.url.path
+    if caminho in LIVRES or caminho.startswith(PREFIXOS_LIVRES):
+        return await call_next(request)
+
+    if _quem(request):
+        return await call_next(request)
+
+    # Quem tem cookie valido mas ainda espera aprovacao vai pra tela de espera,
+    # nao pra de entrar: mandar de volta pro login faria a pessoa tentar entrar
+    # de novo sem entender que o problema nao e a senha.
+    pendente = contas.conta_do_cookie_mesmo_pendente(
+        request.cookies.get(contas.NOME_COOKIE))
+
+    if caminho.startswith("/api/"):
+        return JSONResponse(
+            {"erro": "Sua conta ainda nao foi liberada." if pendente
+                     else "Entre para usar o Prospector."},
+            status_code=401)
+
+    return RedirectResponse("/aguardando" if pendente else "/entrar", status_code=303)
 
 
 class SearchRequest(BaseModel):
@@ -128,6 +171,131 @@ def index():
 @app.get("/api/saude")
 def api_saude():
     """Usado pela publicacao automatica pra saber se a versao nova respondeu."""
+    return {"ok": True}
+
+
+# ===================== TELAS E ROTAS DE ACESSO =====================
+# As quatro telas sao o MESMO arquivo: quem escolhe qual cartao aparece e o
+# acesso.js, olhando o endereco e o estado da sessao. Separar em quatro arquivos
+# duplicaria o cabecalho e a marca em todos eles.
+
+def _tela_de_acesso():
+    return FileResponse(os.path.join(WEB_DIR, "acesso.html"))
+
+
+@app.get("/entrar")
+def tela_entrar():
+    return _tela_de_acesso()
+
+
+@app.get("/criar-conta")
+def tela_criar_conta():
+    return _tela_de_acesso()
+
+
+@app.get("/aguardando")
+def tela_aguardando():
+    return _tela_de_acesso()
+
+
+@app.get("/acessos")
+def tela_acessos():
+    return _tela_de_acesso()
+
+
+class EntrarRequest(BaseModel):
+    email: str = ""
+    senha: str = ""
+
+
+class ContaRequest(BaseModel):
+    email: str = ""
+
+
+def _por_o_cookie(resposta, email):
+    resposta.set_cookie(
+        contas.NOME_COOKIE, contas.criar_cookie(email),
+        max_age=contas.DURACAO_SESSAO, httponly=True, samesite="lax", path="/")
+    return resposta
+
+
+@app.get("/api/acesso/eu")
+def api_acesso_eu(request: Request):
+    """O estado que as telas leem pra decidir o que mostrar."""
+    conta = contas.conta_do_cookie_mesmo_pendente(request.cookies.get(contas.NOME_COOKIE))
+    if not conta:
+        return {"entrou": False}
+    return {
+        "entrou": True,
+        "email": conta.get("email"),
+        "status": conta.get("status"),
+        "papel": conta.get("papel"),
+        "criada_em": conta.get("criada_em"),
+        "dono": conta.get("papel") == "dono",
+    }
+
+
+@app.post("/api/acesso/entrar")
+def api_acesso_entrar(req: EntrarRequest, request: Request):
+    conta, erro = contas.entrar(req.email, req.senha, _origem(request))
+    if erro:
+        return JSONResponse({"erro": erro}, status_code=401)
+    corpo = {"ok": True, "status": conta.get("status"), "dono": conta.get("papel") == "dono"}
+    return _por_o_cookie(JSONResponse(corpo), conta.get("email"))
+
+
+@app.post("/api/acesso/criar")
+def api_acesso_criar(req: EntrarRequest, request: Request):
+    conta, erro = contas.criar(req.email, req.senha)
+    if erro:
+        return JSONResponse({"erro": erro}, status_code=400)
+    # Ja entra com a sessao: se a conta for a primeira, cai direto na ferramenta;
+    # se nao for, cai na tela de espera sabendo quem e.
+    corpo = {"ok": True, "status": conta.get("status"), "dono": conta.get("papel") == "dono"}
+    return _por_o_cookie(JSONResponse(corpo), conta.get("email"))
+
+
+@app.post("/api/acesso/sair")
+def api_acesso_sair():
+    resposta = JSONResponse({"ok": True})
+    resposta.delete_cookie(contas.NOME_COOKIE, path="/")
+    return resposta
+
+
+def _so_dono(request):
+    conta = _quem(request)
+    if not conta or conta.get("papel") != "dono":
+        raise HTTPException(status_code=403, detail="So o dono mexe nos acessos.")
+    return conta
+
+
+@app.get("/api/acesso/contas")
+def api_acesso_contas(request: Request):
+    _so_dono(request)
+    return {"contas": contas.listar()}
+
+
+@app.post("/api/acesso/liberar")
+def api_acesso_liberar(req: ContaRequest, request: Request):
+    _so_dono(request)
+    if not contas.liberar(req.email):
+        raise HTTPException(status_code=404, detail="Conta nao encontrada.")
+    return {"ok": True}
+
+
+@app.post("/api/acesso/recusar")
+def api_acesso_recusar(req: ContaRequest, request: Request):
+    _so_dono(request)
+    if not contas.recusar(req.email):
+        raise HTTPException(status_code=404, detail="Conta nao encontrada.")
+    return {"ok": True}
+
+
+@app.post("/api/acesso/tirar")
+def api_acesso_tirar(req: ContaRequest, request: Request):
+    _so_dono(request)
+    if not contas.tirar_acesso(req.email):
+        raise HTTPException(status_code=400, detail="Essa conta nao pode perder o acesso.")
     return {"ok": True}
 
 
