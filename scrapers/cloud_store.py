@@ -1,3 +1,4 @@
+# proposito: leads e fila no Supabase, best-effort: cai pro local sem quebrar
 """
 Cloud store (Supabase) para leads + fila de disparo.
 Tudo best-effort: se o Supabase estiver fora do ar, retorna None/False
@@ -203,6 +204,42 @@ def existing_ids(ids):
         return _with_timeout(_do, timeout=15)
     except Exception:
         return set()
+
+
+def disparo_liberado(lead):
+    """So barra quem foi EXPLICITAMENTE desativado para disparo. Campo ausente
+    (lead da sessao) ou nulo (linha anterior a coluna existir) conta como
+    liberado: barrar todos quebraria o fluxo normal da fila."""
+    if not isinstance(lead, dict):
+        return True
+    valor = lead.get("disparo_ativo")
+    return True if valor is None else bool(valor)
+
+
+def set_disparo_ativo(ids, ativo):
+    """Liga ou desliga o disparo dos leads informados. Devolve quantos foram
+    gravados, 0 com a nuvem fora. Ligar e sempre acao consciente de quem usa:
+    nada aqui roda sozinho."""
+    alvos = [str(i).strip() for i in (ids or []) if str(i or "").strip()]
+    if not alvos:
+        return 0
+
+    def _do():
+        sb = _client()
+        if not sb:
+            return 0
+        n = 0
+        for i in range(0, len(alvos), 100):
+            chunk = alvos[i:i + 100]
+            sb.table("leads").update({"disparo_ativo": bool(ativo)}).in_("id", chunk).execute()
+            n += len(chunk)
+        return n
+
+    try:
+        return _with_timeout(_do, timeout=20)
+    except Exception as e:
+        print(f"[cloud] set_disparo_ativo falhou: {e}")
+        return 0
 
 
 def listar_leads(estado=None, min_score=None, apenas_pendentes=False, limite=200):

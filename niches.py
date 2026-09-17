@@ -1,3 +1,4 @@
+# proposito: a lista de nichos que a busca oferece
 NICHES = [
     {"id": "restaurantes", "label": "Restaurantes",
      "variacoes": ["restaurantes", "cantina", "comida caseira", "marmita", "grelhados", "self service"]},

@@ -47,3 +47,8 @@ check_*.py
 shot_*.png
 test_*.py
 *.out.txt
+# Node (ferramentas de lint; o projeto e Python)
+node_modules/
+
+# Documentos de trabalho da Dodo, nao fazem parte do produto
+Resumo do projeto/

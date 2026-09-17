@@ -1,3 +1,4 @@
+# proposito: porta de entrada: cadastro pendente, aprovacao do dono e cookie de sessao
 """Porta de entrada do Prospector: quem pode entrar e quem ainda nao pode.
 
 O sistema saiu do computador do fundador e passou a responder na internet. Antes

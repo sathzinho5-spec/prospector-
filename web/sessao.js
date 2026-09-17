@@ -1,3 +1,4 @@
+// proposito: link de Acessos pra quem e dono, e o Sair que sai de verdade
 /* Sessao dentro da ferramenta: mostra o link de Acessos pra quem e dono e faz
  * o Sair sair de verdade.
  *

@@ -1,3 +1,4 @@
+# proposito: busca no Google pra achar site e referencia do negocio
 import base64
 import re
 from urllib.parse import parse_qs, quote_plus, unquote, urlparse

@@ -1,3 +1,4 @@
+# proposito: cria ou promove conta de dono, quando a regra da primeira conta nao basta
 """Cria ou promove uma conta de dono do Prospector.
 
 Existe porque a regra normal e "a PRIMEIRA conta vira dona", e isso resolve so o

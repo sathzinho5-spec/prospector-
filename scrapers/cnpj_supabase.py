@@ -1,3 +1,4 @@
+# proposito: baixa o CNPJ da Receita, filtra capital alto e sobe pro Supabase
 """
 CNPJ Supabase - Gigantes Invisíveis
 Baixa CSVs da Receita no Temp, filtra capital >= 500k, sobe pro Supabase e apaga Temp.

@@ -1,3 +1,4 @@
+# proposito: le o perfil publico do Instagram: dados, posts e midia
 import json
 import re
 
