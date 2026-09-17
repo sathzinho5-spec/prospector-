@@ -47,6 +47,15 @@ PREFIXOS_LIVRES = ("/static/", "/api/acesso/")
 
 
 def _origem(request):
+    """Quem esta tentando entrar, pro freio de forca bruta.
+
+    Atras do proxy, request.client e o proprio proxy: sem olhar o
+    X-Forwarded-For, cinco erros de qualquer pessoa trancariam todas as outras.
+    O primeiro endereco da lista e o de quem originou o pedido.
+    """
+    encaminhado = request.headers.get("x-forwarded-for", "")
+    if encaminhado:
+        return encaminhado.split(",")[0].strip()
     return (request.client.host if request.client else "") or "desconhecida"
 
 
@@ -212,10 +221,16 @@ class ContaRequest(BaseModel):
     email: str = ""
 
 
-def _por_o_cookie(resposta, email):
+def _por_o_cookie(resposta, email, request=None):
+    # O Secure so entra quando o pedido chegou por https. Ligado sempre, ele
+    # quebraria quem roda a ferramenta local em http na rede; desligado sempre,
+    # o navegador mandaria a sessao na primeira visita em http, antes de o proxy
+    # empurrar pro https.
+    seguro = bool(request) and request.url.scheme == "https"
     resposta.set_cookie(
         contas.NOME_COOKIE, contas.criar_cookie(email),
-        max_age=contas.DURACAO_SESSAO, httponly=True, samesite="lax", path="/")
+        max_age=contas.DURACAO_SESSAO, httponly=True, samesite="lax",
+        secure=seguro, path="/")
     return resposta
 
 
@@ -241,7 +256,7 @@ def api_acesso_entrar(req: EntrarRequest, request: Request):
     if erro:
         return JSONResponse({"erro": erro}, status_code=401)
     corpo = {"ok": True, "status": conta.get("status"), "dono": conta.get("papel") == "dono"}
-    return _por_o_cookie(JSONResponse(corpo), conta.get("email"))
+    return _por_o_cookie(JSONResponse(corpo), conta.get("email"), request)
 
 
 @app.post("/api/acesso/criar")
@@ -252,7 +267,7 @@ def api_acesso_criar(req: EntrarRequest, request: Request):
     # Ja entra com a sessao: se a conta for a primeira, cai direto na ferramenta;
     # se nao for, cai na tela de espera sabendo quem e.
     corpo = {"ok": True, "status": conta.get("status"), "dono": conta.get("papel") == "dono"}
-    return _por_o_cookie(JSONResponse(corpo), conta.get("email"))
+    return _por_o_cookie(JSONResponse(corpo), conta.get("email"), request)
 
 
 @app.post("/api/acesso/sair")
