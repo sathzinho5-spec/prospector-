@@ -41,6 +41,16 @@ CREATE TABLE IF NOT EXISTS numeros_abordados (
   telefone TEXT PRIMARY KEY,
   primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Numero desativado pro disparo por decisao de quem opera. Diferente do
+-- abordado: aqui nao houve envio nenhum, e a pessoa escolheu que nao ha de
+-- haver. Mora fora da fila pelo mesmo motivo: limpar a fila nao pode reabrir
+-- o envio pra quem foi desativado de proposito.
+CREATE TABLE IF NOT EXISTS numeros_bloqueados (
+  telefone TEXT PRIMARY KEY,
+  motivo TEXT,
+  bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 _worker_thread = None
@@ -89,6 +99,9 @@ def enfileirar(itens, origem=""):
         existentes.update(
             r[0] for r in con.execute("SELECT telefone FROM numeros_abordados").fetchall()
         )
+        existentes.update(
+            r[0] for r in con.execute("SELECT telefone FROM numeros_bloqueados").fetchall()
+        )
         for it in itens:
             tel = _norm_phone(it.get("telefone"))
             msg = (it.get("mensagem") or "").strip()
@@ -129,7 +142,7 @@ def limpar_finalizados():
         # 'duplicado' entra aqui porque tambem e estado final. O historico de
         # quem ja foi abordado nao mora na fila, entao limpar nao reabre o
         # disparo repetido.
-        con.execute("DELETE FROM fila WHERE status IN ('enviado','falha','cancelado','duplicado')")
+        con.execute("DELETE FROM fila WHERE status IN ('enviado','falha','cancelado','duplicado','bloqueado')")
         con.commit()
     finally:
         con.close()
@@ -180,6 +193,40 @@ def ja_recebeu(con, telefone, item_id=-1):
     return bool(row)
 
 
+def bloquear(telefone, motivo=""):
+    """Desativa um numero pro disparo. Idempotente."""
+    tel = _norm_phone(telefone)
+    if not tel:
+        return False
+    con = _conn()
+    try:
+        con.execute("INSERT OR IGNORE INTO numeros_bloqueados (telefone, motivo) VALUES (?,?)",
+                    (tel, motivo))
+        con.commit()
+    finally:
+        con.close()
+    return True
+
+
+def desbloquear(telefone):
+    tel = _norm_phone(telefone)
+    con = _conn()
+    try:
+        con.execute("DELETE FROM numeros_bloqueados WHERE telefone=?", (tel,))
+        con.commit()
+    finally:
+        con.close()
+    return True
+
+
+def bloqueado(con, telefone):
+    tel = _norm_phone(telefone)
+    if not tel:
+        return False
+    return bool(con.execute(
+        "SELECT 1 FROM numeros_bloqueados WHERE telefone=?", (tel,)).fetchone())
+
+
 def registrar_abordado(con, telefone):
     """Grava o numero no historico que a limpeza da fila nao alcanca."""
     tel = _norm_phone(telefone)
@@ -217,6 +264,12 @@ def enviar_agora(item_id, provider):
         if not row:
             return False, "Item não encontrado na fila"
         item = dict(row)
+        if bloqueado(con, item["telefone"]):
+            erro = "Este numero esta desativado pro disparo."
+            con.execute("UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
+                        (erro, item_id))
+            con.commit()
+            return False, erro
         if ja_recebeu(con, item["telefone"], item_id):
             erro = "Este numero ja recebeu uma abordagem."
             con.execute("UPDATE fila SET status='duplicado', erro=? WHERE id=?",
@@ -617,6 +670,12 @@ def _worker_loop():
             # enviada nao pode gastar a vez de um chip no rodizio.
             con = _conn()
             try:
+                if bloqueado(con, item["telefone"]):
+                    con.execute(
+                        "UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
+                        ("Este numero esta desativado pro disparo.", item["id"]))
+                    con.commit()
+                    continue
                 if ja_recebeu(con, item["telefone"], item["id"]):
                     con.execute(
                         "UPDATE fila SET status='duplicado', erro=? WHERE id=?",

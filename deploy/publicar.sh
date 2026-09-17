@@ -15,6 +15,7 @@ IMAGEM=prospector
 CONTAINER=prospector
 LOG=/var/log/prospector-deploy.log
 REDE=nginx-proxy-manager_default
+REDE_BANCO=supabase_default
 # As configuracoes e os resultados vivem FORA do container. Sem isso, cada
 # publicacao apagaria a chave da OpenAI e o sessionid do Instagram.
 DADOS=/srv/prospector-dados
@@ -69,6 +70,11 @@ subir() {
         --network "$REDE" --memory 1g --shm-size 1g --cpus 2 \
         -v "$DADOS:/app/dados" \
         "$IMAGEM:atual" >/dev/null
+
+    # Segunda rede: o Supabase vive na dele, e o docker run so aceita uma.
+    # Sem este passo o Prospector nao resolve o nome do banco, e a nuvem cai
+    # a cada publicacao com um erro de DNS que nao diz que a causa e a rede.
+    docker network connect "$REDE_BANCO" "$CONTAINER" 2>/dev/null || true
 }
 
 subir
