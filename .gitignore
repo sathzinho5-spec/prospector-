@@ -31,6 +31,11 @@ Thumbs.db
 
 # Secrets
 settings.json
+sessao.chave
+*.chave
+
+# Helpers locais
+fix_docker_admin.ps1
 
 # Logs
 *.log
