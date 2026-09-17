@@ -19,10 +19,11 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt \
  && python -m playwright install --with-deps chromium
 
-COPY app.py config.py niches.py run.py scheduler.py storage.py ./
+COPY app.py config.py contas.py niches.py run.py scheduler.py storage.py ./
 COPY analysis/ analysis/
 COPY scrapers/ scrapers/
 COPY web/ web/
+COPY tools/ tools/
 
 # Configuracoes e resultados vem por volume. Se entrassem na imagem, cada
 # publicacao apagaria a chave da OpenAI e o sessionid do Instagram.

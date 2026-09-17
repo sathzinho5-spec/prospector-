@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prospector</title>
+<link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/acesso.css">
+</head>
+<body class="acesso-body">
+
+<main class="acesso-palco">
+
+  <!-- ===== ENTRAR ===== -->
+  <section class="acesso-cartao" id="telaEntrar" hidden>
+    <div class="acesso-marca">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="acesso-titulo">Entrar</h2>
+      <p class="acesso-sub">Acesso da prospecção da Vitrine Rápida.</p>
+    </div>
+
+    <div class="acesso-recado acesso-recado-erro" id="erroEntrar" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>
+      </svg>
+      <span id="erroEntrarTexto"></span>
+    </div>
+
+    <form class="acesso-campos" id="formEntrar" autocomplete="on">
+      <div class="field">
+        <label for="entrarEmail">E-mail</label>
+        <input id="entrarEmail" type="email" name="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="entrarSenha">Senha</label>
+        <input id="entrarSenha" type="password" name="senha" autocomplete="current-password" required>
+      </div>
+      <button class="btn primary acesso-botao" type="submit" id="botaoEntrar">Entrar</button>
+    </form>
+
+    <p class="acesso-rodape">Não tem conta? <a href="/criar-conta">Criar conta</a></p>
+  </section>
+
+  <!-- ===== CRIAR CONTA ===== -->
+  <section class="acesso-cartao" id="telaCriar" hidden>
+    <div class="acesso-marca">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="acesso-titulo">Criar conta</h2>
+      <p class="acesso-sub">Use o e-mail que você usa na operação.</p>
+    </div>
+
+    <div class="acesso-recado acesso-recado-aviso" id="avisoCriar">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 7.5v.01"/>
+      </svg>
+      <span id="avisoCriarTexto">Criar a conta não libera o acesso. Ela fica na fila até o dono aprovar.</span>
+    </div>
+
+    <div class="acesso-recado acesso-recado-erro" id="erroCriar" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>
+      </svg>
+      <span id="erroCriarTexto"></span>
+    </div>
+
+    <form class="acesso-campos" id="formCriar" autocomplete="on">
+      <div class="field">
+        <label for="criarEmail">E-mail</label>
+        <input id="criarEmail" type="email" name="email" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="criarSenha">Senha</label>
+        <input id="criarSenha" type="password" name="senha" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label for="criarSenha2">Repetir a senha</label>
+        <input id="criarSenha2" type="password" name="senha2" autocomplete="new-password" required>
+      </div>
+      <button class="btn primary acesso-botao" type="submit" id="botaoCriar">Criar conta</button>
+    </form>
+
+    <p class="acesso-rodape">Já tem conta? <a href="/entrar">Entrar</a></p>
+  </section>
+
+  <!-- ===== AGUARDANDO APROVACAO ===== -->
+  <section class="acesso-cartao" id="telaAguardando" hidden>
+    <div class="acesso-marca">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div class="acesso-selo">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>
+      </svg>
+    </div>
+
+    <div class="acesso-centro">
+      <h2 class="acesso-titulo">Conta criada. Falta a aprovação.</h2>
+      <p class="acesso-sub acesso-sub-clara">O dono precisa liberar o seu acesso. Enquanto isso a ferramenta fica fechada.</p>
+    </div>
+
+    <div class="acesso-resumo">
+      <div class="acesso-resumo-linha">
+        <span>Conta</span><span id="aguardandoEmail"></span>
+      </div>
+      <div class="acesso-resumo-linha">
+        <span>Pedido em</span><span id="aguardandoQuando"></span>
+      </div>
+    </div>
+
+    <button class="btn acesso-botao" type="button" id="botaoSairAguardando">Sair</button>
+  </section>
+
+  <!-- ===== ACESSOS (TELA DO DONO) ===== -->
+  <section class="acesso-cartao acesso-cartao-largo" id="telaAcessos" hidden>
+    <div class="acesso-topo">
+      <div class="acesso-marca">
+        <div class="logo-symbol">
+          <svg viewBox="0 0 24 24">
+            <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+            <path d="M2 17l10 5 10-5"/>
+            <path d="M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <h1>Prospector</h1>
+        </div>
+      </div>
+      <span class="acesso-quem" id="acessosQuem"></span>
+    </div>
+
+    <div>
+      <h2 class="acesso-titulo">Acessos</h2>
+      <p class="acesso-sub">Quem pode abrir o Prospector.</p>
+    </div>
+
+    <div class="acesso-recado acesso-recado-erro" id="erroAcessos" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>
+      </svg>
+      <span id="erroAcessosTexto"></span>
+    </div>
+
+    <div>
+      <div class="acesso-secao">
+        <span class="side-section-title">Aguardando aprovação</span>
+        <span class="badge" id="contagemPendentes" hidden>0</span>
+      </div>
+      <div class="acesso-lista" id="listaPendentes"></div>
+    </div>
+
+    <div>
+      <div class="acesso-secao">
+        <span class="side-section-title">Com acesso</span>
+      </div>
+      <div class="acesso-lista" id="listaLiberados"></div>
+    </div>
+
+    <div class="acesso-acoes-rodape">
+      <a class="btn" href="/">Voltar pra ferramenta</a>
+      <button class="btn" type="button" id="botaoSairAcessos">Sair</button>
+    </div>
+  </section>
+
+  <!-- ===== TROCAR SENHA ===== -->
+  <section class="acesso-cartao" id="telaSenha" hidden>
+    <div class="acesso-marca">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="acesso-titulo">Trocar a senha</h2>
+      <p class="acesso-sub" id="senhaQuem"></p>
+    </div>
+
+    <div class="acesso-recado acesso-recado-erro" id="erroSenha" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>
+      </svg>
+      <span id="erroSenhaTexto"></span>
+    </div>
+
+    <div class="acesso-recado acesso-recado-ok" id="okSenha" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>
+      </svg>
+      <span>Senha trocada. Ela vale a partir da próxima vez que você entrar.</span>
+    </div>
+
+    <form class="acesso-campos" id="formSenha" autocomplete="on">
+      <div class="field">
+        <label for="senhaAtual">Senha atual</label>
+        <input id="senhaAtual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="senhaNova">Senha nova</label>
+        <input id="senhaNova" type="password" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label for="senhaNova2">Repetir a senha nova</label>
+        <input id="senhaNova2" type="password" autocomplete="new-password" required>
+      </div>
+      <button class="btn primary acesso-botao" type="submit" id="botaoSenha">Trocar a senha</button>
+    </form>
+
+    <p class="acesso-rodape"><a href="/">Voltar pra ferramenta</a></p>
+  </section>
+
+</main>
+
+<script src="/static/acesso.js"></script>
+</body>
+</html>

@@ -32,6 +32,25 @@ CREATE TABLE IF NOT EXISTS fila (
   origem TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_fila_status ON fila(status);
+
+-- Numero que ja recebeu abordagem, para nunca receber uma segunda.
+-- Vive FORA da fila de proposito: limpar a fila apaga o historico dela, e se a
+-- protecao dependesse dele, a primeira limpeza reabriria o disparo duplicado
+-- sem ninguem perceber.
+CREATE TABLE IF NOT EXISTS numeros_abordados (
+  telefone TEXT PRIMARY KEY,
+  primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Numero desativado pro disparo por decisao de quem opera. Diferente do
+-- abordado: aqui nao houve envio nenhum, e a pessoa escolheu que nao ha de
+-- haver. Mora fora da fila pelo mesmo motivo: limpar a fila nao pode reabrir
+-- o envio pra quem foi desativado de proposito.
+CREATE TABLE IF NOT EXISTS numeros_bloqueados (
+  telefone TEXT PRIMARY KEY,
+  motivo TEXT,
+  bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 _worker_thread = None
@@ -70,23 +89,31 @@ def enfileirar(itens, origem=""):
     con = _conn()
     n = 0
     try:
+        # Por NUMERO, nao por telefone+mensagem: mesma pessoa com dois textos
+        # diferentes continua sendo duas abordagens pra mesma pessoa.
         existentes = set(
             r[0] for r in con.execute(
-                "SELECT telefone || '|' || mensagem FROM fila WHERE status IN ('pendente','enviando')"
+                "SELECT telefone FROM fila WHERE status IN ('pendente','enviando')"
             ).fetchall()
+        )
+        existentes.update(
+            r[0] for r in con.execute("SELECT telefone FROM numeros_abordados").fetchall()
+        )
+        existentes.update(
+            r[0] for r in con.execute("SELECT telefone FROM numeros_bloqueados").fetchall()
         )
         for it in itens:
             tel = _norm_phone(it.get("telefone"))
             msg = (it.get("mensagem") or "").strip()
             if not tel or not msg:
                 continue
-            if f"{tel}|{msg}" in existentes:
+            if tel in existentes:
                 continue
             con.execute(
                 "INSERT INTO fila (nome, telefone, mensagem, origem) VALUES (?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem),
             )
-            existentes.add(f"{tel}|{msg}")
+            existentes.add(tel)
             n += 1
         con.commit()
     finally:
@@ -112,7 +139,10 @@ def listar(status=None, limite=200):
 def limpar_finalizados():
     con = _conn()
     try:
-        con.execute("DELETE FROM fila WHERE status IN ('enviado','falha','cancelado')")
+        # 'duplicado' entra aqui porque tambem e estado final. O historico de
+        # quem ja foi abordado nao mora na fila, entao limpar nao reabre o
+        # disparo repetido.
+        con.execute("DELETE FROM fila WHERE status IN ('enviado','falha','cancelado','duplicado','bloqueado')")
         con.commit()
     finally:
         con.close()
@@ -148,6 +178,63 @@ def _devolver_travados(minutos=15):
         con.close()
 
 
+def ja_recebeu(con, telefone, item_id=-1):
+    """Aquele NUMERO ja recebeu abordagem? A pergunta e por numero e nunca por
+    linha da fila: duas linhas com textos diferentes pro mesmo telefone sao duas
+    abordagens pra mesma pessoa, e a segunda e contato queimado."""
+    tel = _norm_phone(telefone)
+    if not tel:
+        return False
+    if con.execute("SELECT 1 FROM numeros_abordados WHERE telefone=?", (tel,)).fetchone():
+        return True
+    row = con.execute(
+        "SELECT 1 FROM fila WHERE telefone=? AND status='enviado' AND id<>?",
+        (tel, item_id)).fetchone()
+    return bool(row)
+
+
+def bloquear(telefone, motivo=""):
+    """Desativa um numero pro disparo. Idempotente."""
+    tel = _norm_phone(telefone)
+    if not tel:
+        return False
+    con = _conn()
+    try:
+        con.execute("INSERT OR IGNORE INTO numeros_bloqueados (telefone, motivo) VALUES (?,?)",
+                    (tel, motivo))
+        con.commit()
+    finally:
+        con.close()
+    return True
+
+
+def desbloquear(telefone):
+    tel = _norm_phone(telefone)
+    con = _conn()
+    try:
+        con.execute("DELETE FROM numeros_bloqueados WHERE telefone=?", (tel,))
+        con.commit()
+    finally:
+        con.close()
+    return True
+
+
+def bloqueado(con, telefone):
+    tel = _norm_phone(telefone)
+    if not tel:
+        return False
+    return bool(con.execute(
+        "SELECT 1 FROM numeros_bloqueados WHERE telefone=?", (tel,)).fetchone())
+
+
+def registrar_abordado(con, telefone):
+    """Grava o numero no historico que a limpeza da fila nao alcanca."""
+    tel = _norm_phone(telefone)
+    if tel:
+        con.execute(
+            "INSERT OR IGNORE INTO numeros_abordados (telefone) VALUES (?)", (tel,))
+
+
 def telefones_na_fila():
     con = _conn()
     try:
@@ -177,6 +264,18 @@ def enviar_agora(item_id, provider):
         if not row:
             return False, "Item não encontrado na fila"
         item = dict(row)
+        if bloqueado(con, item["telefone"]):
+            erro = "Este numero esta desativado pro disparo."
+            con.execute("UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
+                        (erro, item_id))
+            con.commit()
+            return False, erro
+        if ja_recebeu(con, item["telefone"], item_id):
+            erro = "Este numero ja recebeu uma abordagem."
+            con.execute("UPDATE fila SET status='duplicado', erro=? WHERE id=?",
+                        (erro, item_id))
+            con.commit()
+            return False, erro
         msg = item["mensagem"]
         ok, err = provider.send(item["telefone"], msg)
         nome_chip = getattr(provider, "instance", provider.name)
@@ -185,6 +284,7 @@ def enviar_agora(item_id, provider):
                 "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
                 "instancia=? WHERE id=?",
                 (nome_chip, item_id,))
+            registrar_abordado(con, item["telefone"])
         else:
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
@@ -244,10 +344,38 @@ class EvolutionProvider:
             return False, "Evolution não configurado (url/key/instance)"
         return True, ""
 
+    def numero_existe(self, phone):
+        """Pergunta a Evolution se o numero existe no WhatsApp. Devolve
+        (existe, erro). Erro preenchido significa que a pergunta NAO pode ser
+        feita, e nesse caso nao se envia: tentativa em numero morto e
+        justamente o que queima o chip."""
+        try:
+            r = requests.post(
+                f"{self.base_url}/chat/whatsappNumbers/{self.instance}",
+                headers=self._headers(),
+                json={"numbers": [phone]},
+                timeout=30,
+            )
+            if r.status_code not in (200, 201):
+                return False, _erro_amigavel(r.status_code, r.text)
+            dados = r.json()
+            if isinstance(dados, list) and dados:
+                return bool(dados[0].get("exists")), ""
+            return False, "A Evolution nao respondeu se o numero existe."
+        except Exception as e:
+            return False, str(e)[:200]
+
     def send(self, phone, message):
         ok, err = self._check_cfg()
         if not ok:
             return False, err
+        # Conferir ANTES de mandar. Depois do sendText a tentativa ja foi gasta,
+        # e o erro bonito nao devolve a reputacao do numero.
+        existe, err_check = self.numero_existe(phone)
+        if err_check:
+            return False, err_check
+        if not existe:
+            return False, "Este numero nao existe no WhatsApp (conta desativada ou invalida)."
         try:
             r = requests.post(
                 f"{self.base_url}/message/sendText/{self.instance}",
@@ -538,6 +666,25 @@ def _worker_loop():
             if not _reivindicar(item["id"]):
                 continue
 
+            # Trava por NUMERO, antes de escolher o chip: linha que nao vai ser
+            # enviada nao pode gastar a vez de um chip no rodizio.
+            con = _conn()
+            try:
+                if bloqueado(con, item["telefone"]):
+                    con.execute(
+                        "UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
+                        ("Este numero esta desativado pro disparo.", item["id"]))
+                    con.commit()
+                    continue
+                if ja_recebeu(con, item["telefone"], item["id"]):
+                    con.execute(
+                        "UPDATE fila SET status='duplicado', erro=? WHERE id=?",
+                        ("Este numero ja recebeu uma abordagem.", item["id"]))
+                    con.commit()
+                    continue
+            finally:
+                con.close()
+
             pi, provider = _escolher()
             if provider is None:
                 _worker_state["proximo_em"] = "chips indisponíveis, tentando de novo"
@@ -557,6 +704,7 @@ def _worker_loop():
                         "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
                         "instancia=? WHERE id=?",
                         (nome_chip, item["id"]))
+                    registrar_abordado(con, item["telefone"])
                 else:
                     tent = item.get("tentativas", 0) + 1
                     status = "falha" if tent >= 3 else "pendente"
