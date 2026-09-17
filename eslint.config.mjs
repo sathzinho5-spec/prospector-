@@ -23,6 +23,12 @@ export default [
       // Religar exige converter o painel pra ES modules, o que quebraria os 26
       // pontos de onclick que dependem do global.
       "no-undef": "off",
+      // vars "local" pelo mesmo motivo: declaracao no topo de um <script> classico
+      // e global, e e assim que os arquivos se chamam. O ESLint le um arquivo por
+      // vez e nao tem como ver o uso do outro lado, entao marcaria como nao usada
+      // toda funcao que e a interface publica do arquivo. Local continua conferido,
+      // e caughtErrors tambem, que e o que pega `catch (e)` sem uso.
+      "no-unused-vars": ["error", { vars: "local", args: "after-used", caughtErrors: "all" }],
       "max-lines": ["warn", { max: 350, skipBlankLines: false, skipComments: false }],
     },
   },
