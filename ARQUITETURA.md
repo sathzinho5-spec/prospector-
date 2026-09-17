@@ -4,16 +4,17 @@ Mapa gerado por `Agente Orquestrador/tools/gerar_arquitetura.py`.
 Nao edite a mao: a proxima geracao sobrescreve. Pra mudar uma linha,
 mude o `proposito:` no cabecalho do arquivo.
 
-Teto por arquivo: 350 linhas. Arquivos: 41.
+Teto por arquivo: 350 linhas. Arquivos: 50.
 
 ## raiz do projeto
 
 ```
-app.py                      1189  SEM PROPOSITO DECLARADO  ACIMA DO TETO
+app.py                       270  sobe o FastAPI, a porta de acesso e as rotas de busca e ajuste
 config.py                     68  SEM PROPOSITO DECLARADO
 contas.py                    348  SEM PROPOSITO DECLARADO
 eslint.config.mjs             47  teto de 350 linhas por arquivo e checagem de erro no JS do painel
 niches.py                     63  SEM PROPOSITO DECLARADO
+nucleo.py                     44  estado em memoria, porta de acesso e quem esta do outro lado
 run.py                        19  SEM PROPOSITO DECLARADO
 scheduler.py                 102  SEM PROPOSITO DECLARADO
 storage.py                   111  SEM PROPOSITO DECLARADO
@@ -25,6 +26,19 @@ storage.py                   111  SEM PROPOSITO DECLARADO
 analysis/__init__.py           0  SEM PROPOSITO DECLARADO
 analysis/analyzer.py         573  SEM PROPOSITO DECLARADO  ACIMA DO TETO
 analysis/copy_sdr.py         168  SEM PROPOSITO DECLARADO
+```
+
+## rotas/
+
+```
+rotas/__init__.py              1  marca rotas/ como pacote; os routers vivem nos arquivos ao lado
+rotas/acesso.py              148  telas de acesso e as rotas de conta: entrar, criar, liberar, tirar
+rotas/cnpj.py                 40  garimpo de empresas grandes por UF na base de CNPJ
+rotas/crm.py                  62  leads na nuvem e o CRM: listar, filtrar e mover de estagio
+rotas/disparo.py             279  disparo: fila, envio, instancias Evolution, iniciar e pausar
+rotas/modelos.py             145  os contratos de entrada da API, num lugar so
+rotas/negocio.py             202  analise e copy de um lead: contato, estrategia, pitch, proposta
+rotas/whatsapp.py             74  conversas do WhatsApp: chats, mensagens, responder e achar o lead
 ```
 
 ## scrapers/
@@ -85,7 +99,6 @@ web/js/ui.js                 118  estado compartilhado do painel e as pecas visu
 ## Acima do teto de 350 linhas
 
 - `analysis/analyzer.py`
-- `app.py`
 - `scrapers/disparo.py`
 - `scrapers/google_maps.py`
 
@@ -96,7 +109,6 @@ Cada um destes precisa de uma linha `proposito:` no cabecalho.
 - `analysis/__init__.py`
 - `analysis/analyzer.py`
 - `analysis/copy_sdr.py`
-- `app.py`
 - `config.py`
 - `contas.py`
 - `niches.py`
