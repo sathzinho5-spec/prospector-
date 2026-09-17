@@ -281,10 +281,22 @@ async def _collect_cards(page, feed, target):
     if await cards.count() == 0:
         cards = feed.locator('a[href*="/maps/place/"]')
 
-    for _ in range(target // 3 + 4):
+    # rolagem profunda: tenta carregar bem além do alvo (o Maps pagina aos poucos)
+    teto = max(target * 2, 40)
+    ultima_contagem = -1
+    repeticoes_iguais = 0
+    for _ in range(30):
         count = await cards.count()
-        if count >= target:
+        if count >= teto:
             break
+        # se 3 rolagens seguidas não trouxerem nada novo, acabou a lista
+        if count == ultima_contagem:
+            repeticoes_iguais += 1
+            if repeticoes_iguais >= 3:
+                break
+        else:
+            repeticoes_iguais = 0
+        ultima_contagem = count
         try:
             await feed.first.evaluate("el => el.scrollTo(0, el.scrollHeight)")
         except Exception:
@@ -294,7 +306,7 @@ async def _collect_cards(page, feed, target):
     found = []
     seen_urls = set()
     count = await cards.count()
-    for i in range(min(target * 2, count)):
+    for i in range(min(teto, count)):
         try:
             href = await cards.nth(i).get_attribute("href")
             name = _clean(await cards.nth(i).get_attribute("aria-label") or "")
@@ -340,13 +352,18 @@ async def _visit_place(page, card, location, seen_keys, businesses, delay):
             await page.wait_for_timeout(2500)
 
 
-async def search_places(query, locations=None, max_results=15, headless=None, delay=1.5):
+async def search_places(query, locations=None, max_results=15, headless=None, delay=1.5, termos=None):
     settings = load_settings()
     if headless is None:
         headless = bool(settings.get("headless", True))
 
     if not locations:
         locations = ["Brasil"]
+    if not termos:
+        termos = [query]
+    # limite de segurança: evita varreduras de horas
+    termos = termos[:8]
+    locations = locations[:10]
 
     businesses = []
     seen_keys = set()
@@ -365,37 +382,38 @@ async def search_places(query, locations=None, max_results=15, headless=None, de
         worker_pages = [page, await context.new_page()]
 
         for location in locations:
-            full_query = f"{query} {location}".strip()
-            url = f"https://www.google.com/maps/search/{quote_plus(full_query)}?hl=pt-BR"
-            try:
-                await page.goto(url, timeout=60000, wait_until="domcontentloaded")
-            except Exception:
-                continue
-            await _accept_consent(page)
-
-            if await _is_blocked(page):
-                await page.wait_for_timeout(5000)
+            for termo in termos:
+                full_query = f"{termo} {location}".strip()
+                url = f"https://www.google.com/maps/search/{quote_plus(full_query)}?hl=pt-BR"
                 try:
                     await page.goto(url, timeout=60000, wait_until="domcontentloaded")
                 except Exception:
                     continue
+                await _accept_consent(page)
 
-            feed = page.locator('div[role="feed"]')
-            try:
-                await feed.first.wait_for(timeout=30000)
-            except Exception:
-                continue
+                if await _is_blocked(page):
+                    await page.wait_for_timeout(5000)
+                    try:
+                        await page.goto(url, timeout=60000, wait_until="domcontentloaded")
+                    except Exception:
+                        continue
 
-            cards = await _collect_cards(page, feed, max_results)
+                feed = page.locator('div[role="feed"]')
+                try:
+                    await feed.first.wait_for(timeout=30000)
+                except Exception:
+                    continue
 
-            # visitas em paralelo (2 por vez)
-            for i in range(0, len(cards), 2):
-                chunk = cards[i:i + 2]
-                tasks = [
-                    _visit_place(worker_pages[j], card, location, seen_keys, businesses, delay)
-                    for j, card in enumerate(chunk)
-                ]
-                await asyncio.gather(*tasks)
+                cards = await _collect_cards(page, feed, max_results)
+
+                # visitas em paralelo (2 por vez)
+                for i in range(0, len(cards), 2):
+                    chunk = cards[i:i + 2]
+                    tasks = [
+                        _visit_place(worker_pages[j], card, f"{termo} | {location}", seen_keys, businesses, delay)
+                        for j, card in enumerate(chunk)
+                    ]
+                    await asyncio.gather(*tasks)
 
         try:
             os.makedirs(os.path.dirname(STATE_FILE), exist_ok=True)

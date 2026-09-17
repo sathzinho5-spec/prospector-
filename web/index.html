@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Prospector</title>
+<title>Prospector — Sales Intelligence</title>
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/painel.css">
 </head>
@@ -11,8 +11,8 @@
 
 <div class="app">
 
-  <!-- ===== SIDEBAR: BUSCA ===== -->
-  <aside class="sidebar">
+  <!-- ===== NAVEGAÇÃO PRINCIPAL ===== -->
+  <aside class="sidebar" id="sidebar">
     <div class="side-head">
       <div class="logo-symbol">
         <svg viewBox="0 0 24 24">
@@ -23,34 +23,42 @@
       </div>
       <div class="logo-text">
         <h1>Prospector</h1>
-        <p>Prospecção de negócios</p>
+        <p>Sales Intelligence</p>
       </div>
     </div>
 
-    <nav class="painel-nav">
+    <nav class="painel-nav" aria-label="Navegação principal">
       <button class="tabbtn painel-item active" data-tab="home">
         <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/></svg>
-        <span class="painel-nome">Início</span>
+        <span class="painel-nome">Dashboard</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="results">
+        <svg viewBox="0 0 24 24" class="painel-icone"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg>
+        <span class="painel-nome">Prospecção</span><span id="tabResultsBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="leads">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 6h16v12H4z"/><path d="M4 7l8 5 8-5"/></svg>
+        <span class="painel-nome">Leads</span><span id="tabLeadsBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="crm">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/></svg>
+        <span class="painel-nome">Pipeline</span><span id="tabCrmBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="comercial">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M5 12h4l2-5 2 10 2-5h4"/></svg>
+        <span class="painel-nome">Disparo</span><span id="tabQueueBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="conversas">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/></svg>
+        <span class="painel-nome">Conversas</span><span id="tabWaBadge" class="badge hidden">0</span>
       </button>
       <button class="tabbtn painel-item" data-tab="conexao">
         <svg viewBox="0 0 24 24" class="painel-icone"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>
         <span class="painel-nome">Conexão do número</span>
       </button>
-      <button class="tabbtn painel-item" data-tab="results">
-        <svg viewBox="0 0 24 24" class="painel-icone"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg>
-        <span class="painel-nome">Resultados</span><span id="tabResultsBadge" class="badge hidden">0</span>
-      </button>
-      <button class="tabbtn painel-item" data-tab="crm">
-        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/></svg>
-        <span class="painel-nome">CRM</span><span id="tabCrmBadge" class="badge hidden">0</span>
-      </button>
-      <button class="tabbtn painel-item" data-tab="comercial">
-        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M5 12h4l2-5 2 10 2-5h4"/></svg>
-        <span class="painel-nome">Comercial</span><span id="tabQueueBadge" class="badge hidden">0</span>
-      </button>
-      <button class="tabbtn painel-item" data-tab="conversas">
-        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/></svg>
-        <span class="painel-nome">Conversas</span><span id="tabWaBadge" class="badge hidden">0</span>
+      <button class="tabbtn painel-item" data-tab="metricas">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-8"/><path d="M2 20h20"/></svg>
+        <span class="painel-nome">Métricas</span>
       </button>
     </nav>
 
@@ -68,16 +76,18 @@
         <a class="btn small" href="/senha">Trocar senha</a>
         <a class="btn small" href="/entrar" id="btnSair">Sair</a>
       </div>
-      <div class="version-tag">Prospector <b>v37</b> · prompt + tom + 3 chips &middot; multi-chip</div>
+      <div class="version-tag">Prospector <b>v38</b></div>
     </div>
   </aside>
+  <div class="backdrop hidden" id="backdrop"></div>
 
-  <!-- ===== MAIN ===== -->
+  <!-- ===== CONTEÚDO ===== -->
   <section class="main">
 
     <div class="toolbar">
+      <button class="icon-btn only-mobile" id="btnMenu" aria-label="Abrir menu">☰</button>
       <div class="toolbar-title">
-        <h2 id="queryTitle">Início</h2>
+        <h2 id="queryTitle">Dashboard</h2>
         <span id="resultsCount" class="badge hidden">0</span>
       </div>
       <div class="toolbar-right">
@@ -89,90 +99,57 @@
           <button class="btn small" data-export="xlsx">Excel</button>
           <button class="btn small" data-export="json">JSON</button>
         </div>
-        <button class="btn small" id="btnSettings">Configurações IA</button>
+        <button class="btn small" id="btnSettings">Configurações</button>
       </div>
-    </div>
-
-    <div class="painel-estado">
-      <div class="painel-estado-itens">
-        <span class="pill" id="estadoChip">chip: verificando...</span>
-        <span class="pill" id="estadoDisparo">disparo: verificando...</span>
-      </div>
-      <span class="hint" id="estadoHoje"></span>
     </div>
 
     <div class="content">
 
-      <!-- ===== ABA: INÍCIO ===== -->
+      <!-- ===== DASHBOARD ===== -->
       <div class="tabsec" id="secHome">
-        <section class="panel" id="buscaCard">
+        <section class="panel" id="dashCard">
           <div class="card-head">
-            <h3 style="margin-bottom:0;">Nova busca</h3>
+            <h3 style="margin-bottom:0;">Visão geral</h3>
+            <button class="btn small" id="btnDashRefresh">Atualizar</button>
           </div>
-
-      <div>
-        <div class="side-section-title">Nova busca</div>
-
-        <div class="field">
-          <label for="niche">Nicho</label>
-          <select id="niche"></select>
-        </div>
-
-        <div class="field" style="margin-top:12px;">
-          <label for="customQuery">Ou termo livre</label>
-          <input id="customQuery" placeholder="Ex: floricultura, food truck..." autocomplete="off" name="busca-termo-x">
-        </div>
-
-        <div class="row-2">
-          <div class="field">
-            <label for="bairro">Bairro / cidade</label>
-            <input id="bairro" placeholder="Opcional" autocomplete="off" name="bairro-x">
-          </div>
-          <div class="field narrow">
-            <label for="maxResults">Máx/UF</label>
-            <input id="maxResults" type="number" min="1" max="60" value="10">
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <div class="state-head">
-          <label>Estados</label>
-          <span id="stateCount" class="hint">0 selecionados</span>
-        </div>
-        <div class="state-actions" style="margin-bottom:8px; display:flex; gap:6px;">
-          <button type="button" class="btn small" id="btnAllStates">Todos</button>
-          <button type="button" class="btn small" id="btnNoStates">Limpar</button>
-        </div>
-        <div id="stateBox" class="state-box"></div>
-      </div>
-
-      <div class="field">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--text);">
-          <input type="checkbox" id="onlyNew" checked style="width:auto;accent-color:var(--accent);">
-          Apenas leads novos (nunca repetir)
-        </label>
-        <p class="hint">Compara com a nuvem e oculta quem você já coletou.</p>
-      </div>
-
-      <button id="btnSearch" class="fab-btn">Buscar negócios</button>
-
-      <div class="chip on" id="igChipWrap" style="align-self:flex-start;">
-        <span class="dot"></span><span id="igChipText">Instagram: verificando...</span>
-      </div>
+          <div id="dashKpis" class="perf-grid"></div>
         </section>
 
+        <div class="dash-grid">
+          <section class="panel" id="dashActivityCard">
+            <div class="card-head">
+              <h3 style="margin-bottom:0;">Atividade recente</h3>
+            </div>
+            <div id="dashActivity" class="activity-list">
+              <p class="hint">Carregando...</p>
+            </div>
+          </section>
 
-        <section class="panel" id="emptyCard" style="text-align:center;padding:60px 44px;">
-          <div class="logo-symbol">
-            <svg viewBox="0 0 24 24" style="width:34px;height:34px;">
-              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-              <path d="M2 17l10 5 10-5"/>
-              <path d="M2 12l10 5 10-5"/>
-            </svg>
+          <section class="panel" id="dashActionsCard">
+            <div class="card-head">
+              <h3 style="margin-bottom:0;">Ações rápidas</h3>
+            </div>
+            <div class="quick-actions">
+              <button class="btn primary" data-goto="results">Nova busca</button>
+              <button class="btn" data-goto="leads">Ver leads</button>
+              <button class="btn" data-goto="crm">Abrir pipeline</button>
+              <button class="btn" data-goto="comercial">Fila de disparo</button>
+            </div>
+            <h4 style="margin-top:18px;">Última busca</h4>
+            <div id="lastSearchInfo" class="hint">Nenhuma busca nesta sessão ainda.</div>
+            <div class="btn-row" style="margin-top:12px;">
+              <button class="btn primary hidden" id="btnReloadLast">Recarregar resultados</button>
+            </div>
+            <h4 style="margin-top:18px;">Status do sistema</h4>
+            <div id="sysStatus" class="hint">Carregando...</div>
+            <div id="schedAlert" class="hint" style="margin-top:10px;"></div>
+          </section>
+        </div>
+
+        <section class="panel" id="emptyCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Como funciona</h3>
           </div>
-          <h3 style="font-size:20px;color:#fff;">Bem-vindo ao Prospector</h3>
-          <p style="margin-top:12px;color:var(--text2);">Encontre negócios no Google Maps, extraia contatos e receba<br>análise estratégica de IA para cada lead.</p>
           <div class="welcome-steps">
             <div class="welcome-step"><b>1. Busque</b><span>Escolha o nicho, marque os estados e defina o limite por UF.</span></div>
             <div class="welcome-step"><b>2. Extraia</b><span>Contatos do site, WhatsApp, e-mails e imagem do Maps.</span></div>
@@ -190,29 +167,205 @@
             <div class="btn-row" style="margin-top:22px;">
               <button class="btn danger" id="btnQuickSearch">Buscar agora</button>
             </div>
-            <p class="hint">Os atalhos preenchem o formulário da sidebar. Ajuste bairro e limite ali se quiser.</p>
+            <p class="hint">Os atalhos preenchem o formulário de busca. Ajuste bairro e limite ali se quiser.</p>
           </div>
 
-          <div class="panel" id="lastCard">
-            <h3>Última busca</h3>
-            <div id="lastSearchInfo" class="hint">Nenhuma busca nesta sessão ainda.</div>
-            <div class="btn-row" style="margin-top:16px;">
-              <button class="btn primary hidden" id="btnReloadLast">Recarregar resultados</button>
+          <div class="panel" id="lastCard" hidden>
+            <h3>Atalho</h3>
+            <p class="hint">Use o painel "Última busca" acima.</p>
+          </div>
+        </section>
+      </div><!-- /secHome -->
+
+      <!-- ===== PROSPECÇÃO ===== -->
+      <div class="tabsec hidden" id="secResults">
+
+        <section class="panel" id="searchCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Encontrar empresas</h3>
+            <span class="hint" id="searchHint">Google Maps + Instagram</span>
+          </div>
+          <div class="search-grid">
+            <div class="field">
+              <label for="fonte">Fonte de leads</label>
+              <select id="fonte">
+                <option value="maps">Google Maps</option>
+                <option value="instagram">Instagram</option>
+              </select>
             </div>
-            <h4 style="margin-top:22px;">Status do sistema</h4>
-            <div id="sysStatus" class="hint">Carregando...</div>
-            <div id="schedAlert" class="hint" style="margin-top:10px;"></div>
+            <div class="field">
+              <label for="niche">Nicho</label>
+              <select id="niche"></select>
+            </div>
+            <div class="field">
+              <label for="customQuery">Ou termo livre</label>
+              <input id="customQuery" placeholder="Ex: floricultura, food truck..." autocomplete="off" name="busca-termo-x">
+            </div>
+            <div class="field">
+              <label for="bairro">Bairro / cidade</label>
+              <input id="bairro" placeholder="Opcional" autocomplete="off" name="bairro-x">
+            </div>
+            <div class="field narrow">
+              <label for="maxResults">Máx/UF</label>
+              <input id="maxResults" type="number" min="1" max="60" value="10">
+            </div>
+          </div>
+          <div class="field" style="margin-top:14px;">
+            <div class="state-head">
+              <label>Estados</label>
+              <span id="stateCount" class="hint">0 selecionados</span>
+            </div>
+            <div class="state-actions" style="margin-bottom:8px; display:flex; gap:6px;">
+              <button type="button" class="btn small" id="btnAllStates">Todos</button>
+              <button type="button" class="btn small" id="btnNoStates">Limpar</button>
+            </div>
+            <div id="stateBox" class="state-box"></div>
+          </div>
+          <div class="check-row">
+            <label class="check"><input type="checkbox" id="useVar" checked> Incluir variações <span class="hint-inline">(traz muito mais leads)</span></label>
+            <label class="check"><input type="checkbox" id="onlyNew" checked> Apenas leads novos <span class="hint-inline">(nunca repetir)</span></label>
+          </div>
+          <div class="btn-row" style="margin-top:16px;">
+            <button id="btnSearch" class="btn danger btn-lg">Buscar negócios</button>
+          </div>
+          <div class="chip on" id="igChipWrap" style="align-self:flex-start;margin-top:12px;">
+            <span class="dot"></span><span id="igChipText">Instagram: verificando...</span>
           </div>
         </section>
 
-      </div><!-- /secHome -->
+        <section class="panel" id="resultsCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Empresas encontradas</h3>
+            <span class="hint" id="filterInfo">Nenhuma busca ainda</span>
+          </div>
+          <div class="filter-bar">
+            <input id="fBusca" placeholder="Buscar nesta lista..." autocomplete="off">
+            <select id="fSite">
+              <option value="all">Site: todos</option>
+              <option value="com">Com site</option>
+              <option value="sem">Sem site</option>
+            </select>
+            <select id="fNota">
+              <option value="0">Nota: qualquer</option>
+              <option value="4">4,0+</option>
+              <option value="4.5">4,5+</option>
+            </select>
+            <input id="fReviews" type="number" min="0" placeholder="Min. avaliações">
+            <select id="fSort">
+              <option value="default">Ordem: busca</option>
+              <option value="score">Score IA</option>
+              <option value="urgencia">Urgência</option>
+              <option value="nome">Nome A–Z</option>
+              <option value="cidade">Cidade A–Z</option>
+              <option value="nota">Melhor nota</option>
+              <option value="avaliacoes">Mais avaliações</option>
+            </select>
+            <select id="perPage">
+              <option value="25">25/pág</option>
+              <option value="50">50/pág</option>
+              <option value="100">100/pág</option>
+            </select>
+          </div>
+          <div class="bulk-bar hidden" id="bulkBar">
+            <b id="bulkCount">0 selecionadas</b>
+            <button class="btn small primary" id="btnBulkAnalyze">Analisar (IA)</button>
+            <button class="btn small primary" id="btnBulkEnqueue">Enfileirar</button>
+            <button class="btn small" id="btnBulkExport">Exportar CSV</button>
+            <button class="btn small" id="btnBulkClear">Limpar</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="resultsTable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" id="selAll" aria-label="Selecionar todas"></th>
+                  <th data-sort="nome" class="sortable">Empresa</th>
+                  <th data-sort="nota" class="sortable">Nota</th>
+                  <th data-sort="avaliacoes" class="sortable">Avaliações</th>
+                  <th data-sort="cidade" class="sortable">Cidade/UF</th>
+                  <th>Telefone</th>
+                  <th>Site</th>
+                  <th>Status</th>
+                  <th data-sort="score" class="sortable">Score</th>
+                  <th class="col-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody"></tbody>
+            </table>
+          </div>
+          <div class="pager" id="resultsPager"></div>
+        </section>
 
-      <!-- ===== ABA: CRM ===== -->
+        <section class="panel hidden" id="analyzeCard">
+          <h3 id="bizTitle" style="font-size:16px;color:var(--text);"></h3>
+          <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
+          <div class="btn-row">
+            <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
+            <button id="btnSequencia" class="btn primary">Sequência SDR (skill)</button>
+            <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
+            <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
+            <button id="btnReference" class="btn">Buscar referência</button>
+            <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
+          </div>
+          <div class="subtabs hidden" id="analyzeTabs">
+            <button class="subtab" data-out="strategyOutput">Estratégia</button>
+            <button class="subtab" data-out="sdrOutput">Sequência SDR</button>
+            <button class="subtab" data-out="pitchOutput">Mensagem</button>
+            <button class="subtab" data-out="proposalOutput">Proposta</button>
+            <button class="subtab" data-out="refOutput">Referência</button>
+            <button class="subtab" data-out="igOutput">Instagram</button>
+          </div>
+          <div id="strategyOutput" class="aout hidden"></div>
+          <div id="pitchOutput" class="aout hidden"></div>
+          <div id="sdrOutput" class="aout hidden"></div>
+          <div id="proposalOutput" class="aout hidden"></div>
+          <div id="refOutput" class="aout hidden"></div>
+          <div id="igOutput" class="aout hidden"></div>
+        </section>
+
+      </div><!-- /secResults -->
+
+      <!-- ===== LEADS (BASE NUVEM) ===== -->
+      <div class="tabsec hidden" id="secLeads">
+        <section class="panel" id="leadsCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Leads coletados</h3>
+            <span class="hint" id="leadsInfo"></span>
+          </div>
+          <div class="filter-bar">
+            <input id="leadSearch" placeholder="Buscar nome, cidade, categoria..." autocomplete="off">
+            <select id="leadUf"><option value="">UF: todas</option></select>
+            <select id="leadScore">
+              <option value="0">Score: qualquer</option>
+              <option value="45">45+</option>
+              <option value="70">70+</option>
+            </select>
+            <button class="btn small primary" id="btnLeadsRefresh">Atualizar</button>
+          </div>
+          <div class="table-wrap">
+            <table class="table" id="leadsTable">
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Cidade/UF</th>
+                  <th>Telefone</th>
+                  <th>Score</th>
+                  <th>Status</th>
+                  <th class="col-actions">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="leadsBody"></tbody>
+            </table>
+          </div>
+          <div class="pager" id="leadsPager"></div>
+        </section>
+      </div><!-- /secLeads -->
+
+      <!-- ===== PIPELINE (CRM) ===== -->
       <div class="tabsec hidden" id="secCrm">
 
         <section class="panel" id="crmKpiCard">
           <div class="card-head">
-            <h3 style="margin-bottom:0;">CRM — todos os leads</h3>
+            <h3 style="margin-bottom:0;">Pipeline comercial</h3>
             <div class="btn-row" style="margin:0;">
               <button class="btn small primary" id="btnCrmRefresh">Atualizar</button>
             </div>
@@ -270,96 +423,7 @@
 
       </div><!-- /secCrm -->
 
-      <!-- ===== ABA: RESULTADOS ===== -->
-      <!-- ===== ABA: CONEXAO DO NUMERO ===== -->
-      <div class="tabsec hidden" id="secConexao">
-
-        <section class="panel">
-          <div class="card-head">
-            <h3 style="margin-bottom:0;">Seu n&uacute;mero</h3>
-            <span id="conexaoEstado" class="tag">verificando...</span>
-          </div>
-          <p class="hint" style="margin-bottom:14px;">
-            Cada afiliado conecta o pr&oacute;prio chip. O seu n&uacute;mero nunca
-            encosta no de outra pessoa.
-          </p>
-          <div id="conexaoLista" class="hint" style="margin-bottom:12px;"></div>
-          <div class="btn-row">
-            <button id="btnConexaoConectar" class="btn primary">Conectar WhatsApp</button>
-            <button id="btnConexaoAtualizar" class="btn">Atualizar estado</button>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="card-head">
-            <h3 style="margin-bottom:0;">Antes de conectar</h3>
-          </div>
-          <p class="hint">Use um chip secund&aacute;rio, nunca o seu n&uacute;mero pessoal.</p>
-          <p class="hint">Comece com 20 a 30 envios por dia na primeira semana.</p>
-          <p class="hint">Toda mensagem sai com SAIR no fim. O sistema acrescenta sozinho.</p>
-          <p class="hint">Disparo em massa no WhatsApp comum pode derrubar o n&uacute;mero.</p>
-        </section>
-
-      </div><!-- /secConexao -->
-
-      <div class="tabsec hidden" id="secResults">
-
-        <section id="resultsCard">
-          <div class="filter-bar">
-            <select id="fSite">
-              <option value="all">Site: todos</option>
-              <option value="com">Com site</option>
-              <option value="sem">Sem site</option>
-            </select>
-            <select id="fNota">
-              <option value="0">Nota: qualquer</option>
-              <option value="4">4,0+</option>
-              <option value="4.5">4,5+</option>
-            </select>
-            <input id="fReviews" type="number" min="0" placeholder="Min. avaliações">
-            <select id="fSort">
-              <option value="default">Ordem: busca</option>
-              <option value="score">Score IA</option>
-              <option value="urgencia">Urgência</option>
-              <option value="nota">Melhor nota</option>
-              <option value="avaliacoes">Mais avaliações</option>
-            </select>
-            <button id="btnAnalyzeAll" class="btn primary">Analisar todos (IA)</button>
-            <span id="filterInfo" class="hint" style="margin:0;"></span>
-          </div>
-          <div class="biz-list" id="resultsList"></div>
-        </section>
-
-        <section class="panel hidden" id="analyzeCard">
-          <h3 id="bizTitle" style="font-size:16px;color:#fff;"></h3>
-          <div id="bizSub" class="bio" style="margin-top:-8px;margin-bottom:14px;"></div>
-          <div class="btn-row">
-          <button id="btnStrategy" class="btn danger">Análise Estratégica (IA)</button>
-          <button id="btnSequencia" class="btn primary">Sequência SDR (skill)</button>
-          <button id="btnPitch" class="btn primary">Gerar mensagem de abordagem</button>
-            <button id="btnProposal" class="btn primary">Proposta comercial (PDF)</button>
-            <button id="btnReference" class="btn">Buscar referência</button>
-            <button id="btnAnalyzeIg" class="btn">Instagram + IA</button>
-          </div>
-          <div class="subtabs hidden" id="analyzeTabs">
-            <button class="subtab" data-out="strategyOutput">Estratégia</button>
-            <button class="subtab" data-out="sdrOutput">Sequência SDR</button>
-            <button class="subtab" data-out="pitchOutput">Mensagem</button>
-            <button class="subtab" data-out="proposalOutput">Proposta</button>
-            <button class="subtab" data-out="refOutput">Referência</button>
-            <button class="subtab" data-out="igOutput">Instagram</button>
-          </div>
-          <div id="strategyOutput" class="aout hidden"></div>
-          <div id="pitchOutput" class="aout hidden"></div>
-          <div id="sdrOutput" class="aout hidden"></div>
-          <div id="proposalOutput" class="aout hidden"></div>
-          <div id="refOutput" class="aout hidden"></div>
-          <div id="igOutput" class="aout hidden"></div>
-        </section>
-
-      </div><!-- /secResults -->
-
-      <!-- ===== ABA: COMERCIAL ===== -->
+      <!-- ===== DISPARO (COMERCIAL) ===== -->
       <div class="tabsec hidden" id="secComercial">
 
         <section class="panel" id="queueCard">
@@ -382,7 +446,7 @@
             derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
           </p>
           <div id="instList" class="hint" style="margin-bottom:12px;"></div>
-        <div class="disparo-grid">
+          <div class="disparo-grid">
             <div class="field">
               <label for="dispDelayMin">Pausa mín (seg)</label>
               <input id="dispDelayMin" type="number" min="5" value="45">
@@ -403,26 +467,30 @@
               </div>
             </div>
           </div>
-        <div class="btn-row">
-          <button id="btnEnqueue" class="btn primary">Enfileirar resultados</button>
-          <button id="btnMigrar" class="btn primary">Puxar todos os minerados</button>
-          <button id="btnConnectWa" class="btn primary">Conectar WhatsApp</button>
-          <button id="btnStartDisp" class="btn danger">Iniciar disparo</button>
-          <button id="btnPauseDisp" class="btn">Pausar</button>
-          <button id="btnTestDisp" class="btn">Testar no meu número</button>
-          <button id="btnClearDisp" class="btn">Limpar finalizados</button>
-        </div>
-        <div class="btn-row" style="align-items:center;">
-          <span class="hint" style="margin:0;">Modo:</span>
-          <div class="seg" id="modoSeg">
-            <button class="seg-btn" data-modo="auto">Automático</button>
-            <button class="seg-btn" data-modo="manual">Manual</button>
+          <div class="btn-row">
+            <button id="btnEnqueue" class="btn primary">Enfileirar resultados</button>
+            <button id="btnMigrar" class="btn primary">Puxar todos os minerados</button>
+            <button id="btnConnectWa" class="btn primary">Conectar WhatsApp</button>
+            <button id="btnStartDisp" class="btn danger">Iniciar disparo</button>
+            <button id="btnPauseDisp" class="btn">Pausar</button>
+            <button id="btnTestDisp" class="btn">Testar no meu número</button>
+            <button id="btnClearDisp" class="btn">Limpar finalizados</button>
           </div>
-          <span class="hint" id="modoHint" style="margin:0;"></span>
-        </div>
+          <div class="btn-row" style="align-items:center;">
+            <span class="hint" style="margin:0;">Modo:</span>
+            <div class="seg" id="modoSeg">
+              <button class="seg-btn" data-modo="auto">Automático</button>
+              <button class="seg-btn" data-modo="manual">Manual</button>
+            </div>
+            <span class="hint" id="modoHint" style="margin:0;"></span>
+          </div>
           <div id="disparoTable" class="hint"></div>
         </section>
 
+      </div><!-- /secComercial -->
+
+      <!-- ===== MÉTRICAS ===== -->
+      <div class="tabsec hidden" id="secMetricas">
         <section class="panel" id="perfCard">
           <div class="card-head">
             <h3 style="margin-bottom:0;">Performance do funil</h3>
@@ -431,9 +499,9 @@
           <h4 style="margin-top:22px;">Top 3 leads por score</h4>
           <div id="perfTop" class="hint"></div>
         </section>
+      </div><!-- /secMetricas -->
 
-      </div><!-- /secComercial -->
-
+      <!-- ===== CONVERSAS ===== -->
       <div class="tabsec hidden" id="secConversas">
 
         <section class="panel" id="waCard">
@@ -466,6 +534,37 @@
 
       </div><!-- /secConversas -->
 
+      <!-- ===== CONEXÃO DO NÚMERO ===== -->
+      <div class="tabsec hidden" id="secConexao">
+
+        <section class="panel">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Seu número</h3>
+            <span id="conexaoEstado" class="tag">verificando...</span>
+          </div>
+          <p class="hint" style="margin-bottom:14px;">
+            Cada afiliado conecta o próprio chip. O seu número nunca
+            encosta no de outra pessoa.
+          </p>
+          <div id="conexaoLista" class="hint" style="margin-bottom:12px;"></div>
+          <div class="btn-row">
+            <button id="btnConexaoConectar" class="btn primary">Conectar WhatsApp</button>
+            <button id="btnConexaoAtualizar" class="btn">Atualizar estado</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Antes de conectar</h3>
+          </div>
+          <p class="hint">Use um chip secundário, nunca o seu número pessoal.</p>
+          <p class="hint">Comece com 20 a 30 envios por dia na primeira semana.</p>
+          <p class="hint">Toda mensagem sai com SAIR no fim. O sistema acrescenta sozinho.</p>
+          <p class="hint">Disparo em massa no WhatsApp comum pode derrubar o número.</p>
+        </section>
+
+      </div><!-- /secConexao -->
+
     </div>
   </section>
 </div>
@@ -474,7 +573,7 @@
 <div id="modal" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-head">
-      <h2>Configurações da IA</h2>
+      <h2>Configurações</h2>
       <button id="btnCloseModal" class="modal-close">&times;</button>
     </div>
 
@@ -574,7 +673,7 @@
     <div class="field">
       <label for="sbSecret">Service role key (secret)</label>
       <input id="sbSecret" type="password" placeholder="sb_secret_... (opcional)">
-      <p class="hint">Conecta leads, análises e disparo à nuvem. Rode antes o supabase_prospector.sql no SQL Editor.</p>
+      <p class="hint">Conecta leads, análises e disparo à nuvem. Rode antes o supabase_schema.sql no SQL Editor.</p>
     </div>
 
     <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Busca agendada automática</h4>
@@ -630,14 +729,14 @@
   </div>
 </div>
 
-<!-- Modal: Detalhes -->
-<div id="detailModal" class="modal-overlay hidden">
-  <div class="modal-box wide">
-    <div class="modal-head">
-      <h2>Detalhes do negócio</h2>
+<!-- Drawer: Detalhes da empresa -->
+<div id="detailModal" class="modal-overlay drawer-overlay hidden">
+  <div class="drawer" role="dialog" aria-modal="true" aria-label="Detalhes da empresa">
+    <div class="drawer-head">
+      <h2>Detalhes da empresa</h2>
       <button id="btnCloseDetail" class="modal-close">&times;</button>
     </div>
-    <div id="detailBody"></div>
+    <div id="detailBody" class="drawer-body"></div>
   </div>
 </div>
 
@@ -649,6 +748,8 @@
     <p id="loaderTimer" class="loader-timer"></p>
   </div>
 </div>
+
+<div id="toasts" aria-live="polite"></div>
 
 <script src="/static/app.js"></script>
 <script src="/static/painel.js"></script>

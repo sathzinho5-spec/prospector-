@@ -4,7 +4,29 @@ let lastBusiness = null;
 let lastHandle = null;
 let bizCache = [];
 let loaderInterval = null;
-let filters = { site: "all", nota: 0, reviews: 0, sort: "default" };
+let filters = { site: "all", nota: 0, reviews: 0, sort: "default", texto: "" };
+let tableState = { page: 1, perPage: 25, sortKey: "", sortDir: 1 };
+let selectedKeys = {};
+let leadsCache = [];
+let leadsState = { page: 1, perPage: 25, q: "", uf: "" };
+
+function bizKey(b) {
+  return String(b.nome || "") + "|" + String(b.telefone || "") + "|" + String(b.endereco || "");
+}
+
+function toast(msg, type) {
+  const box = $("toasts");
+  if (!box) return;
+  const el = document.createElement("div");
+  el.className = "toast " + (type || "info");
+  el.textContent = msg;
+  box.appendChild(el);
+  setTimeout(function () { el.classList.add("show"); }, 30);
+  setTimeout(function () {
+    el.classList.remove("show");
+    setTimeout(function () { el.remove(); }, 300);
+  }, 3200);
+}
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -64,6 +86,7 @@ async function init() {
   renderQuickNiches();
   renderQuickStates();
   loadLastSearch();
+  loadDashboard();
 }
 
 // ===== URGÊNCIA =====
@@ -307,6 +330,8 @@ async function loadScheduleResults() {
     $("queryTitle").textContent = "Leads novos (agendada)";
     $("exportGroup").classList.remove("hidden");
     switchTab("results");
+    selectedKeys = {};
+    tableState.page = 1;
     renderResults(d.novos.length ? d.novos : d.total ? d.novos : []);
     showStatus("searchStatus", d.novos.length + " leads novos encontrados pela busca agendada!", "ok");
   } catch (e) {
@@ -395,16 +420,21 @@ async function loadSettings() {
   }
 }
 
+function on(id, ev, fn) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener(ev, fn);
+}
+
 function bindEvents() {
-  $("btnSearch").addEventListener("click", doSearch);
-  $("btnReference").addEventListener("click", doReference);
-  $("btnAnalyzeIg").addEventListener("click", function () { doInstagram(""); });
-  $("btnStrategy").addEventListener("click", doStrategy);
-  $("btnSettings").addEventListener("click", function () { $("modal").classList.remove("hidden"); });
-  $("btnCloseModal").addEventListener("click", function () { $("modal").classList.add("hidden"); });
-  $("btnCloseDetail").addEventListener("click", function () { $("detailModal").classList.add("hidden"); });
-  $("btnCloseMsg").addEventListener("click", function () { $("msgModal").classList.add("hidden"); });
-  $("btnSaveSettings").addEventListener("click", saveSettings);
+  on("btnSearch", "click", doSearch);
+  on("btnReference", "click", doReference);
+  on("btnAnalyzeIg", "click", function () { doInstagram(""); });
+  on("btnStrategy", "click", doStrategy);
+  on("btnSettings", "click", function () { $("modal").classList.remove("hidden"); });
+  on("btnCloseModal", "click", function () { $("modal").classList.add("hidden"); });
+  on("btnCloseDetail", "click", function () { $("detailModal").classList.add("hidden"); });
+  on("btnCloseMsg", "click", function () { $("msgModal").classList.add("hidden"); });
+  on("btnSaveSettings", "click", saveSettings);
   $("btnAllStates").addEventListener("click", function () {
     document.querySelectorAll("#stateBox input").forEach(function (cb) {
       cb.checked = true;
@@ -426,37 +456,38 @@ function bindEvents() {
   document.querySelectorAll("#analyzeTabs .subtab").forEach(function (st) {
     st.addEventListener("click", function () { showOut(st.dataset.out); });
   });
-  $("btnQuickSearch").addEventListener("click", doSearch);
-  $("btnReloadLast").addEventListener("click", reloadLast);
-  $("btnCrmRefresh").addEventListener("click", loadCrm);
+  on("btnQuickSearch", "click", doSearch);
+  on("btnReloadLast", "click", reloadLast);
+  on("btnCrmRefresh", "click", loadCrm);
   ["crmBusca", "crmUf", "crmStatus", "crmScore"].forEach(function (id) {
     const el = $(id);
     if (el) el.addEventListener(el.tagName === "INPUT" ? "input" : "change", renderCrmBoard);
   });
-  $("btnPitch").addEventListener("click", doPitch);
-  $("btnSequencia").addEventListener("click", doSequencia);
-  $("btnProposal").addEventListener("click", doProposal);
-  $("btnEnqueue").addEventListener("click", enqueueAll);
-  $("btnMigrar").addEventListener("click", migrarMinerados);
-  $("btnConnectWa").addEventListener("click", connectWhatsApp);
-  $("btnCloseQr").addEventListener("click", function () {
+  on("btnPitch", "click", doPitch);
+  on("btnSequencia", "click", doSequencia);
+  on("btnProposal", "click", doProposal);
+  on("btnEnqueue", "click", enqueueAll);
+  on("btnMigrar", "click", migrarMinerados);
+  on("btnConnectWa", "click", connectWhatsApp);
+  on("btnCloseQr", "click", function () {
     clearInterval(qrPoll);
     $("qrModal").classList.add("hidden");
   });
-  $("btnStartDisp").addEventListener("click", startDisp);
-  $("btnPauseDisp").addEventListener("click", pauseDisp);
-  $("btnTestDisp").addEventListener("click", testDisp);
-  $("btnClearDisp").addEventListener("click", clearDisp);
-  $("btnWaRefresh").addEventListener("click", loadWaChats);
-  $("btnWaSend").addEventListener("click", sendWaReply);
-  $("waSearch").addEventListener("input", renderWaChats);
+  on("btnStartDisp", "click", startDisp);
+  on("btnPauseDisp", "click", pauseDisp);
+  on("btnTestDisp", "click", testDisp);
+  on("btnClearDisp", "click", clearDisp);
+  on("btnWaRefresh", "click", loadWaChats);
+  on("btnWaSend", "click", sendWaReply);
+  on("waSearch", "input", renderWaChats);
+  on("btnAnalyzeAll", "click", analyzeAll);
+  on("btnIgSites", "click", extractIgFromSites);
   $("waInput").addEventListener("keydown", function (ev) {
     if (ev.key === "Enter") sendWaReply();
   });
   document.querySelectorAll("#modoSeg .seg-btn").forEach(function (b) {
     b.addEventListener("click", function () { setModo(b.dataset.modo); });
   });
-  $("btnAnalyzeAll").addEventListener("click", analyzeAll);
   $("provider").addEventListener("change", function () {
     const p = PROVIDERS[this.value];
     if (p) {
@@ -464,10 +495,28 @@ function bindEvents() {
       $("model").value = p.model;
     }
   });
-  $("fSite").addEventListener("change", function () { filters.site = this.value; renderResults(bizCache); });
-  $("fNota").addEventListener("change", function () { filters.nota = parseFloat(this.value) || 0; renderResults(bizCache); });
-  $("fReviews").addEventListener("input", function () { filters.reviews = parseInt(this.value, 10) || 0; renderResults(bizCache); });
-  $("fSort").addEventListener("change", function () { filters.sort = this.value; renderResults(bizCache); });
+  on("fSite", "change", function () { filters.site = this.value; renderResults(bizCache); });
+  on("fNota", "change", function () { filters.nota = parseFloat(this.value) || 0; renderResults(bizCache); });
+  on("fReviews", "input", function () { filters.reviews = parseInt(this.value, 10) || 0; renderResults(bizCache); });
+  on("fSort", "change", function () { filters.sort = this.value; renderResults(bizCache); });
+  on("fBusca", "input", function () { filters.texto = this.value; renderResults(bizCache); });
+  on("perPage", "change", function () { tableState.perPage = parseInt(this.value, 10) || 25; tableState.page = 1; renderResults(bizCache); });
+  on("selAll", "change", function () { toggleSelectAll(this.checked); });
+  on("btnBulkAnalyze", "click", bulkAnalyze);
+  on("btnBulkEnqueue", "click", bulkEnqueue);
+  on("btnBulkExport", "click", bulkExportCsv);
+  on("btnBulkClear", "click", clearSelection);
+  on("btnLeadsRefresh", "click", function () { loadLeadsView(1); });
+  on("leadSearch", "input", function () { leadsState.q = this.value; loadLeadsView(1); });
+  on("leadUf", "change", function () { leadsState.uf = this.value; loadLeadsView(1); });
+  on("btnMenu", "click", function () {
+    $("sidebar").classList.toggle("open");
+    $("backdrop").classList.toggle("hidden");
+  });
+  on("backdrop", "click", function () {
+    $("sidebar").classList.remove("open");
+    $("backdrop").classList.add("hidden");
+  });
   document.querySelectorAll("[data-export]").forEach(function (b) {
     b.addEventListener("click", function () { exportData(b.dataset.export); });
   });
@@ -476,14 +525,28 @@ function bindEvents() {
   });
 }
 
+var TAB_TITLES = {
+  home: "Dashboard",
+  results: "Prospecção",
+  leads: "Leads",
+  crm: "Pipeline",
+  comercial: "Disparo",
+  conversas: "Conversas",
+  conexao: "Conexão do número",
+  metricas: "Métricas"
+};
+
 window.switchTab = function (name) {
-  ["home", "results", "crm", "comercial", "conversas"].forEach(function (t) {
+  ["home", "results", "leads", "crm", "comercial", "conversas", "conexao", "metricas"].forEach(function (t) {
     const sec = $("sec" + t.charAt(0).toUpperCase() + t.slice(1));
     if (sec) sec.classList.toggle("hidden", t !== name);
   });
   document.querySelectorAll(".tabbtn").forEach(function (tb) {
     tb.classList.toggle("active", tb.dataset.tab === name);
   });
+  if (TAB_TITLES[name]) $("queryTitle").textContent = TAB_TITLES[name];
+  $("sidebar").classList.remove("open");
+  $("backdrop").classList.add("hidden");
   if (name === "home") {
     $("emptyCard").classList.remove("hidden");
     $("homeExtra").classList.remove("hidden");
@@ -501,6 +564,15 @@ window.switchTab = function (name) {
   }
   if (name === "conversas") {
     loadWaChats();
+  }
+  if (name === "leads") {
+    loadLeadsView(1);
+  }
+  if (name === "metricas") {
+    renderPerformance();
+  }
+  if (name === "home") {
+    loadDashboard();
   }
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
@@ -534,6 +606,8 @@ async function reloadLast() {
     $("queryTitle").textContent = d.last_search || "Resultados";
     $("exportGroup").classList.remove("hidden");
     switchTab("results");
+    selectedKeys = {};
+    tableState.page = 1;
     renderResults(d.businesses);
   } catch (e) {
     hideLoader();
@@ -542,6 +616,11 @@ async function reloadLast() {
 }
 
 async function doSearch() {
+  const fonte = ($("fonte") && $("fonte").value) || "maps";
+  if (fonte === "instagram") {
+    return doSearchInstagram();
+  }
+
   const locations = selectedStates();
   const bairro = $("bairro").value.trim();
 
@@ -550,12 +629,65 @@ async function doSearch() {
     finalLocations = locations.map(function (nome) { return bairro + ", " + nome; });
   }
 
-  const payload = {
+  doSearchMaps({
     query: $("customQuery").value.trim() || $("niche").value,
     locations: finalLocations,
     max_results: parseInt($("maxResults").value, 10) || 10,
+    apenas_novos: $("onlyNew").checked,
+    usar_variacoes: $("useVar").checked
+  }, finalLocations);
+}
+
+async function doSearchInstagram() {
+  const nicho = $("customQuery").value.trim() || $("niche").value;
+  const locations = selectedStates();
+  const bairro = $("bairro").value.trim();
+  const local = bairro || locations.join(" ") || "";
+  if (!nicho) return;
+
+  const payload = {
+    nicho: nicho,
+    local: local,
+    max_results: parseInt($("maxResults").value, 10) || 10,
+    enriquecer: true,
     apenas_novos: $("onlyNew").checked
   };
+
+  showLoader("Descobrindo perfis no Instagram...");
+  clearStatus("searchStatus");
+  try {
+    const r = await fetch("/api/instagram/prospectar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "Erro na busca");
+    hideLoader();
+
+    let msg = data.total + " perfis encontrados no Instagram.";
+    if (!data.enriquecidos) {
+      msg += " Sem sessionid: só @ e link. Cole o sessionid nas Configurações para trazer seguidores e bio.";
+    }
+    if (data.repetidos_ocultos > 0) {
+      msg += " " + data.repetidos_ocultos + " repetidos foram ocultados.";
+    }
+    showStatus("searchStatus", msg, "ok");
+
+    $("emptyCard").classList.add("hidden");
+    $("homeExtra").classList.add("hidden");
+    document.querySelector(".content").classList.remove("empty");
+    $("queryTitle").textContent = "Instagram: " + data.query;
+    $("exportGroup").classList.remove("hidden");
+    switchTab("results");
+    renderResults(data.businesses);
+  } catch (e) {
+    hideLoader();
+    showStatus("searchStatus", "Falha: " + e.message, "error");
+  }
+}
+
+async function doSearchMaps(payload, finalLocations) {
   if (!payload.query) return;
   if (!finalLocations.length) {
     showStatus("searchStatus", "Selecione pelo menos um estado.", "error");
@@ -564,6 +696,8 @@ async function doSearch() {
 
   showLoader("Buscando em " + finalLocations.length + " estado(s)...");
   clearStatus("searchStatus");
+  switchTab("results");
+  renderSkeleton(6);
   try {
     const r = await fetch("/api/search", {
       method: "POST",
@@ -575,6 +709,10 @@ async function doSearch() {
     hideLoader();
 
     let msg = data.total + " negócios novos encontrados.";
+    if (data.termos_usados && data.termos_usados.length > 1) {
+      msg += " Termos: " + data.termos_usados.slice(0, 8).join(", ") +
+        (data.termos_usados.length > 8 ? " (+" + (data.termos_usados.length - 8) + ")" : "") + ".";
+    }
     if (data.por_local) {
       msg += " " + Object.keys(data.por_local).map(function (k) { return k.split(",")[0] + ": " + data.por_local[k]; }).join(" | ");
     }
@@ -589,9 +727,12 @@ async function doSearch() {
     $("queryTitle").textContent = data.query.charAt(0).toUpperCase() + data.query.slice(1);
     $("exportGroup").classList.remove("hidden");
     switchTab("results");
+    selectedKeys = {};
+    tableState.page = 1;
     renderResults(data.businesses);
   } catch (e) {
     hideLoader();
+    renderTableError(e.message);
     showStatus("searchStatus", "Falha: " + e.message, "error");
   }
 }
@@ -612,6 +753,19 @@ function statusPill(b) {
 
 function filteredBusinesses() {
   let arr = bizCache.slice();
+  if (filters.texto) {
+    const q = filters.texto.trim().toLowerCase();
+    const qDigits = q.replace(/\D/g, "");
+    if (q) {
+      arr = arr.filter(function (b) {
+        if (String(b.nome || "").toLowerCase().indexOf(q) !== -1) return true;
+        if (String(b.cidade || "").toLowerCase().indexOf(q) !== -1) return true;
+        if (String(b.categoria || "").toLowerCase().indexOf(q) !== -1) return true;
+        if (qDigits && String(b.telefone || "").indexOf(qDigits) !== -1) return true;
+        return false;
+      });
+    }
+  }
   if (filters.site === "com") arr = arr.filter(function (b) { return b.website; });
   if (filters.site === "sem") arr = arr.filter(function (b) { return !b.website; });
   if (filters.nota > 0) {
@@ -642,6 +796,17 @@ function filteredBusinesses() {
       return parseInt(String(b.avaliacoes || "0").replace(/[.,]/g, ""), 10) - parseInt(String(a.avaliacoes || "0").replace(/[.,]/g, ""), 10);
     });
   }
+  if (tableState.sortKey === "nome") {
+    arr.sort(function (a, b) {
+      const r = String(a.nome || "").localeCompare(String(b.nome || ""));
+      return r * tableState.sortDir;
+    });
+  } else if (tableState.sortKey === "cidade") {
+    arr.sort(function (a, b) {
+      const r = String(a.cidade || "").localeCompare(String(b.cidade || ""));
+      return r * tableState.sortDir;
+    });
+  }
   return arr;
 }
 
@@ -652,6 +817,84 @@ function scorePill(b) {
   return "<span class='pill " + cls + "'>IA " + s + "%</span>";
 }
 
+function selectedList() {
+  return bizCache.filter(function (b) { return selectedKeys[bizKey(b)]; });
+}
+
+function updateBulkBar() {
+  const n = Object.keys(selectedKeys).length;
+  const bar = $("bulkBar");
+  if (!bar) return;
+  bar.classList.toggle("hidden", !n);
+  $("bulkCount").textContent = n + " selecionada(s)";
+  const sel = $("selAll");
+  if (sel) {
+    const pageKeys = currentPageRows().map(bizKey);
+    const all = pageKeys.length > 0 && pageKeys.every(function (k) { return selectedKeys[k]; });
+    sel.checked = all;
+  }
+}
+
+function currentPageRows() {
+  const arr = filteredBusinesses();
+  const start = (tableState.page - 1) * tableState.perPage;
+  return arr.slice(start, start + tableState.perPage);
+}
+
+function toggleSelectAll(checked) {
+  currentPageRows().forEach(function (b) {
+    if (checked) selectedKeys[bizKey(b)] = true;
+    else delete selectedKeys[bizKey(b)];
+  });
+  paintSelection();
+}
+
+function paintSelection() {
+  document.querySelectorAll("#resultsBody tr[data-key]").forEach(function (tr) {
+    tr.classList.toggle("selected", !!selectedKeys[tr.dataset.key]);
+    const cb = tr.querySelector("input.row-check");
+    if (cb) cb.checked = !!selectedKeys[tr.dataset.key];
+  });
+  updateBulkBar();
+}
+
+function clearSelection() {
+  selectedKeys = {};
+  paintSelection();
+}
+
+function sortArrow(key) {
+  if (tableState.sortKey !== key) return "";
+  return tableState.sortDir === 1 ? " ▲" : " ▼";
+}
+
+window.sortBy = function (key) {
+  if (tableState.sortKey === key) {
+    tableState.sortDir = tableState.sortDir === 1 ? -1 : 1;
+  } else {
+    tableState.sortKey = key;
+    tableState.sortDir = (key === "nome" || key === "cidade") ? 1 : -1;
+  }
+  tableState.page = 1;
+  renderResults(bizCache);
+};
+
+window.gotoPage = function (p) {
+  tableState.page = p;
+  renderResults(bizCache);
+};
+
+function renderPager(total, page, perPage, fnName) {
+  const pages = Math.max(1, Math.ceil(total / perPage));
+  if (page > pages) page = pages;
+  let html = "<span class='hint'>Página " + page + " de " + pages + " · " + total + " itens</span>";
+  html += "<div class='btn-row' style='margin:0;'>";
+  html += "<button class='btn small' " + (page <= 1 ? "disabled" : "") + " onclick='" + fnName + "(" + (page - 1) + ")'>Anterior</button>";
+  html += "<button class='btn small' " + (page >= pages ? "disabled" : "") + " onclick='" + fnName + "(" + (page + 1) + ")'>Próxima</button>";
+  html += "</div>";
+  return { html: html, page: page, pages: pages };
+}
+
 function renderResults(businesses) {
   bizCache = businesses;
   const tb = $("tabResultsBadge");
@@ -659,49 +902,357 @@ function renderResults(businesses) {
     tb.textContent = businesses.length;
     tb.classList.toggle("hidden", !businesses.length);
   }
+  const rc = $("resultsCount");
+  if (rc) {
+    rc.textContent = businesses.length;
+    rc.classList.toggle("hidden", !businesses.length);
+  }
 
   const arr = filteredBusinesses();
   $("filterInfo").textContent = arr.length + " de " + bizCache.length + " exibidos";
 
-  const list = $("resultsList");
-  list.innerHTML = arr
-    .map(function (b) {
-      const i = bizCache.indexOf(b);
-      const subParts = [b.categoria, [b.cidade, b.estado].filter(Boolean).join(" - ")]
-        .filter(Boolean).join(" · ");
-      let meta = "";
-      meta += urgencyPill(b);
-      meta += scorePill(b);
-      if (isContacted(b.nome)) meta += "<span class='pill done-pill'>Contatado</span>";
-      meta += statusPill(b);
-      if (b.telefone) meta += "<span class='mini-tag'>" + esc(b.telefone) + "</span>";
-      if (b.website) meta += "<span class='mini-tag'>site</span>";
-      if (b.preco) meta += "<span class='mini-tag'>" + esc(b.preco) + "</span>";
+  const perPage = tableState.perPage;
+  const pages = Math.max(1, Math.ceil(arr.length / perPage));
+  if (tableState.page > pages) tableState.page = tableState.pages = pages;
+  const rows = arr.slice((tableState.page - 1) * perPage, tableState.page * perPage);
 
+  const body = $("resultsBody");
+  if (!rows.length) {
+    body.innerHTML = "<tr><td colspan='10'><div class='empty-box'>" +
+      "<b>Nenhum resultado</b><span>Ajuste os filtros ou rode uma nova busca.</span></div></td></tr>";
+  } else {
+    body.innerHTML = rows.map(function (b) {
+      const i = bizCache.indexOf(b);
+      const key = bizKey(b);
+      const cidade = [b.cidade, b.estado].filter(Boolean).join(" - ") || "—";
       return (
-        "<div class='biz-row' id='bizRow" + i + "' style='animation-delay:" + (i * 45) + "ms' onclick='showDetails(" + i + ")'>" +
-        avatarHtml(b) +
-        "<div class='biz-main'>" +
-        "<div class='biz-name'><span style='overflow:hidden;text-overflow:ellipsis;'>" + esc(b.nome) + "</span>" +
-        (b.nota ? "<span class='star-chip'>&#9733; " + esc(b.nota) + "</span>" : "") +
-        "</div>" +
-        "<div class='biz-sub2'>" + esc(subParts) +
-        (b.avaliacoes ? " · " + esc(b.avaliacoes) + " avaliações" : "") + "</div>" +
-        "<div class='biz-meta'>" + meta + "</div>" +
-        "</div>" +
-        "<div class='biz-actions'>" +
+        "<tr class='biz-row' id='bizRow" + i + "' data-key=\"" + esc(key) + "\" onclick='showDetails(" + i + ")'>" +
+        "<td class='col-check' onclick='event.stopPropagation();'><input type='checkbox' class='row-check' data-key=\"" + esc(key) + "\"" + (selectedKeys[key] ? " checked" : "") + "></td>" +
+        "<td><div class='cell-main'>" + avatarHtml(b) +
+        "<div style='min-width:0;'><div class='cell-name'>" + esc(b.nome) + "</div>" +
+        "<div class='cell-sub'>" + esc(b.categoria || "—") + "</div></div></div></td>" +
+        "<td>" + (b.nota ? "<span class='star-chip'>★ " + esc(b.nota) + "</span>" : "—") + "</td>" +
+        "<td class='num'>" + (esc(b.avaliacoes) || "—") + "</td>" +
+        "<td>" + esc(cidade) + "</td>" +
+        "<td class='nowrap'>" + (esc(b.telefone) || "—") + "</td>" +
+        "<td>" + (b.website ? "<a class='link' href='" + esc(b.website) + "' target='_blank' onclick='event.stopPropagation();'>Site</a>" : "—") + "</td>" +
+        "<td>" + (statusPill(b) || "<span class='muted'>—</span>") + "</td>" +
+        "<td>" + (scorePill(b) + urgencyPill(b) || "<span class='muted'>—</span>") + "</td>" +
+        "<td><div class='row-actions'>" +
         (waPhone(b) ? "<button class='btn small wa' onclick='event.stopPropagation();openWhatsApp(" + i + ")'>WhatsApp</button>" : "") +
         "<button class='btn small primary' onclick='event.stopPropagation();selectBusiness(" + i + ", false);doStrategy()'>Estratégia</button>" +
-        "<button class='btn small' onclick='event.stopPropagation();selectBusiness(" + i + ", true)'>Instagram</button>" +
-        "</div>" +
-        "</div>"
+        "</div></td>" +
+        "</tr>"
       );
-    })
-    .join("");
+    }).join("");
+  }
+
+  document.querySelectorAll("#resultsBody .row-check").forEach(function (cb) {
+    cb.addEventListener("change", function () {
+      if (cb.checked) selectedKeys[cb.dataset.key] = true;
+      else delete selectedKeys[cb.dataset.key];
+      paintSelection();
+    });
+  });
+
+  document.querySelectorAll("#resultsTable th.sortable").forEach(function (th) {
+    const k = th.dataset.sort;
+    th.classList.toggle("sorted", tableState.sortKey === k);
+    const base = th.textContent.replace(/ [▲▼]/g, "");
+    th.textContent = base + sortArrow(k);
+    if (!th.dataset.sortBound) {
+      th.dataset.sortBound = "1";
+      th.addEventListener("click", function () { window.sortBy(k); });
+    }
+  });
+
+  const pg = renderPager(arr.length, tableState.page, perPage, "gotoPage");
+  tableState.page = pg.page;
+  $("resultsPager").innerHTML = pg.html;
+  updateBulkBar();
 }
 
-async function analyzeAll() {
-  if (!bizCache.length) return;
+function renderSkeleton(rows) {
+  const body = $("resultsBody");
+  if (!body) return;
+  let html = "";
+  for (let i = 0; i < (rows || 6); i++) {
+    html += "<tr class='skel-row'><td></td><td><div class='skel' style='width:70%'></div><div class='skel sm' style='width:45%'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td><td><div class='skel sm'></div></td></tr>";
+  }
+  body.innerHTML = html;
+  $("resultsPager").innerHTML = "";
+}
+
+function renderTableError(msg) {
+  const body = $("resultsBody");
+  if (!body) return;
+  body.innerHTML = "<tr><td colspan='10'><div class='empty-box'>" +
+    "<b>Não foi possível carregar</b><span>" + esc(msg) + "</span>" +
+    "<button class='btn small primary' onclick='doSearch()'>Tentar de novo</button></div></td></tr>";
+  $("resultsPager").innerHTML = "";
+}
+
+async function bulkAnalyze() {
+  const list = selectedList();
+  if (!list.length) return;
+  showLoader("Analisando " + list.length + " selecionadas com IA...");
+  const CHUNK = 5;
+  try {
+    for (let i = 0; i < list.length; i += CHUNK) {
+      const chunk = list.slice(i, i + CHUNK);
+      const r = await fetch("/api/business/strategy_batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ businesses: chunk })
+      });
+      const d = await r.json();
+      if (r.ok && d.results) {
+        d.results.forEach(function (res) {
+          const b = bizCache.find(function (x) { return x.nome === res.nome; });
+          if (b && res) {
+            b.score_oportunidade = res.score;
+            b.nivel_ia = res.nivel;
+            b.estrategia_resumo = res.resumo;
+            b.oportunidades_ia = res.oportunidades;
+            b.strategy_engine = res.engine;
+          }
+        });
+      }
+      $("loaderText").textContent = "Analisando " + Math.min(i + CHUNK, list.length) + "/" + list.length + "...";
+    }
+    hideLoader();
+    filters.sort = "score";
+    const fs = $("fSort");
+    if (fs) fs.value = "score";
+    tableState.sortKey = "";
+    renderResults(bizCache);
+    toast(list.length + " leads pontuados pela IA", "ok");
+  } catch (e) {
+    hideLoader();
+    showStatus("searchStatus", "Falha na análise: " + e.message, "error");
+  }
+}
+
+async function bulkEnqueue() {
+  const list = selectedList().filter(function (b) { return waPhone(b); });
+  if (!list.length) {
+    toast("Nenhuma selecionada com telefone", "error");
+    return;
+  }
+  showLoader("Gerando mensagens 0/" + list.length + "...");
+  const itens = [];
+  try {
+    for (let i = 0; i < list.length; i++) {
+      const b = list[i];
+      const r = await fetch("/api/business/pitch?rapido=1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ business: b })
+      });
+      const d = await r.json();
+      if (r.ok && d.whatsapp) itens.push({ nome: b.nome, telefone: b.telefone, mensagem: d.whatsapp });
+      $("loaderText").textContent = "Gerando mensagens " + (i + 1) + "/" + list.length + "...";
+    }
+    const r2 = await fetch("/api/disparo/enfileirar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itens: itens, origem: "bulk" })
+    });
+    const d2 = await r2.json();
+    hideLoader();
+    if (!r2.ok) throw new Error(d2.detail || "Erro");
+    toast(d2.enfileirados + " leads na fila de disparo", "ok");
+    switchTab("comercial");
+  } catch (e) {
+    hideLoader();
+    showStatus("searchStatus", "Falha: " + e.message, "error");
+  }
+}
+
+function bulkExportCsv() {
+  const list = selectedList();
+  if (!list.length) return;
+  const fields = ["nome", "categoria", "nota", "avaliacoes", "endereco", "cidade", "estado", "telefone", "website", "score_oportunidade"];
+  const escCsv = function (v) {
+    v = v == null ? "" : String(v);
+    return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  };
+  let csv = "\ufeff" + fields.join(";") + "\n";
+  list.forEach(function (b) {
+    csv += fields.map(function (f) { return escCsv(b[f]); }).join(";") + "\n";
+  });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = "leads-selecionados.csv";
+  a.click();
+  toast(list.length + " leads exportados", "ok");
+}
+
+async function loadLeadsView(page) {
+  leadsState.page = page || 1;
+  const body = $("leadsBody");
+  body.innerHTML = "<tr><td colspan='6'><div class='skel' style='width:40%'></div><div class='skel' style='width:60%'></div><div class='skel' style='width:50%'></div></td></tr>";
+  try {
+    const r = await fetch("/api/crm/leads?limite=500");
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    let arr = d.leads || [];
+    const q = (leadsState.q || "").trim().toLowerCase();
+    if (q) {
+      arr = arr.filter(function (l) {
+        return String(l.nome || "").toLowerCase().indexOf(q) !== -1 ||
+          String(l.cidade || "").toLowerCase().indexOf(q) !== -1 ||
+          String(l.categoria || "").toLowerCase().indexOf(q) !== -1;
+      });
+    }
+    if (leadsState.uf) {
+      arr = arr.filter(function (l) { return String(l.estado || "").toUpperCase() === leadsState.uf; });
+    }
+    $("leadsInfo").textContent = arr.length + " leads na base";
+    const tb = $("tabLeadsBadge");
+    if (tb) {
+      tb.textContent = arr.length;
+      tb.classList.toggle("hidden", !arr.length);
+    }
+    const perPage = leadsState.perPage;
+    const pages = Math.max(1, Math.ceil(arr.length / perPage));
+    if (leadsState.page > pages) leadsState.page = pages;
+    const rows = arr.slice((leadsState.page - 1) * perPage, leadsState.page * perPage);
+    if (!rows.length) {
+      body.innerHTML = "<tr><td colspan='6'><div class='empty-box'><b>Nenhum lead encontrado</b><span>Ajuste os filtros ou rode uma busca.</span></div></td></tr>";
+    } else {
+      body.innerHTML = rows.map(function (l) {
+        const st = String(l.contato_status || "novo");
+        return "<tr>" +
+          "<td><div class='cell-main'><div style='min-width:0;'><div class='cell-name'>" + esc(l.nome) + "</div>" +
+          "<div class='cell-sub'>" + esc(l.categoria || "—") + "</div></div></div></td>" +
+          "<td>" + esc([l.cidade, l.estado].filter(Boolean).join(" - ") || "—") + "</td>" +
+          "<td class='nowrap'>" + (esc(l.telefone) || "—") + "</td>" +
+          "<td>" + (l.score_oportunidade != null ? "<span class='pill " + (l.score_oportunidade >= 70 ? "high" : (l.score_oportunidade < 45 ? "low" : "med")) + "'>" + l.score_oportunidade + "%</span>" : "—") + "</td>" +
+          "<td><span class='pill'>" + esc(st) + "</span></td>" +
+          "<td><button class='btn small' onclick='viewCloudLead(\"" + String(l.id || "").replace(/"/g, "") + "\")'>Ver</button></td>" +
+          "</tr>";
+      }).join("");
+    }
+    const pg = renderPager(arr.length, leadsState.page, perPage, "gotoLeadsPage");
+    leadsState.page = pg.page;
+    $("leadsPager").innerHTML = pg.html;
+    body.dataset.total = arr.length;
+  } catch (e) {
+    body.innerHTML = "<tr><td colspan='6'><div class='empty-box'><b>Falha ao carregar leads</b><span>" +
+      esc(e.message) + "</span><button class='btn small primary' onclick='loadLeadsView(1)'>Tentar de novo</button></div></td></tr>";
+    $("leadsPager").innerHTML = "";
+  }
+}
+
+window.gotoLeadsPage = function (p) {
+  loadLeadsView(p);
+};
+
+window.viewCloudLead = async function (id) {
+  try {
+    const r = await fetch("/api/crm/leads?limite=500");
+    const d = await r.json();
+    const lead = (d.leads || []).find(function (l) { return String(l.id) === String(id); });
+    if (lead) openDetailModal(lead);
+  } catch (e) {
+    toast("Falha ao abrir lead", "error");
+  }
+};
+
+async function loadDashboard() {
+  const grid = $("dashKpis");
+  if (!grid) return;
+  grid.innerHTML = "<div class='perf-stat'><div class='skel' style='width:60%'></div></div>".repeat(4);
+  try {
+    const out = await Promise.all([
+      fetch("/api/crm/leads?limite=500").then(function (r) { return r.json(); }).catch(function () { return { leads: [] }; }),
+      fetch("/api/disparo/status").then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch("/api/results").then(function (r) { return r.json(); }).catch(function () { return {}; }),
+      fetch("/api/schedule").then(function (r) { return r.json(); }).catch(function () { return {}; })
+    ]);
+    const leads = out[0].leads || [];
+    const disp = out[1] || {};
+    const counts = {};
+    leads.forEach(function (l) {
+      const s = String(l.contato_status || "novo");
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    const novos = counts.novo || 0;
+    const andamento = Math.max(0, leads.length - novos - (counts.fechado || 0) - (counts.perdido || 0));
+    const scored = leads.filter(function (l) { return l.score_oportunidade != null; });
+    const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + l.score_oportunidade; }, 0) / scored.length) : null;
+
+    function stat(label, value, cls, goto) {
+      return "<div class='perf-stat dash-kpi" + (cls ? " " + cls : "") + "'" + (goto ? " data-goto='" + goto + "' role='button' tabindex='0'" : "") + ">" +
+        "<div><div class='perf-num'>" + value + "</div><div class='perf-label'>" + label + "</div></div></div>";
+    }
+    grid.innerHTML =
+      stat("Empresas na base", leads.length, "", "leads") +
+      stat("Leads novos", novos, "", "crm") +
+      stat("Em andamento", andamento, "", "crm") +
+      stat("Score médio IA", media != null ? media + "%" : "—") +
+      stat("Fila de disparo", disp.pendentes != null ? disp.pendentes : "—", "", "comercial") +
+      stat("Enviados", disp.enviados != null ? disp.enviados : "—", disp.enviados > 0 ? "ok" : "");
+
+    const act = [];
+    if (out[2].last_search) act.push(["Última busca", out[2].last_search, "results"]);
+    if (out[3].last_run) act.push(["Busca agendada", "rodou em " + out[3].last_run + " · " + (out[3].new_count || 0) + " novos", "home"]);
+    if ((disp.enviados || 0) > 0) act.push(["Disparo", disp.enviados + " enviados · " + (disp.pendentes || 0) + " pendentes", "comercial"]);
+    if (!act.length) act.push(["Nada por aqui ainda", "Rode sua primeira busca para começar", "results"]);
+    $("dashActivity").innerHTML = act.map(function (a) {
+      return "<button class='activity-item' data-goto='" + a[2] + "'><b>" + esc(a[0]) + "</b><span>" + esc(a[1]) + "</span></button>";
+    }).join("");
+
+    document.querySelectorAll("[data-goto]").forEach(function (b) {
+      if (b.dataset.bound) return;
+      b.dataset.bound = "1";
+      b.addEventListener("click", function () { switchTab(b.dataset.goto); });
+      b.addEventListener("keydown", function (ev) {
+        if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); switchTab(b.dataset.goto); }
+      });
+    });
+  } catch (e) {
+    grid.innerHTML = "<div class='empty-box'><b>Falha ao carregar painel</b><span>" + esc(e.message) + "</span><button class='btn small primary' onclick='loadDashboard()'>Tentar de novo</button></div>";
+  }
+}
+
+async function extractIgFromSites() {
+  if (!bizCache.length) {
+    showStatus("searchStatus", "Faça uma busca no Maps primeiro.", "error");
+    return;
+  }
+  showLoader("Varrendo os sites em busca de Instagram...");
+  try {
+    const r = await fetch("/api/instagram/dos-sites", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ businesses: bizCache, apenas_novos: $("onlyNew").checked })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "Erro");
+    hideLoader();
+
+    let msg = data.total + " Instagrams extraídos dos sites.";
+    if (!data.enriquecidos) {
+      msg += " Sem sessionid: sem seguidores/bio. Cole o sessionid para enriquecer.";
+    }
+    if (data.repetidos_ocultos > 0) {
+      msg += " " + data.repetidos_ocultos + " repetidos foram ocultados.";
+    }
+    showStatus("searchStatus", msg, "ok");
+
+    $("queryTitle").textContent = "Instagram via sites";
+    selectedKeys = {};
+    tableState.page = 1;
+    renderResults(data.businesses);
+  } catch (e) {
+    hideLoader();
+    showStatus("searchStatus", "Falha: " + e.message, "error");
+  }
+}
+
+async function analyzeAll() {  if (!bizCache.length) return;
   const total = bizCache.length;
   const CHUNK = 5;
   showLoader("Analisando 0/" + total + " leads com IA...");
@@ -732,7 +1283,9 @@ async function analyzeAll() {
     }
     hideLoader();
     filters.sort = "score";
-    $("fSort").value = "score";
+    tableState.sortKey = "";
+    const fs = $("fSort");
+    if (fs) fs.value = "score";
     renderResults(bizCache);
     showStatus("searchStatus", total + " leads pontuados pela IA e ordenados por oportunidade!", "ok");
   } catch (e) {
@@ -967,7 +1520,7 @@ function renderPerformance() {
   const media = scored.length ? Math.round(scored.reduce(function (s, b) { return s + b.score_oportunidade; }, 0) / scored.length) : 0;
 
   function stat(label, value, cls) {
-    return "<div class='perf-stat " + (cls || "") + "'><div class='perf-num'>" + value + "</div><div class='perf-label'>" + label + "</div></div>";
+    return "<div class='perf-stat " + (cls || "") + "'><div><div class='perf-num'>" + value + "</div><div class='perf-label'>" + label + "</div></div></div>";
   }
 
   grid.innerHTML =
@@ -1002,7 +1555,10 @@ function detailHtmlFor(b) {
   html += row("Bairro", b.bairro);
   html += row("Cidade / UF", [b.cidade, b.estado].filter(Boolean).join(" - "));
   html += row("Telefone", b.telefone);
-  html += row("Site", b.website);
+  if (b.website) {
+    html += "<div class='detail-row'><span class='detail-label'>Site</span><span><a class='link' href='" +
+      esc(b.website) + "' target='_blank' rel='noopener'>" + esc(b.website) + "</a></span></div>";
+  }
   html += row("Status", b.status_funcionamento);
   html += row("Preço", b.preco);
   html += row("Horários", b.horarios);
@@ -2160,7 +2716,7 @@ function renderCrmKpis(arr) {
   const total = arr.length;
   const by = function (s) { return arr.filter(function (l) { return String(l.contato_status || "novo") === s; }).length; };
   const novos = by("novo"), fech = by("fechado"), perd = by("perdido");
-  const andamento = total - novos - fech - perd;
+  const andamento = Math.max(0, total - novos - fech - perd);
   const taxa = total ? Math.round(fech / total * 100) : 0;
   const scored = arr.filter(function (l) { return l.score_oportunidade != null; });
   const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + l.score_oportunidade; }, 0) / scored.length) : 0;
