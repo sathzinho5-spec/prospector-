@@ -41,6 +41,14 @@
  *   .acesso-acoes-rodape par de botoes do fim da tela do dono.
  */
 
+/* O atributo hidden so esconde porque a folha padrao do navegador da
+   display:none a ele. QUALQUER regra de display do autor vence isso, e tanto o
+   cartao quanto a caixa de recado usam display:flex - entao as quatro telas
+   apareciam juntas na mesma pagina, e o erro de senha aparecia sem ninguem ter
+   errado senha. Esta regra devolve ao hidden o poder de esconder.
+   Mesmo motivo do .hidden com !important que o styles.css ja carrega. */
+[hidden] { display: none !important; }
+
 .acesso-body {
   /* O app trava o corpo em overflow:hidden. Aqui a fila do dono cresce com o
      numero de contas, entao a tela precisa rolar. */
