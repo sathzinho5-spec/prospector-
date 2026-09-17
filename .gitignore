@@ -47,3 +47,5 @@ check_*.py
 shot_*.png
 test_*.py
 *.out.txt
+# Node (ferramentas de lint; o projeto e Python)
+node_modules/
