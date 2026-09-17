@@ -2,6 +2,15 @@
 // ===== CONEXÃO WHATSAPP (Evolution QR) =====
 let qrPoll = null;
 
+// 5521999998888 -> "55 21 99999-8888". Formato desconhecido volta so com os
+// digitos: melhor o numero cru na tela do que numero cortado errado.
+function formatarNumero(digitos) {
+  const d = String(digitos || "").replace(/\D/g, "");
+  if (d.length < 12 || d.length > 13) return d;
+  const pais = d.slice(0, 2), ddd = d.slice(2, 4), resto = d.slice(4);
+  return pais + " " + ddd + " " + resto.slice(0, resto.length - 4) + "-" + resto.slice(-4);
+}
+
 async function refreshInstances() {
   const box = $("instList");
   if (!box) return;
@@ -15,9 +24,11 @@ async function refreshInstances() {
     }
     box.innerHTML = arr.map(function (it) {
       const dot = it.conectado ? "on" : "off";
+      const num = formatarNumero(it.numero);
       return "<span class='chip " + dot + "' style='margin:2px;'>" +
         "<span class='dot'></span><b>" + esc(it.instance || "?") + "</b>&nbsp;" +
         esc(it.conectado ? "conectado" : (it.estado || "off")) +
+        (num ? "&nbsp;·&nbsp;" + esc(num) : "") +
         " <a class='link' href='#' onclick='connectWhatsApp(\"" + esc(it.instance || "") + "\");return false;'>conectar</a></span>";
     }).join("");
   } catch {

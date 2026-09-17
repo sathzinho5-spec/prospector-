@@ -51,6 +51,9 @@ def _conn():
         if "instancia" not in cols:
             con.execute("ALTER TABLE fila ADD COLUMN instancia TEXT")
             con.commit()
+        if "editada_em" not in cols:
+            con.execute("ALTER TABLE fila ADD COLUMN editada_em TIMESTAMP")
+            con.commit()
     except Exception:
         pass
     return con
@@ -223,10 +226,19 @@ def telefones_na_fila():
         con.close()
 
 
-def atualizar_mensagem(item_id, mensagem):
+def atualizar_mensagem(item_id, mensagem, manual=False):
+    """Troca o texto de um item da fila. manual=True carimba a edicao a mao;
+    manual=False (o padrao, que e o refazer com IA) LIMPA o carimbo, porque
+    regenerar sobrescreve o que a pessoa escreveu e a tela nao pode seguir
+    dizendo que aquele texto e dela."""
     con = _conn()
     try:
-        con.execute("UPDATE fila SET mensagem=? WHERE id=?", (mensagem, item_id))
+        if manual:
+            con.execute("UPDATE fila SET mensagem=?, editada_em=CURRENT_TIMESTAMP WHERE id=?",
+                        (mensagem, item_id))
+        else:
+            con.execute("UPDATE fila SET mensagem=?, editada_em=NULL WHERE id=?",
+                        (mensagem, item_id))
         con.commit()
         return True
     finally:

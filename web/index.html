@@ -260,6 +260,9 @@
               <option value="perdido">Perdidos</option>
             </select>
             <button class="btn small primary" onclick="crmBulkMove()">Mover</button>
+            <span class="hint" style="margin-left:10px;">Disparo da seleção:</span>
+            <button class="btn small" onclick="crmBulkDisparo(true)" title="Libera estes leads para entrar na fila do disparo">Ligar</button>
+            <button class="btn small" onclick="crmBulkDisparo(false)" title="Impede estes leads de entrar na fila do disparo">Desligar</button>
             <button class="btn small" onclick="crmBulkClear()">Limpar seleção</button>
           </div>
         </section>
@@ -555,6 +558,16 @@
       <label for="dispPrompt">Prompt do disparador (opcional, sobrescreve a skill)</label>
       <textarea id="dispPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
       <p class="hint">Responda sempre em JSON: whatsapp, email_assunto, email_corpo.</p>
+    </div>
+    <div class="field">
+      <label for="abordPrompt">Prompt da abordagem (opcional, sobrescreve a skill)</label>
+      <textarea id="abordPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+      <p class="hint">Vale para a fila do disparo e para a copy por negócio. Responda sempre em JSON: alavanca, abertura, followup, fechamento.</p>
+    </div>
+    <div class="field">
+      <label for="abordIaMax">Máximo de mensagens com IA por carregamento da fila</label>
+      <input id="abordIaMax" type="number" min="0" max="100" placeholder="30">
+      <p class="hint">Trave de custo: o carregamento puxa até 500 leads. Acima deste número o lead fica de fora da fila e a tela avisa. Zero desliga a IA no carregamento.</p>
     </div>
     <div class="field">
       <label for="dispMetaToken">Meta — Token</label>

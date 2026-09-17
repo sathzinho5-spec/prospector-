@@ -82,7 +82,10 @@ class SettingsRequest(BaseModel):
     disparo_evo_instances: str = ""
     disparo_evo_chip2: str = ""
     disparo_evo_chip3: str = ""
-    disparo_prompt: str = ""
+    # None = o campo nao veio no pedido. "" = a pessoa apagou e quer o padrao.
+    disparo_prompt: str | None = None
+    abordagem_prompt: str | None = None
+    abordagem_ia_max: int | None = None
     disparo_tom: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
@@ -117,6 +120,11 @@ class SequenciaRequest(BaseModel):
     business: dict
     niche_id: str = ""
 
+class DisparoAtivoRequest(BaseModel):
+    ids: list = []
+    ativo: bool = False
+
+
 class DisparoMigrarRequest(BaseModel):
     origem: str = "minerados"
 
@@ -126,6 +134,11 @@ class DisparoAgoraRequest(BaseModel):
 
 class DisparoRefazerRequest(BaseModel):
     id: int
+
+
+class DisparoMensagemRequest(BaseModel):
+    id: int
+    mensagem: str = ""
 
 class WaResponderRequest(BaseModel):
     jid: str = ""

@@ -16,7 +16,7 @@ from nucleo import LIVRES, PREFIXOS_LIVRES, STATE, WEB_DIR, _quem
 from scrapers import google_maps
 from storage import export_csv, export_excel, save_businesses, save_json
 
-from rotas import acesso, cnpj, crm, disparo, negocio, whatsapp
+from rotas import acesso, cnpj, crm, disparo, disparo_evolution, negocio, whatsapp
 from rotas.modelos import ScheduleRequest, SearchRequest, SettingsRequest
 
 app = FastAPI(title="Prospector - Scraping de Negócios")
@@ -111,8 +111,12 @@ def api_save_settings(req: SettingsRequest):
         _v = getattr(req, _f, "")
         if _v:
             new[_f] = _v.strip()
-    if req.disparo_prompt:
+    if req.disparo_prompt is not None:
         new["disparo_prompt"] = req.disparo_prompt.strip()
+    if req.abordagem_prompt is not None:
+        new["abordagem_prompt"] = req.abordagem_prompt.strip()
+    if req.abordagem_ia_max is not None:
+        new["abordagem_ia_max"] = max(0, min(100, int(req.abordagem_ia_max)))
     if req.disparo_tom in ("direto", "consultivo", "agressivo", "amigavel"):
         new["disparo_tom"] = req.disparo_tom
     if req.disparo_meta_token:
@@ -266,5 +270,6 @@ app.include_router(acesso.router)
 app.include_router(negocio.router)
 app.include_router(crm.router)
 app.include_router(disparo.router)
+app.include_router(disparo_evolution.router)
 app.include_router(whatsapp.router)
 app.include_router(cnpj.router)

@@ -25,9 +25,12 @@ NICHE_ANGLES = {
     "pizzarias": {"dor": "depender so do iFood e pagar taxa alta", "promessa": "pedido direto com margem cheia"},
     "cafeterias": {"dor": "cliente que passa na porta e nao entra", "promessa": "fluxo constante de manha e tarde"},
     "acai": {"dor": "vender so no verao e no calor", "promessa": "venda o ano todo"},
-    "beleza": {"dor": "agenda com buracos e cliente que some", "promessa": "agenda cheia com retorno garantido"},
-    "barbearias": {"dor": "cadeira vazia e cliente que nao volta", "promessa": "cadeira ocupada a semana toda"},
-    "estetica": {"dor": "depender de indicacao para fechar pacote", "promessa": "pacotes vendidos no automatico"},
+    "beleza": {"dor": "cliente novo que gosta do trabalho, nao acha os servicos nem como falar, e vai no proximo",
+               "promessa": "servicos, fotos dos trabalhos, endereco e WhatsApp num link so"},
+    "barbearias": {"dor": "quem descobre a barbearia e nao acha preco, horario nem como marcar",
+                   "promessa": "servicos, precos, horario e WhatsApp num link so"},
+    "estetica": {"dor": "quem pergunta procedimento e preco no direct e desiste antes de marcar avaliacao",
+                 "promessa": "procedimentos, resultados, endereco e WhatsApp num link so"},
     "academias": {"dor": "aluno que cancela em 3 meses", "promessa": "matricula e retencao constantes"},
     "padarias": {"dor": "concorrer so por preco com mercado", "promessa": "cliente fiel do bairro que paga mais"},
     "petshop": {"dor": "tutor que compra racao no mercado", "promessa": "tutor fiel com compra recorrente"},
@@ -64,7 +67,7 @@ def _sem_travessao(texto):
 
 def _local_sequencia(business, niche_id=None):
     nome = business.get("nome") or "aí"
-    cidade = business.get("cidade") or "sua região"
+    cidade = (business.get("cidade") or "").strip()
     nota = business.get("nota")
     av = business.get("avaliacoes")
     site = business.get("website")
@@ -72,25 +75,27 @@ def _local_sequencia(business, niche_id=None):
 
     dado = f"nota {nota} com {av} avaliações no Google" if nota else "presença no Google Maps"
     sem_site = not site
+    # Cidade vem vazia na carteira. Sem ela a frase perde o trecho, nunca vira "sua região".
+    onde = f" em {cidade}" if cidade else ""
 
     abertura = (
         f"Olá, tudo bem? Aqui é do time de marketing para negócios locais. "
         f"Vi {nome} no Google, {dado}, parabéns pelo trabalho. "
         f"Reparei que {('vocês ainda não têm um site próprio, então quem pesquisa acaba caindo no concorrente' if sem_site else 'dá para transformar essas buscas em muito mais contato')}. "
         f"A gente resolve exatamente isso para {ang['dor']}: {ang['promessa']}. "
-        f"Posso te mandar uma análise rápida e gratuita do seu perfil?"
+        f"Quer ver um exemplo de como isso ficaria para vocês?"
     )
 
     followup = (
-        f"Oi, passando rapidinho. Muitos negócios em {cidade} estão perdendo cliente todo dia "
+        f"Oi, passando rapidinho. Muitos negócios{onde} perdem cliente todo dia "
         f"simplesmente porque não aparecem direito quando alguém pesquisa. "
-        f"Preparei 3 pontos práticos para {nome} melhorar isso ainda essa semana. "
+        f"Montei um exemplo de como isso ficaria para {nome}. "
         f"Quer que eu te envie?"
     )
 
     fechamento = (
         f"Última mensagem, prometo. Se {ang['dor']} é algo que incomoda aí, "
-        f"vale pelo menos olhar a análise gratuita que montei para vocês. "
+        f"vale pelo menos olhar o exemplo que montei para vocês. "
         f"Se não fizer sentido, te deixo em paz. Topa receber?"
     )
 
@@ -119,12 +124,27 @@ REGRAS OBRIGATORIAS (se violar, a resposta e invalida):
 7. Maximo 90 palavras por mensagem
 
 Responda SOMENTE com JSON valido:
-{{
+{
   "alavanca": "dor e promessa usadas em 1 linha",
   "abertura": "primeira mensagem",
   "followup": "mensagem de 2 dias depois",
   "fechamento": "ultima mensagem (break-up)"
-}}"""
+}"""
+
+
+def _montar_prompt_sequencia(settings):
+    """Prompt da abordagem: customizado pelo usuario ou padrao da skill.
+
+    Espelha analysis.copy_fechamento._montar_prompt: se o prompt colado nao
+    trouxer os marcadores, eles sao acrescentados no fim, senao a IA receberia
+    o pedido sem os dados do lead e sem o angulo do nicho.
+    """
+    base = (settings.get("abordagem_prompt") or "").strip() or SEQUENCIA_PROMPT
+    if "{dados}" not in base:
+        base += "\n\nDados do negocio: {dados}"
+    if "{dor}" not in base or "{promessa}" not in base:
+        base += '\n\nAngulo do nicho: dor = "{dor}", promessa = "{promessa}".'
+    return base
 
 
 def gerar_sequencia(business, settings, niche_id=None):
@@ -141,7 +161,7 @@ def gerar_sequencia(business, settings, niche_id=None):
             model = settings.get("openai_model", "gpt-4o-mini")
             dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
                                                    "cidade", "estado", "website", "telefone")}
-            prompt = (SEQUENCIA_PROMPT
+            prompt = (_montar_prompt_sequencia(settings)
                       .replace("{dados}", json.dumps(dados, ensure_ascii=False))
                       .replace("{dor}", ang["dor"])
                       .replace("{promessa}", ang["promessa"]))

@@ -24,6 +24,13 @@ const ICO = {
   site: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95c-.32-1.25-.78-2.45-1.38-3.56 1.84.63 3.37 1.91 4.33 3.56zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56-1.84-.63-3.37-1.9-4.33-3.56zm2.95-8H5.08c.96-1.66 2.49-2.93 4.33-3.56C8.81 5.55 8.35 6.75 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.27 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95c-.96 1.65-2.49 2.93-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z"
 };
 
+// Espelha cloud_store.disparo_liberado: campo ausente ou nulo conta como
+// ligado, para lead recem-minerado nao aparecer barrado sem ninguem ter barrado.
+function dispAtivoDe(l) {
+  const v = l ? l.disparo_ativo : undefined;
+  return (v === undefined || v === null) ? true : !!v;
+}
+
 function crmCard(l) {
   const score = l.score_oportunidade;
   // ACHADO, nao e sujeira: este scoreHtml e montado e nunca usado no cartao.
@@ -40,6 +47,7 @@ function crmCard(l) {
     ? "https://wa.me/" + (waDigits.length <= 11 && waDigits.slice(0, 2) !== "55" ? "55" + waDigits : waDigits)
     : "";
   const lid = String(l.id || "").replace(/"/g, "");
+  const dispAtivo = dispAtivoDe(l);
   const checked = crmSelected[lid] ? " checked" : "";
 
   let extra = "";
@@ -61,12 +69,17 @@ function crmCard(l) {
     (l.nota ? "★ " + esc(l.nota) + (l.avaliacoes ? " (" + esc(l.avaliacoes) + ")" : "") + " · " : "") +
     esc([l.cidade, l.estado].filter(Boolean).join(" - ")) +
     (l.telefone ? " · " + esc(l.telefone) : "") + "</div>" +
+    "<div style='margin-top:4px;'><span class='pill " + (dispAtivo ? "open" : "closed") + "'>" +
+    (dispAtivo ? "disparo ligado" : "disparo desligado") + "</span></div>" +
     "</div>" +
     "</div>" +
     "<div class='biz-meta' style='margin-top:8px;'>" + scoreRing(score) +
     (waLink ? "<a class='btn small wa' style='font-size:11px;padding:4px 10px;' href='" + waLink + "' target='_blank'>WhatsApp</a>" : "") +
     "<button class='btn small' onclick='showLeadDetails(\"" + esc(lid) + "\")'>Detalhes</button>" +
     "<button class='btn small' onclick='toggleCrmExtra(\"" + esc(lid) + "\")'>Ver mais</button>" +
+    "<button class='btn small' title='Liga ou desliga este lead para o disparo' " +
+    "onclick='toggleDisparoLead(\"" + esc(lid) + "\")'>" +
+    (dispAtivo ? "Desligar disparo" : "Ligar disparo") + "</button>" +
     "</div>" +
     "<div class='crm-extra hidden' id='extra-" + esc(lid) + "'>" + (extra || "<span class='hint'>Sem detalhes extras.</span>") + "</div>" +
     "<select class='crm-stage' data-id='" + esc(lid) + "' data-nome='" + esc(l.nome || "") + "'>" + opts + "</select>" +
@@ -109,6 +122,61 @@ window.crmBulkMove = async function () {
   }
   renderBulkBar();
   renderCrmBoard();
+};
+
+// Grava o interruptor na nuvem e so mexe na tela depois que a nuvem confirmou:
+// pintar antes mostraria "ligado" para um lead que continua desligado no banco.
+async function setDisparoAtivo(ids, ativo) {
+  const alvos = (ids || []).filter(function (id) {
+    const lead = crmCache.find(function (l) { return String(l.id) === String(id); });
+    return lead && !lead._local;
+  });
+  if (!alvos.length) {
+    showStatus("searchStatus", "Lead da sessao ainda nao esta na nuvem: nao da pra ligar o disparo dele.", "error");
+    return 0;
+  }
+  const r = await fetch("/api/crm/disparo-ativo", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids: alvos, ativo: !!ativo })
+  });
+  const d = await r.json();
+  if (!r.ok || !d.ok) throw new Error((d && d.detail) || "falha ao gravar");
+  alvos.forEach(function (id) {
+    const lead = crmCache.find(function (l) { return String(l.id) === String(id); });
+    if (lead) lead.disparo_ativo = !!ativo;
+  });
+  return alvos.length;
+}
+
+window.toggleDisparoLead = async function (id) {
+  const lead = crmCache.find(function (l) { return String(l.id) === String(id); });
+  if (!lead) return;
+  const alvo = !dispAtivoDe(lead);
+  try {
+    const n = await setDisparoAtivo([id], alvo);
+    if (!n) return;
+    showStatus("searchStatus", "Disparo " + (alvo ? "ligado" : "desligado") + " para " + (lead.nome || "o lead") + ".", "ok");
+    renderCrmBoard();
+  } catch (e) {
+    showStatus("searchStatus", "Falha ao mudar o disparo: " + e.message, "error");
+  }
+};
+
+window.crmBulkDisparo = async function (ativo) {
+  const ids = Object.keys(crmSelected);
+  if (!ids.length) return;
+  showLoader((ativo ? "Ligando" : "Desligando") + " o disparo de " + ids.length + " lead(s)...");
+  try {
+    const n = await setDisparoAtivo(ids, ativo);
+    hideLoader();
+    if (!n) return;
+    showStatus("searchStatus", "Disparo " + (ativo ? "ligado" : "desligado") + " em " + n + " lead(s).", "ok");
+    renderCrmBoard();
+  } catch (e) {
+    hideLoader();
+    showStatus("searchStatus", "Falha ao mudar o disparo: " + e.message, "error");
+  }
 };
 
 window.crmBulkClear = function () {

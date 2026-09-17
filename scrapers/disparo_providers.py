@@ -109,6 +109,45 @@ class EvolutionProvider:
         except Exception as e:
             return False, str(e)[:200], ""
 
+    def numero_dono(self):
+        """Numero do chip pareado nesta instancia, so digitos, "" quando a
+        Evolution nao devolve. NAO conferido contra a Evolution real desta
+        operacao: cobre os dois nomes de campo conhecidos (ownerJid e number)
+        e as duas formas de resposta do fetchInstances (instancia solta ou
+        aninhada em "instance"). Sem numero, quem chama mostra o que ja
+        mostrava."""
+        ok, _ = self._check_cfg()
+        if not ok:
+            return ""
+        try:
+            r = requests.get(
+                f"{self.base_url}/instance/fetchInstances",
+                headers=self._headers(),
+                params={"instanceName": self.instance},
+                timeout=15,
+            )
+            if r.status_code not in (200, 201):
+                return ""
+            dados = r.json()
+        except Exception:
+            return ""
+        if isinstance(dados, dict):
+            dados = [dados]
+        if not isinstance(dados, list):
+            return ""
+        for item in dados:
+            if not isinstance(item, dict):
+                continue
+            info = item.get("instance") if isinstance(item.get("instance"), dict) else item
+            nome = info.get("instanceName") or info.get("name") or ""
+            if nome and nome != self.instance:
+                continue
+            bruto = info.get("ownerJid") or info.get("owner") or info.get("number") or ""
+            digitos = "".join(c for c in str(bruto) if c.isdigit())
+            if digitos:
+                return digitos
+        return ""
+
     def estado(self):
         ok, err = self._check_cfg()
         if not ok:
@@ -123,7 +162,11 @@ class EvolutionProvider:
                 return {"conectado": False, "estado": f"http_{r.status_code}",
                         "erro": r.text[:200]}
             st = (r.json().get("instance") or {}).get("state") or r.json().get("state", "")
-            return {"conectado": st == "open", "estado": st, "erro": ""}
+            conectado = st == "open"
+            # So pergunta o numero quando ha chip pareado: evita uma segunda
+            # chamada HTTP por instancia desconectada a cada atualizacao da tela.
+            return {"conectado": conectado, "estado": st, "erro": "",
+                    "numero": self.numero_dono() if conectado else ""}
         except Exception as e:
             return {"conectado": False, "estado": "offline", "erro": str(e)[:200]}
 

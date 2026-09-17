@@ -1,14 +1,16 @@
-# proposito: disparo: fila, envio, instancias Evolution, iniciar e pausar
-import os
-
+# proposito: disparo: fila, envio da mensagem, iniciar e pausar o motor
 from fastapi import APIRouter, HTTPException
 
 import config
 from analysis import analyzer
 from nucleo import STATE
+# Reexportado de proposito: o bloco da Evolution mudou de arquivo e estas tres
+# funcoes seguem alcancaveis como rotas.disparo._evo_cfg, como sempre foram.
+from rotas.disparo_evolution import _evo_cfg, _evo_instances, _evo_provider  # noqa: F401
 from rotas.modelos import (DisparoAgoraRequest, DisparoEnqueueRequest,
-                           DisparoMigrarRequest, DisparoRefazerRequest,
-                           DisparoStartRequest, DisparoTestRequest)
+                           DisparoMensagemRequest, DisparoMigrarRequest,
+                           DisparoRefazerRequest, DisparoStartRequest,
+                           DisparoTestRequest)
 
 router = APIRouter()
 
@@ -21,6 +23,46 @@ def api_disparo_enqueue(req: DisparoEnqueueRequest):
         raise HTTPException(400, "Nenhum item recebido.")
     n = disparo.enfileirar(req.itens, origem=req.origem)
     return {"enfileirados": n}
+
+
+def _teto_ia(settings):
+    """Trave de custo: quantas mensagens da migracao podem sair da IA. A
+    migracao puxa ate 500 leads; sem teto seriam 500 chamadas pagas num
+    clique. Sem chave de IA o teto e zero e tudo cai no template local."""
+    if not str(settings.get("openai_api_key") or "").strip():
+        return 0
+    padrao = config.DEFAULT_SETTINGS.get("abordagem_ia_max", 30)
+    try:
+        teto = int(settings.get("abordagem_ia_max", padrao))
+    except (TypeError, ValueError):
+        teto = padrao
+    return max(0, min(100, teto))
+
+
+def _mensagem_abordagem(business, settings, usar_ia, exigir_ia):
+    """Mensagem de um lead da fila. Devolve (texto, engine).
+
+    Com IA configurada (exigir_ia), texto de template local NAO entra na fila:
+    o fallback local carrega copy que o fundador reprovou, e uma queda da IA
+    mandaria ela pro cliente sem aviso. Melhor o lead ficar de fora e a tela
+    dizer quantos ficaram. Sem chave de IA nada muda: tudo sai do template.
+    """
+    if usar_ia:
+        try:
+            from analysis import copy_sdr
+            seq = copy_sdr.gerar_sequencia(business, settings)
+            msg = (seq.get("abertura") or "").strip()
+            engine = seq.get("engine") or "local"
+            if msg and engine != "local":
+                return msg, engine
+        except Exception:
+            pass
+    if exigir_ia:
+        return "", "local"
+    try:
+        return (analyzer._local_pitch(business).get("whatsapp") or "").strip(), "local"
+    except Exception:
+        return "", "local"
 
 
 @router.post("/api/disparo/migrar")
@@ -38,24 +80,39 @@ def api_disparo_migrar(req: DisparoMigrarRequest):
     if not leads:
         raise HTTPException(404, "Nenhum lead minerado encontrado.")
 
+    settings = config.load_settings()
+    teto_ia = _teto_ia(settings)
+    exigir_ia = teto_ia > 0
     na_fila = disparo.telefones_na_fila()
     itens = []
+    desativados = 0
+    tentativas_ia = 0
+    com_ia = 0
+    sem_mensagem = 0
     for b in leads:
+        if not cloud_store.disparo_liberado(b):
+            desativados += 1
+            continue
         tel = disparo._norm_phone(b.get("telefone"))
         if not tel or tel in na_fila:
             continue
-        try:
-            pitch = analyzer._local_pitch(b)
-            msg = pitch.get("whatsapp", "")
-        except Exception:
-            msg = ""
+        usar_ia = tentativas_ia < teto_ia
+        if usar_ia:
+            tentativas_ia += 1
+        msg, engine = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
         if not msg:
+            sem_mensagem += 1
             continue
+        if engine != "local":
+            com_ia += 1
         itens.append({"nome": b.get("nome", ""), "telefone": b.get("telefone", ""), "mensagem": msg})
         na_fila.add(tel)
 
     n = disparo.enfileirar(itens, origem=req.origem or "minerados")
-    return {"enfileirados": n, "total_minerados": len(leads)}
+    return {"enfileirados": n, "total_minerados": len(leads),
+            "desativados": desativados, "teto_ia": teto_ia,
+            "com_ia": com_ia, "com_template": len(itens) - com_ia,
+            "sem_mensagem": sem_mensagem}
 
 
 @router.post("/api/disparo/enviar-agora")
@@ -100,6 +157,17 @@ def api_disparo_refazer(req: DisparoRefazerRequest):
     if not item:
         raise HTTPException(404, "Item não encontrado na fila.")
 
+    # Mesma regra da edicao a mao: o texto do que JA SAIU nao se reescreve, porque
+    # o registro do que foi enviado e a metrica da operacao. 'falha' continua
+    # aberto de proposito: regenerar e o caminho de recuperar item que nao saiu.
+    status_item = (item.get("status") or "").strip()
+    if status_item not in ("pendente", "falha"):
+        raise HTTPException(
+            409,
+            f"Esta mensagem está como '{status_item}' e não pode mais ser regenerada. "
+            "Só item pendente ou com falha aceita regeneração.",
+        )
+
     business = {"nome": item.get("nome", ""), "telefone": item.get("telefone", "")}
     try:
         from scrapers import cloud_store
@@ -122,6 +190,33 @@ def api_disparo_refazer(req: DisparoRefazerRequest):
         raise HTTPException(502, "A IA não retornou mensagem.")
     disparo.atualizar_mensagem(req.id, msg)
     return {"mensagem": msg, "engine": pitch.get("engine")}
+
+
+@router.post("/api/disparo/mensagem")
+def api_disparo_mensagem(req: DisparoMensagemRequest):
+    """Salva o texto que a pessoa escreveu a mao, antes do envio.
+
+    So item pendente aceita edicao: mexer no texto de algo ja enviado seria
+    mentir sobre o que saiu, e o que saiu e a metrica do dia.
+    """
+    from scrapers import disparo
+
+    msg = (req.mensagem or "").strip()
+    if not msg:
+        raise HTTPException(400, "A mensagem nao pode ficar vazia.")
+    item = None
+    for f in disparo.listar(limite=1000):
+        if f["id"] == req.id:
+            item = f
+            break
+    if not item:
+        raise HTTPException(404, "Item nao encontrado na fila.")
+    status = str(item.get("status") or "")
+    if status != "pendente":
+        raise HTTPException(409, f"Esta mensagem esta como '{status}' e nao pode mais ser "
+                                 "editada. So item pendente aceita edicao.")
+    disparo.atualizar_mensagem(req.id, msg, manual=True)
+    return {"ok": True, "id": req.id, "mensagem": msg, "editada": True}
 
 
 @router.get("/api/disparo/fila")
@@ -205,75 +300,3 @@ def api_disparo_limpar():
 
     disparo.limpar_finalizados()
     return disparo.status()
-
-
-def _evo_provider(instance=None):
-    from scrapers import disparo
-
-    s = config.load_settings()
-    inst = (instance or "").strip() or s.get("disparo_evo_instance", "")
-    return disparo.EvolutionProvider(
-        _evo_cfg(s)["url"],
-        _evo_cfg(s)["key"],
-        inst,
-    )
-
-
-def _evo_cfg(s=None):
-    """URL/key da Evolution: settings primeiro, env da VPS como fallback."""
-    s = s if s is not None else config.load_settings()
-    return {
-        "url": s.get("disparo_evo_url", "") or os.environ.get("DISPARO_EVO_URL", ""),
-        "key": s.get("disparo_evo_key", "") or os.environ.get("DISPARO_EVO_KEY", ""),
-    }
-
-
-def _evo_instances():
-    from scrapers import disparo  # noqa: F401 (garante módulo carregado)
-
-    s = config.load_settings()
-    insts = []
-    for v in (s.get("disparo_evo_instance"), s.get("disparo_evo_chip2"),
-              s.get("disparo_evo_chip3")):
-        v = str(v or "").strip()
-        if v and v not in insts:
-            insts.append(v)
-    for v in str(s.get("disparo_evo_instances") or "").split(","):
-        v = v.strip()
-        if v and v not in insts:
-            insts.append(v)
-    return insts[:3]
-
-
-@router.post("/api/disparo/evolution/qrcode")
-def api_evo_qrcode(instance: str = ""):
-    prov = _evo_provider(instance)
-    ok, err, qr = prov.criar_instancia()
-    if not ok:
-        raise HTTPException(502, err)
-    return {"ok": True, "qrcode": qr, "instance": prov.instance}
-
-
-@router.get("/api/disparo/evolution/estado")
-def api_evo_estado(instance: str = ""):
-    return _evo_provider(instance).estado()
-
-
-@router.get("/api/disparo/instancias")
-def api_disparo_instancias():
-    provs = []
-    for inst in _evo_instances():
-        from scrapers import disparo
-
-        s = config.load_settings()
-        cfg = _evo_cfg(s)
-        p = disparo.EvolutionProvider(cfg["url"], cfg["key"], inst)
-        st = p.estado()
-        provs.append({"instance": inst, **st})
-    if not provs:
-        s = config.load_settings()
-        provs.append({"instance": s.get("disparo_evo_instance", ""),
-                      "conectado": False, "estado": "nao_configurado",
-                      "erro": "Cadastre as instâncias nas Configurações."})
-    return {"instancias": provs}
-

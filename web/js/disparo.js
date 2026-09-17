@@ -35,8 +35,12 @@ async function migrarMinerados() {
     const d = await r.json();
     hideLoader();
     if (!r.ok) throw new Error(d.detail || "Erro");
-    showStatus("searchStatus",
-      d.enfileirados + " leads minerados na fila (de " + d.total_minerados + " no total, sem repetir telefone)!", "ok");
+    let resumo = d.enfileirados + " leads minerados na fila (de " + d.total_minerados
+      + " no total, sem repetir telefone)!";
+    if (d.desativados) resumo += " " + d.desativados + " pulados: desativados para disparo.";
+    if (d.com_ia || d.com_template) resumo += " " + (d.com_ia || 0) + " com IA, " + (d.com_template || 0) + " com template.";
+    if (d.sem_mensagem) resumo += " " + d.sem_mensagem + " ficaram de fora: a IA nao cobriu (teto " + (d.teto_ia || 0) + ").";
+    showStatus("searchStatus", resumo, "ok");
     refreshDisparo();
   } catch (e) {
     hideLoader();
@@ -61,7 +65,8 @@ window.enviarAgora = async function (id) {
   refreshDisparo();
 };
 
-window.refazerMensagem = async function (id, btn) {
+window.refazerMensagem = async function (id, btn, editada) {
+  if (editada && !window.confirm("Esta mensagem foi escrita por você. Refazer com IA apaga o seu texto. Continuar?")) return;
   const old = btn ? btn.textContent : "";
   if (btn) { btn.textContent = "Gerando..."; btn.disabled = true; }
   try {
@@ -72,6 +77,7 @@ window.refazerMensagem = async function (id, btn) {
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");
+    closeMsgModal();
     showStatus("searchStatus", "Mensagem refeita com " + (d.engine === "local" ? "o motor local" : d.engine) + "! Confira na tabela.", "ok");
   } catch (e) {
     showStatus("searchStatus", "Falha ao refazer: " + e.message, "error");
@@ -79,6 +85,30 @@ window.refazerMensagem = async function (id, btn) {
     if (btn) { btn.textContent = old; btn.disabled = false; }
   }
   refreshDisparo();
+};
+
+window.salvarMensagem = async function (id) {
+  const campo = $("msgEdit");
+  if (!campo) return;
+  const texto = campo.value.trim();
+  if (!texto) {
+    showStatus("searchStatus", "A mensagem não pode ficar vazia.", "error");
+    return;
+  }
+  try {
+    const r = await fetch("/api/disparo/mensagem", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: id, mensagem: texto })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || "Erro");
+    closeMsgModal();
+    showStatus("searchStatus", "Mensagem salva. Ela sai exatamente assim.", "ok");
+    refreshDisparo();
+  } catch (e) {
+    showStatus("searchStatus", "Falha ao salvar: " + e.message, "error");
+  }
 };
 
 window.verMensagem = async function (id) {
@@ -95,10 +125,21 @@ window.verMensagem = async function (id) {
     if (d.tentativas) html += "<p class='hint'>Tentativas: " + d.tentativas + "</p>";
     if (d.erro) html += "<p class='status error'>" + esc(d.erro) + "</p>";
     html += "<h4>Mensagem que " + (d.status === "enviado" ? "foi enviada" : "será enviada") + "</h4>";
-    html += "<div class='pitch-box' style='white-space:pre-wrap;'>" + esc(d.mensagem || "(vazia)") + "</div>";
+    if (d.editada_em) {
+      html += "<p class='hint'>Escrita à mão em " + esc(d.editada_em) +
+        ". Refazer com IA apaga esta versão.</p>";
+    }
     if (d.status === "pendente") {
-      html += "<div class='btn-row'><button class='btn small wa' onclick='enviarAgora(" + d.id + ");closeMsgModal();'>Enviar agora</button>" +
-        "<button class='btn small' onclick='refazerMensagem(" + d.id + ", null);closeMsgModal();'>Refazer com IA</button></div>";
+      html += "<textarea id='msgEdit' rows='8' style='width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;'>" + esc(d.mensagem || "") + "</textarea>";
+      html += "<div class='btn-row'>" +
+        "<button class='btn small primary' onclick='salvarMensagem(" + d.id + ")'>Salvar mensagem</button>" +
+        "<button class='btn small wa' onclick='enviarAgora(" + d.id + ");closeMsgModal();'>Enviar agora</button>" +
+        "<button class='btn small' onclick='refazerMensagem(" + d.id + ", null, " + (d.editada_em ? "true" : "false") + ")'>Refazer com IA</button>" +
+        "</div>";
+    } else {
+      html += "<div class='pitch-box' style='white-space:pre-wrap;'>" + esc(d.mensagem || "(vazia)") + "</div>";
+      html += "<p class='hint'>Esta mensagem está como \"" + esc(d.status) +
+        "\" e não pode mais ser editada.</p>";
     }
     $("msgBody").innerHTML = html;
     $("msgModal").classList.remove("hidden");
@@ -183,12 +224,13 @@ async function refreshDisparo() {
     const rows = (d2.fila || []).map(function (f) {
       const action = f.status === "pendente"
         ? "<button class='btn small wa' onclick='enviarAgora(" + f.id + ")'>Enviar</button>" +
-          "<button class='btn small' onclick='refazerMensagem(" + f.id + ", this)'>Refazer IA</button>"
+          "<button class='btn small' onclick='refazerMensagem(" + f.id + ", this, " + (f.editada_em ? "true" : "false") + ")'>Refazer IA</button>"
         : "";
       return "<tr><td>" + esc(f.nome) + "</td><td>" + esc(f.telefone) + "</td>" +
         "<td class='st-" + f.status + "'>" + f.status + "</td>" +
         "<td>" + (f.instancia ? esc(f.instancia) : "<span class='hint'>—</span>") + "</td>" +
-        "<td>" + esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
+        "<td>" + (f.editada_em ? "<span class='pill open' style='margin-right:6px;'>sua</span>" : "") +
+        esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
         "<td><div class='row-actions'><button class='btn small' onclick='verMensagem(" + f.id + ")'>Ver</button>" + action + "</div></td></tr>";
     }).join("");
     $("disparoTable").innerHTML = rows

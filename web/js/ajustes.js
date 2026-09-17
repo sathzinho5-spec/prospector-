@@ -24,6 +24,21 @@ async function loadSettings() {
       $("iaChipText").textContent = "IA local";
     }
 
+    const abordIaMax = $("abordIaMax");
+    if (abordIaMax) abordIaMax.value = (s.abordagem_ia_max === undefined || s.abordagem_ia_max === null) ? "" : s.abordagem_ia_max;
+
+    // O valor salvo aparece no campo, senao nao ha como apagar o que foi colado.
+    const abordPrompt = $("abordPrompt");
+    if (abordPrompt) {
+      abordPrompt.value = s.abordagem_prompt || "";
+      abordPrompt.placeholder = "Vazio = prompt da skill";
+    }
+    const dispPromptEl = $("dispPrompt");
+    if (dispPromptEl) {
+      dispPromptEl.value = s.disparo_prompt || "";
+      dispPromptEl.placeholder = "Vazio = prompt da skill";
+    }
+
     const igWrap = $("igChipWrap");
     if (s.instagram_sessionid) {
       igWrap.classList.add("on"); igWrap.classList.remove("off");
@@ -51,7 +66,11 @@ async function saveSettings() {
     if ($("dispEvoChip2").value.trim()) body.disparo_evo_chip2 = $("dispEvoChip2").value.trim();
     if ($("dispEvoChip3").value.trim()) body.disparo_evo_chip3 = $("dispEvoChip3").value.trim();
     if ($("dispTom")) body.disparo_tom = $("dispTom").value;
-    if ($("dispPrompt").value.trim()) body.disparo_prompt = $("dispPrompt").value.trim();
+    // Mandados SEMPRE, inclusive vazios: campo apagado tem que chegar como ""
+    // no back-end, senao nao existe como voltar pro prompt da skill.
+    body.disparo_prompt = $("dispPrompt").value.trim();
+    body.abordagem_prompt = $("abordPrompt").value.trim();
+    if ($("abordIaMax") && $("abordIaMax").value !== "") body.abordagem_ia_max = parseInt($("abordIaMax").value, 10) || 0;
     if ($("dispMetaToken").value.trim()) body.disparo_meta_token = $("dispMetaToken").value.trim();
     if ($("dispMetaPhone").value.trim()) body.disparo_meta_phone_id = $("dispMetaPhone").value.trim();
   }
@@ -94,8 +113,10 @@ async function saveSettings() {
       $("dispEvoChip2").value = s.disparo_evo_chip2 || "";
       $("dispEvoChip3").value = s.disparo_evo_chip3 || "";
       $("dispTom").value = s.disparo_tom || "direto";
-      $("dispPrompt").value = "";
-      $("dispPrompt").placeholder = s.disparo_prompt ? "Prompt personalizado ativo" : "Vazio = prompt da skill";
+      $("dispPrompt").value = s.disparo_prompt || "";
+      $("dispPrompt").placeholder = "Vazio = prompt da skill";
+      $("abordPrompt").value = s.abordagem_prompt || "";
+      $("abordPrompt").placeholder = "Vazio = prompt da skill";
       $("dispMetaPhone").value = s.disparo_meta_phone_id || "";
       $("dispEvoKey").placeholder = s.disparo_evo_key ? "Key configurada" : "sua apikey";
       $("dispMetaToken").placeholder = s.disparo_meta_token ? "Token configurado" : "token permanente";

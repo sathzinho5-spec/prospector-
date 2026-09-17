@@ -1,7 +1,7 @@
 # proposito: leads na nuvem e o CRM: listar, filtrar e mover de estagio
 from fastapi import APIRouter, HTTPException
 
-from rotas.modelos import CrmStatusRequest
+from rotas.modelos import CrmStatusRequest, DisparoAtivoRequest
 
 router = APIRouter()
 
@@ -45,6 +45,19 @@ def api_crm_leads(busca: str = "", uf: str = "", status: str = "", min_score: in
     if min_score:
         leads = [l for l in leads if (l.get("score_oportunidade") or 0) >= min_score]
     return {"total": len(leads), "leads": leads}
+
+
+@router.post("/api/crm/disparo-ativo")
+def api_crm_disparo_ativo(req: DisparoAtivoRequest):
+    """Liga ou desliga o disparo de um lead ou de varios de uma vez."""
+    from scrapers import cloud_store
+
+    if not req.ids:
+        raise HTTPException(400, "Informe pelo menos um lead.")
+    n = cloud_store.set_disparo_ativo(req.ids, req.ativo)
+    if not n:
+        raise HTTPException(502, "Nao deu pra gravar na nuvem. Tente de novo.")
+    return {"ok": True, "atualizados": n, "ativo": bool(req.ativo)}
 
 
 @router.post("/api/crm/status")

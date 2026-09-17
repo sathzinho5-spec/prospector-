@@ -38,6 +38,11 @@ DEFAULT_SETTINGS = {
     "disparo_evo_chip2": "",
     "disparo_evo_chip3": "",
     "disparo_prompt": "",
+    "abordagem_prompt": "",
+    # Trave de custo: quantos leads da migracao podem sair da IA por vez.
+    # 30 porque a carteira tem 30 e o objetivo e carregar todos num clique.
+    # Acima disso o lead fica de fora e a tela avisa. Zero desliga a IA.
+    "abordagem_ia_max": 30,
     "disparo_tom": "direto",
     "disparo_meta_token": "",
     "disparo_meta_phone_id": "",
