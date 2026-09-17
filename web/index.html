@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Prospector</title>
 <link rel="stylesheet" href="/static/styles.css">
+<link rel="stylesheet" href="/static/painel.css">
 </head>
 <body>
 
@@ -26,7 +27,89 @@
       </div>
     </div>
 
-    <div class="side-body">
+    <nav class="painel-nav">
+      <button class="tabbtn painel-item active" data-tab="home">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 11.5 12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/></svg>
+        <span class="painel-nome">Início</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="conexao">
+        <svg viewBox="0 0 24 24" class="painel-icone"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>
+        <span class="painel-nome">Conexão do número</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="results">
+        <svg viewBox="0 0 24 24" class="painel-icone"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg>
+        <span class="painel-nome">Resultados</span><span id="tabResultsBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="crm">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/></svg>
+        <span class="painel-nome">CRM</span><span id="tabCrmBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="comercial">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M5 12h4l2-5 2 10 2-5h4"/></svg>
+        <span class="painel-nome">Comercial</span><span id="tabQueueBadge" class="badge hidden">0</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="conversas">
+        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M20 15a3 3 0 0 1-3 3H8l-4 3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3z"/></svg>
+        <span class="painel-nome">Conversas</span><span id="tabWaBadge" class="badge hidden">0</span>
+      </button>
+    </nav>
+
+    <div class="side-status">
+      <div id="searchStatus" class="status hidden"></div>
+    </div>
+
+    <div class="painel-rodape">
+      <div class="painel-quem">
+        <span class="painel-quem-nome" id="quemNome">&nbsp;</span>
+        <span class="painel-quem-papel" id="quemPapel"></span>
+      </div>
+      <div class="painel-rodape-acoes">
+        <a class="btn small" id="btnAcessos" href="/acessos" hidden>Acessos</a>
+        <a class="btn small" href="/senha">Trocar senha</a>
+        <a class="btn small" href="/entrar" id="btnSair">Sair</a>
+      </div>
+      <div class="version-tag">Prospector <b>v36</b> &middot; multi-chip</div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <section class="main">
+
+    <div class="toolbar">
+      <div class="toolbar-title">
+        <h2 id="queryTitle">Início</h2>
+        <span id="resultsCount" class="badge hidden">0</span>
+      </div>
+      <div class="toolbar-right">
+        <div class="chip" id="iaChip"><span class="dot"></span><span id="iaChipText">IA: ...</span></div>
+        <div class="chip" id="cloudChip"><span class="dot"></span><span id="cloudChipText">Nuvem: ...</span></div>
+        <div class="export-group hidden" id="exportGroup">
+          <span class="hint">Exportar:</span>
+          <button class="btn small" data-export="csv">CSV</button>
+          <button class="btn small" data-export="xlsx">Excel</button>
+          <button class="btn small" data-export="json">JSON</button>
+        </div>
+        <button class="btn small" id="btnSettings">Configurações IA</button>
+      </div>
+    </div>
+
+    <div class="painel-estado">
+      <div class="painel-estado-itens">
+        <span class="pill" id="estadoChip">chip: verificando...</span>
+        <span class="pill" id="estadoDisparo">disparo: verificando...</span>
+      </div>
+      <span class="hint" id="estadoHoje"></span>
+    </div>
+
+    <div class="content">
+
+      <!-- ===== ABA: INÍCIO ===== -->
+      <div class="tabsec" id="secHome">
+        <section class="panel" id="buscaCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Nova busca</h3>
+          </div>
+
       <div>
         <div class="side-section-title">Nova busca</div>
 
@@ -77,52 +160,8 @@
       <div class="chip on" id="igChipWrap" style="align-self:flex-start;">
         <span class="dot"></span><span id="igChipText">Instagram: verificando...</span>
       </div>
-    </div>
+        </section>
 
-    <div class="side-status">
-      <div id="searchStatus" class="status hidden"></div>
-    </div>
-
-    <div class="side-foot">
-      <div class="version-tag">Prospector <b>v36</b> · multi-chip</div>
-    </div>
-  </aside>
-
-  <!-- ===== MAIN ===== -->
-  <section class="main">
-
-    <div class="toolbar">
-      <div class="toolbar-title">
-        <h2 id="queryTitle">Início</h2>
-        <span id="resultsCount" class="badge hidden">0</span>
-      </div>
-      <div class="toolbar-right">
-        <div class="chip" id="iaChip"><span class="dot"></span><span id="iaChipText">IA: ...</span></div>
-        <div class="chip" id="cloudChip"><span class="dot"></span><span id="cloudChipText">Nuvem: ...</span></div>
-        <div class="export-group hidden" id="exportGroup">
-          <span class="hint">Exportar:</span>
-          <button class="btn small" data-export="csv">CSV</button>
-          <button class="btn small" data-export="xlsx">Excel</button>
-          <button class="btn small" data-export="json">JSON</button>
-        </div>
-        <button class="btn small" id="btnSettings">Configurações IA</button>
-        <a class="btn small" id="btnAcessos" href="/acessos" hidden>Acessos</a>
-        <a class="btn small" href="/entrar" id="btnSair">Sair</a>
-      </div>
-    </div>
-
-    <div class="tabs">
-      <button class="tabbtn active" data-tab="home">Início</button>
-      <button class="tabbtn" data-tab="results">Resultados <span id="tabResultsBadge" class="badge hidden">0</span></button>
-      <button class="tabbtn" data-tab="crm">CRM <span id="tabCrmBadge" class="badge hidden">0</span></button>
-      <button class="tabbtn" data-tab="comercial">Comercial <span id="tabQueueBadge" class="badge hidden">0</span></button>
-      <button class="tabbtn" data-tab="conversas">Conversas <span id="tabWaBadge" class="badge hidden">0</span></button>
-    </div>
-
-    <div class="content">
-
-      <!-- ===== ABA: INÍCIO ===== -->
-      <div class="tabsec" id="secHome">
 
         <section class="panel" id="emptyCard" style="text-align:center;padding:60px 44px;">
           <div class="logo-symbol">
@@ -232,6 +271,37 @@
       </div><!-- /secCrm -->
 
       <!-- ===== ABA: RESULTADOS ===== -->
+      <!-- ===== ABA: CONEXAO DO NUMERO ===== -->
+      <div class="tabsec hidden" id="secConexao">
+
+        <section class="panel">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Seu n&uacute;mero</h3>
+            <span id="conexaoEstado" class="tag">verificando...</span>
+          </div>
+          <p class="hint" style="margin-bottom:14px;">
+            Cada afiliado conecta o pr&oacute;prio chip. O seu n&uacute;mero nunca
+            encosta no de outra pessoa.
+          </p>
+          <div id="conexaoLista" class="hint" style="margin-bottom:12px;"></div>
+          <div class="btn-row">
+            <button id="btnConexaoConectar" class="btn primary">Conectar WhatsApp</button>
+            <button id="btnConexaoAtualizar" class="btn">Atualizar estado</button>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Antes de conectar</h3>
+          </div>
+          <p class="hint">Use um chip secund&aacute;rio, nunca o seu n&uacute;mero pessoal.</p>
+          <p class="hint">Comece com 20 a 30 envios por dia na primeira semana.</p>
+          <p class="hint">Toda mensagem sai com SAIR no fim. O sistema acrescenta sozinho.</p>
+          <p class="hint">Disparo em massa no WhatsApp comum pode derrubar o n&uacute;mero.</p>
+        </section>
+
+      </div><!-- /secConexao -->
+
       <div class="tabsec hidden" id="secResults">
 
         <section id="resultsCard">
@@ -563,6 +633,7 @@
 </div>
 
 <script src="/static/app.js"></script>
+<script src="/static/painel.js"></script>
 <script src="/static/sessao.js"></script>
 </body>
 </html>

@@ -7,7 +7,6 @@
 (function () {
   "use strict";
 
-  var linkAcessos = document.getElementById("btnAcessos");
   var linkSair = document.getElementById("btnSair");
 
   if (linkSair) {
@@ -21,10 +20,4 @@
     });
   }
 
-  if (linkAcessos) {
-    fetch("/api/acesso/eu")
-      .then(function (r) { return r.json(); })
-      .then(function (eu) { if (eu && eu.dono) linkAcessos.hidden = false; })
-      .catch(function () {});
-  }
 })();

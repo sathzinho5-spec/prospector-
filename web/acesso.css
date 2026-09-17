@@ -21,8 +21,9 @@
  *   .acesso-sub         linha de apoio embaixo do titulo.
  *   .acesso-sub-clara   variante mais legivel, pra texto que a pessoa precisa ler.
  *   .acesso-recado      bloco de recado com icone. Sozinho nao tem cor:
- *                       .acesso-recado-erro pinta de vermelho e
- *                       .acesso-recado-aviso de roxo.
+ *                       .acesso-recado-erro pinta de vermelho,
+ *                       .acesso-recado-aviso de roxo e
+ *                       .acesso-recado-ok de verde.
  *   .acesso-campos      pilha de campos mais o botao de enviar.
  *   .acesso-botao       botao de largura cheia. Vai SEMPRE junto de .btn.
  *   .acesso-rodape      linha final com o link pra outra tela.
@@ -123,6 +124,14 @@
 }
 
 .acesso-recado-aviso svg { stroke: #d9c0ff; }
+
+.acesso-recado-ok {
+  background: rgba(77,208,122,.15);
+  border-color: rgba(77,208,122,.35);
+  color: var(--green);
+}
+
+.acesso-recado-ok svg { stroke: var(--green); }
 
 .acesso-campos { display: flex; flex-direction: column; gap: 12px; }
 

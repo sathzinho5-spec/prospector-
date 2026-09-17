@@ -188,6 +188,26 @@ def tirar_acesso(email):
     return _mudar(email, {"status": "pendente", "aprovada_em": ""})
 
 
+def trocar_senha(email, senha_atual, senha_nova):
+    """Devolve (ok, erro). Exige a senha atual, sempre.
+
+    Sem essa exigencia, quem sentasse no computador de alguem com a sessao
+    aberta trocaria a senha e tomaria a conta. Tirar o acesso nao adiantaria:
+    a pessoa entraria de novo pela porta da frente.
+    """
+    conta = buscar(email)
+    if not conta:
+        return False, "Conta nao encontrada."
+    if not conferir_senha(senha_atual, conta.get("senha")):
+        return False, "A senha atual nao confere."
+    if len(str(senha_nova or "")) < MINIMO_SENHA:
+        return False, "A senha nova precisa de pelo menos %d caracteres." % MINIMO_SENHA
+    if conferir_senha(senha_nova, conta.get("senha")):
+        return False, "A senha nova e igual a atual."
+    _mudar(email, {"senha": gerar_hash(senha_nova)})
+    return True, ""
+
+
 # ------------------------------------------------------------------ sessao --
 
 def _chave_de_assinatura():

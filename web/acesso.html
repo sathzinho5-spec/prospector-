@@ -198,6 +198,60 @@
     </div>
   </section>
 
+  <!-- ===== TROCAR SENHA ===== -->
+  <section class="acesso-cartao" id="telaSenha" hidden>
+    <div class="acesso-marca">
+      <div class="logo-symbol">
+        <svg viewBox="0 0 24 24">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <h1>Prospector</h1>
+        <p>Prospecção de negócios</p>
+      </div>
+    </div>
+
+    <div>
+      <h2 class="acesso-titulo">Trocar a senha</h2>
+      <p class="acesso-sub" id="senhaQuem"></p>
+    </div>
+
+    <div class="acesso-recado acesso-recado-erro" id="erroSenha" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16.5v.01"/>
+      </svg>
+      <span id="erroSenhaTexto"></span>
+    </div>
+
+    <div class="acesso-recado acesso-recado-ok" id="okSenha" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>
+      </svg>
+      <span>Senha trocada. Ela vale a partir da próxima vez que você entrar.</span>
+    </div>
+
+    <form class="acesso-campos" id="formSenha" autocomplete="on">
+      <div class="field">
+        <label for="senhaAtual">Senha atual</label>
+        <input id="senhaAtual" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="senhaNova">Senha nova</label>
+        <input id="senhaNova" type="password" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label for="senhaNova2">Repetir a senha nova</label>
+        <input id="senhaNova2" type="password" autocomplete="new-password" required>
+      </div>
+      <button class="btn primary acesso-botao" type="submit" id="botaoSenha">Trocar a senha</button>
+    </form>
+
+    <p class="acesso-rodape"><a href="/">Voltar pra ferramenta</a></p>
+  </section>
+
 </main>
 
 <script src="/static/acesso.js"></script>

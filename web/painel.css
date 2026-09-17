@@ -1,0 +1,194 @@
+/* ===== PAINEL: NAVEGACAO NA LATERAL =====
+ *
+ * Implementa o desenho aprovado pelo fundador em 16/09/2026.
+ *
+ * Esta folha carrega DEPOIS da styles.css e so sobrescreve o que o desenho
+ * mudou. Ela nao redefine cor, raio nem fonte: tudo isso continua vindo dos
+ * tokens da styles.css, e e por isso que o painel novo continua parecendo a
+ * mesma ferramenta.
+ *
+ * Por que arquivo proprio, e nao edicao da styles.css: o socio reescreve a
+ * styles.css toda semana. O que e nosso vive aqui e nao entra em conflito.
+ *
+ * CONTRATO DE CLASSES (pro comportamento nao inventar nome):
+ *
+ *   .painel-nav          a lista vertical de abas, dentro da .sidebar.
+ *   .painel-item         uma aba. Vai SEMPRE junto de .tabbtn, que e o nome
+ *                        que o app.js escuta. Nunca troque .tabbtn por outro.
+ *   .painel-icone        o desenho da aba, 18px, so contorno.
+ *   .painel-nome         o nome da aba.
+ *   .painel-rodape       o pe da lateral: quem esta logado e as acoes de conta.
+ *   .painel-quem         bloco do nome e do papel.
+ *   .painel-estado       a faixa de estado no topo, acima do conteudo.
+ *   .painel-estado-itens as etiquetas de chip e de disparo.
+ *
+ * O estado ativo continua sendo a classe .active, posta pelo app.js. Esta
+ * folha so muda como ela e desenhada.
+ */
+
+/* A lateral era formulario de busca e passou a ser navegacao. Navegacao nao
+   precisa de 340px. */
+.sidebar { width: 260px; }
+
+.painel-nav {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Sobrescreve o .tabbtn, que era feito pra fileira horizontal do topo. */
+.painel-nav .tabbtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: none;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text2);
+  position: relative;
+  transition: background .12s, color .12s;
+}
+
+.painel-nav .tabbtn:hover { background: var(--tg-hover); color: var(--text); }
+
+.painel-nav .tabbtn.active {
+  background: rgba(169,79,255,.18);
+  color: var(--text);
+  font-weight: 600;
+  border-bottom-color: transparent;
+}
+
+/* A marca da aba aberta vira um risco na borda esquerda. No topo ela era um
+   risco embaixo, que na vertical nao diz mais nada. */
+.painel-nav .tabbtn.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.painel-icone {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.painel-nome { flex: 1; min-width: 0; }
+
+.painel-nav .tabbtn .badge { margin-left: auto; }
+
+/* ----------------------------------------------------------- rodape ----- */
+
+.painel-rodape {
+  padding: 14px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.painel-quem { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.painel-quem-nome {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.painel-quem-papel { font-size: 11px; color: var(--muted); }
+
+.painel-rodape-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.painel-rodape-acoes .btn {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+/* ------------------------------------------------- faixa de estado ------ */
+
+.painel-estado {
+  padding: 10px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: rgba(23,33,43,.6);
+}
+
+.painel-estado-itens { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+.painel-estado .hint { margin: 0; }
+
+/* ===== CELULAR =====
+ * Vem depois das bases de proposito: @media nao acrescenta especificidade, e
+ * sobrescrita escrita antes da base nao ganha da base.
+ *
+ * No celular o formato aprovado pelo fundador e o de SEMPRE: abas no topo,
+ * roladas na horizontal. So o computador ganhou a lateral. */
+@media (max-width: 900px) {
+  .app { flex-direction: column; }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .painel-nav {
+    flex-direction: row;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 4px 12px 0;
+    flex: 0 0 auto;
+  }
+
+  .painel-nav .tabbtn {
+    width: auto;
+    border-radius: 0;
+    padding: 10px 12px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+
+  .painel-nav .tabbtn.active {
+    background: none;
+    border-bottom-color: var(--accent);
+  }
+
+  /* Na horizontal o risco da esquerda voltaria a nao dizer nada: quem marca a
+     aba aberta e de novo a linha de baixo. */
+  .painel-nav .tabbtn.active::before { display: none; }
+
+  /* O nome FICA. A prancheta que ele aprovou mostra os nomes na fileira, e
+     e o nome que diz o que a aba faz: so o icone viraria adivinhacao. Quem
+     resolve a largura e a rolagem horizontal da propria fileira. */
+
+  .painel-rodape { flex-direction: row; align-items: center; flex-wrap: wrap; }
+
+  .painel-rodape .version-tag { display: none; }
+
+  .painel-estado { padding: 10px 16px; }
+
+  .content { padding: 18px 16px 60px; }
+}

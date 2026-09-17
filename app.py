@@ -212,6 +212,11 @@ def tela_acessos():
     return _tela_de_acesso()
 
 
+@app.get("/senha")
+def tela_senha():
+    return _tela_de_acesso()
+
+
 class EntrarRequest(BaseModel):
     email: str = ""
     senha: str = ""
@@ -219,6 +224,11 @@ class EntrarRequest(BaseModel):
 
 class ContaRequest(BaseModel):
     email: str = ""
+
+
+class SenhaRequest(BaseModel):
+    senha_atual: str = ""
+    senha_nova: str = ""
 
 
 def _por_o_cookie(resposta, email, request=None):
@@ -268,6 +278,24 @@ def api_acesso_criar(req: EntrarRequest, request: Request):
     # se nao for, cai na tela de espera sabendo quem e.
     corpo = {"ok": True, "status": conta.get("status"), "dono": conta.get("papel") == "dono"}
     return _por_o_cookie(JSONResponse(corpo), conta.get("email"), request)
+
+
+@app.post("/api/acesso/trocar-senha")
+def api_acesso_trocar_senha(req: SenhaRequest, request: Request):
+    """Troca a senha de QUEM ESTA LOGADO, e de mais ninguem.
+
+    O e-mail nao vem do corpo do pedido de proposito: se viesse, qualquer pessoa
+    logada trocaria a senha de outra conta mandando outro e-mail.
+    """
+    conta = _quem(request)
+    if not conta:
+        raise HTTPException(status_code=401, detail="Entre para trocar a senha.")
+    ok, erro = contas.trocar_senha(conta.get("email"), req.senha_atual, req.senha_nova)
+    if not ok:
+        return JSONResponse({"erro": erro}, status_code=400)
+    # A sessao continua valendo: quem trocou a propria senha nao precisa entrar
+    # de novo, e o cookie nao carrega a senha dentro dele.
+    return {"ok": True}
 
 
 @app.post("/api/acesso/sair")

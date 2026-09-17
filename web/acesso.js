@@ -15,6 +15,7 @@
     criar: document.getElementById("telaCriar"),
     aguardando: document.getElementById("telaAguardando"),
     acessos: document.getElementById("telaAcessos"),
+    senha: document.getElementById("telaSenha"),
   };
 
   function mostrar(nome) {
@@ -125,6 +126,40 @@
     if (b) b.addEventListener("click", sair);
   });
 
+  /* ------------------------------------------------------ trocar senha --- */
+
+  var formSenha = document.getElementById("formSenha");
+  if (formSenha) {
+    formSenha.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var botao = document.getElementById("botaoSenha");
+      var caixa = document.getElementById("erroSenha");
+      var texto = document.getElementById("erroSenhaTexto");
+      var ok = document.getElementById("okSenha");
+      erro(caixa, "");
+      ok.hidden = true;
+
+      var nova = document.getElementById("senhaNova").value;
+      if (nova !== document.getElementById("senhaNova2").value) {
+        erro(caixa, "As duas senhas novas nao sao iguais.", texto);
+        return;
+      }
+
+      botao.disabled = true;
+      try {
+        await pedir("/api/acesso/trocar-senha", {
+          senha_atual: document.getElementById("senhaAtual").value,
+          senha_nova: nova,
+        });
+        formSenha.reset();
+        ok.hidden = false;
+      } catch (err) {
+        erro(caixa, err.message, texto);
+      }
+      botao.disabled = false;
+    });
+  }
+
   /* ----------------------------------------------------------- acessos -- */
 
   function linha(conta, dono) {
@@ -231,6 +266,13 @@
         erro(document.getElementById("erroAcessos"), err.message,
              document.getElementById("erroAcessosTexto"));
       });
+      return;
+    }
+
+    if (caminho === "/senha") {
+      if (!eu.entrou) { window.location.href = "/entrar"; return; }
+      document.getElementById("senhaQuem").textContent = eu.email;
+      mostrar("senha");
       return;
     }
 
