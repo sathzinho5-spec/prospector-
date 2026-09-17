@@ -1,3 +1,4 @@
+// proposito: decide qual das quatro telas de acesso aparece, pelo endereco e pela sessao
 /* Comportamento das telas de acesso.
  *
  * As quatro telas vivem no mesmo acesso.html. Este arquivo decide qual cartao

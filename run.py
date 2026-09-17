@@ -1,3 +1,4 @@
+# proposito: sobe o uvicorn, com os cabecalhos do proxy quando roda na VPS
 import os
 
 import uvicorn

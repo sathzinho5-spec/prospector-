@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// proposito: npm run dev: sobe o Prospector em Python pelo comando padrao do ecossistema
 /**
  * `npm run dev` - sobe o Prospector em http://127.0.0.1:8000
  *

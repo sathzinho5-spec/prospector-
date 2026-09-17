@@ -1,3 +1,4 @@
+# proposito: leads e fila no Supabase, best-effort: cai pro local sem quebrar
 """
 Cloud store (Supabase) para leads + fila de disparo.
 Tudo best-effort: se o Supabase estiver fora do ar, retorna None/False

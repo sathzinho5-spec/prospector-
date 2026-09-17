@@ -1,3 +1,4 @@
+# proposito: caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
 import json
 import os
 

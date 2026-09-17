@@ -1,3 +1,4 @@
+# proposito: copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
 """
 SDR Copywriter - motor de mensagens do disparador.
 Base: skill copywriter-expert (resposta direta, roteiro por nicho).

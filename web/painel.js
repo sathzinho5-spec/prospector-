@@ -1,3 +1,4 @@
+// proposito: aba de conexao do numero, faixa de estado e quem esta logado
 /* Painel: a aba Conexao do numero, a faixa de estado e quem esta logado.
  *
  * Tudo aqui vive POR FORA do app.js, de proposito. O app.js e reescrito toda

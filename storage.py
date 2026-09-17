@@ -1,3 +1,4 @@
+# proposito: grava e exporta os negocios achados: JSON, CSV e Excel
 import csv
 import json
 import os

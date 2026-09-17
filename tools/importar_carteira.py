@@ -1,3 +1,4 @@
+# proposito: importa a carteira de leads da planilha do Drive pro Prospector
 """Importa a carteira de leads da planilha pra dentro do Prospector.
 
 A planilha vive no Drive do fundador ("Prospeccao Ativa - Vitrine Rapida.xlsx",

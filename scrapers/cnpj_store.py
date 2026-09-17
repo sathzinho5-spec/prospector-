@@ -1,3 +1,4 @@
+# proposito: espelho local em SQLite do CNPJ, pra quando o Supabase esta fora
 """
 CNPJ Store local (SQLite) - fallback quando o Supabase está fora do ar.
 Mesmas tabelas e funções do backend Supabase: empresas_grandes + vistos_cnpj.

@@ -1,3 +1,4 @@
+# proposito: varre o site do negocio atras de email, telefone e rede social
 import re
 
 import requests

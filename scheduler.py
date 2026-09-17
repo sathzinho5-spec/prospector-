@@ -1,3 +1,4 @@
+# proposito: agendador da busca recorrente e a comparacao com a rodada anterior
 import asyncio
 import datetime
 import json
