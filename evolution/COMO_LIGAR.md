@@ -1,26 +1,39 @@
-# Evolution API - como ligar o disparo real (5 min + QR code)
+# Evolution API - como ligar o disparo real
 # ============================================================
 # A Evolution API conecta seu WhatsApp via QR code e o Prospector
 # envia as mensagens sozinho. Sem ela, o disparo fica no modo Simulado.
 #
-# PASSO 1 - Subir a Evolution (precisa do Docker instalado)
+# ------------------------------------------------------------
+# OPÇÃO A — LOCAL (seu PC, para testar)
 # ------------------------------------------------------------
 #   cd evolution
 #   docker compose up -d
 #
-# PASSO 2 - Conectar o WhatsApp DENTRO do Prospector
 # ------------------------------------------------------------
-#   1. Abra o Prospector > aba Comercial > painel "Disparo automático"
-#   2. Clique em "Conectar WhatsApp" -> aparece o QR code na tela
-#   3. No celular: WhatsApp > Config > Aparelhos conectados > Conectar
-#      e escaneie o QR. O status muda para "conectado".
+# OPÇÃO B — VPS (produção, 24h no ar) ⭐ RECOMENDADO
+# ------------------------------------------------------------
+# 1. Copie a pasta evolution para a VPS (ou git pull, ela já está no repo).
+# 2. Na VPS, crie a API key forte e suba:
 #
-# PASSO 3 - Configurar (só 1 vez, em Configurações IA > Disparo)
-# ------------------------------------------------------------
-#   URL base ......: http://localhost:8080
-#   API key .......: prospector123  (ou o EVO_APIKEY que você definir)
-#   Instância .....: prospector     (qualquer nome, use o mesmo no QR)
-#   Provedor ......: Evolution API (QR code)
+#      export EVO_APIKEY='troque-por-uma-chave-longa-e-aleatoria'
+#      export DB_PASSWORD='outra-senha-forte'
+#      docker compose -f docker-compose.vps.yml up -d
+#
+# 3. No Prospector (site), vá em Configurações IA > Disparo:
+#      URL base ...: http://evolution:8080
+#      API key .....: a mesma EVO_APIKEY de cima
+#      Instância ...: prospector (ou chip2, chip3 para os extras)
+#    Salve. (Também aceita env DISPARO_EVO_URL / DISPARO_EVO_KEY no container.)
+# 4. Aba Comercial > Disparo > Conectar WhatsApp > escaneie o QR com o
+#    CHIP SECUNDÁRIO (WhatsApp > Aparelhos conectados).
+# 5. Teste no meu número > Iniciar disparo.
+#
+# NOTAS DE PRODUÇÃO
+# - A API NÃO tem porta pública: só o Prospector (mesma rede Docker) a alcança.
+# - Sessões/QR ficam nos volumes (evo_instances, evo_pgdata): sobrevivem a restart.
+# - Para trocar a key depois: atualize EVO_APIKEY, recrie o container
+#   (docker compose -f docker-compose.vps.yml up -d --force-recreate evolution)
+#   e atualize a mesma key nas Configurações do Prospector.
 #
 # DICAS DE SEGURANÇA (importante)
 # ------------------------------------------------------------

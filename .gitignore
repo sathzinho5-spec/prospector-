@@ -33,6 +33,8 @@ Thumbs.db
 settings.json
 sessao.chave
 *.chave
+.env
+.env.*
 
 # Helpers locais
 fix_docker_admin.ps1

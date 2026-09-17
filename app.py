@@ -722,8 +722,8 @@ def api_disparo_agora(req: DisparoAgoraRequest):
     s = config.load_settings()
     prov = disparo._make_provider({
         "provider": s.get("disparo_provider", "simulado"),
-        "evo_url": s.get("disparo_evo_url", ""),
-        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_url": _evo_cfg(s)["url"],
+        "evo_key": _evo_cfg(s)["key"],
         "evo_instance": s.get("disparo_evo_instance", ""),
         "meta_token": s.get("disparo_meta_token", ""),
         "meta_phone_id": s.get("disparo_meta_phone_id", ""),
@@ -813,8 +813,8 @@ def api_disparo_iniciar(req: DisparoStartRequest):
         "hora_ini": req.hora_ini,
         "hora_fim": req.hora_fim,
         "optout": req.optout,
-        "evo_url": s.get("disparo_evo_url", ""),
-        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_url": _evo_cfg(s)["url"],
+        "evo_key": _evo_cfg(s)["key"],
         "evo_instance": s.get("disparo_evo_instance", ""),
         "evo_instances": [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()],
         "meta_token": s.get("disparo_meta_token", ""),
@@ -846,8 +846,8 @@ def api_disparo_testar(req: DisparoTestRequest):
     s = config.load_settings()
     prov = disparo._make_provider({
         "provider": s.get("disparo_provider", "simulado"),
-        "evo_url": s.get("disparo_evo_url", ""),
-        "evo_key": s.get("disparo_evo_key", ""),
+        "evo_url": _evo_cfg(s)["url"],
+        "evo_key": _evo_cfg(s)["key"],
         "evo_instance": s.get("disparo_evo_instance", ""),
         "meta_token": s.get("disparo_meta_token", ""),
         "meta_phone_id": s.get("disparo_meta_phone_id", ""),
@@ -870,10 +870,19 @@ def _evo_provider(instance=None):
     s = config.load_settings()
     inst = (instance or "").strip() or s.get("disparo_evo_instance", "")
     return disparo.EvolutionProvider(
-        s.get("disparo_evo_url", ""),
-        s.get("disparo_evo_key", ""),
+        _evo_cfg(s)["url"],
+        _evo_cfg(s)["key"],
         inst,
     )
+
+
+def _evo_cfg(s=None):
+    """URL/key da Evolution: settings primeiro, env da VPS como fallback."""
+    s = s if s is not None else config.load_settings()
+    return {
+        "url": s.get("disparo_evo_url", "") or os.environ.get("DISPARO_EVO_URL", ""),
+        "key": s.get("disparo_evo_key", "") or os.environ.get("DISPARO_EVO_KEY", ""),
+    }
 
 
 def _evo_instances():
@@ -914,7 +923,8 @@ def api_disparo_instancias():
         from scrapers import disparo
 
         s = config.load_settings()
-        p = disparo.EvolutionProvider(s.get("disparo_evo_url", ""), s.get("disparo_evo_key", ""), inst)
+        cfg = _evo_cfg(s)
+        p = disparo.EvolutionProvider(cfg["url"], cfg["key"], inst)
         st = p.estado()
         provs.append({"instance": inst, **st})
     if not provs:

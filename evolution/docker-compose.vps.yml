@@ -1,0 +1,62 @@
+# Evolution API na VPS (produção) — Prospector
+# Uso: EVO_APIKEY=<chave-forte> DB_PASSWORD=<senha-forte> docker compose -f docker-compose.vps.yml up -d
+# A API NÃO publica porta: só o Prospector (mesma rede) a alcança em http://evolution:8080.
+# O QR Code aparece dentro do Prospector (aba Comercial > Disparo > Conectar WhatsApp).
+services:
+  evo-postgres:
+    image: postgres:15-alpine
+    container_name: evo-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: evolution
+      POSTGRES_USER: evolution
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no ambiente}
+    volumes:
+      - evo_pgdata:/var/lib/postgresql/data
+    networks:
+      - evo-net
+
+  evo-redis:
+    image: redis:7-alpine
+    container_name: evo-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - evo_redisdata:/data
+    networks:
+      - evo-net
+
+  evolution:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution
+    restart: always
+    depends_on:
+      - evo-postgres
+      - evo-redis
+    environment:
+      SERVER_URL: ${SERVER_URL:-http://evolution:8080}
+      AUTHENTICATION_API_KEY: ${EVO_APIKEY:?defina EVO_APIKEY no ambiente}
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_CONNECTION_URI: postgresql://evolution:${DB_PASSWORD:?defina DB_PASSWORD no ambiente}@evo-postgres:5432/evolution?schema=public
+      REDIS_ENABLED: "true"
+      REDIS_URI: redis://evo-redis:6379
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://evo-redis:6379
+    volumes:
+      - evo_instances:/evolution/instances
+    networks:
+      - evo-net
+      - proxy
+
+volumes:
+  evo_pgdata:
+  evo_redisdata:
+  evo_instances:
+
+networks:
+  evo-net:
+    driver: bridge
+  proxy:
+    name: nginx-proxy-manager_default
+    external: true
