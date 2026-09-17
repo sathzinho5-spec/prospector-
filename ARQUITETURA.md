@@ -4,7 +4,7 @@ Mapa gerado por `Agente Orquestrador/tools/gerar_arquitetura.py`.
 Nao edite a mao: a proxima geracao sobrescreve. Pra mudar uma linha,
 mude o `proposito:` no cabecalho do arquivo.
 
-Teto por arquivo: 350 linhas. Arquivos: 52.
+Teto por arquivo: 350 linhas. Arquivos: 57.
 
 ## raiz do projeto
 
@@ -24,8 +24,11 @@ storage.py                      111  SEM PROPOSITO DECLARADO
 
 ```
 analysis/__init__.py              0  SEM PROPOSITO DECLARADO
-analysis/analyzer.py            573  SEM PROPOSITO DECLARADO  ACIMA DO TETO
+analysis/analyzer.py             13  porta de entrada da analise; reexporta pra nenhuma chamada de fora mudar
+analysis/copy_comercial.py      212  copy de estrategia e de proposta comercial, com prompt e fallback local
+analysis/copy_fechamento.py     184  copy de fechamento: pitch de abordagem e resposta a objecao
 analysis/copy_sdr.py            168  SEM PROPOSITO DECLARADO
+analysis/instagram_report.py    186  relatorio do perfil de Instagram: metricas, tom, pontos fortes e score
 ```
 
 ## rotas/
@@ -51,7 +54,9 @@ scrapers/cnpj_supabase.py       233  SEM PROPOSITO DECLARADO
 scrapers/disparo.py             251  SEM PROPOSITO DECLARADO
 scrapers/disparo_fila.py        242  a fila do disparo em SQLite, o bloqueio de telefone e o anti-duplicata
 scrapers/disparo_providers.py   293  quem sabe enviar: Simulado, Evolution API e Meta Cloud API
-scrapers/google_maps.py         408  SEM PROPOSITO DECLARADO  ACIMA DO TETO
+scrapers/gmaps_extrair.py       184  tira o dado de uma pagina aberta do Maps: texto, link, consentimento, ficha
+scrapers/gmaps_parse.py          81  funcoes puras que viram texto raspado em dado: nota, cidade, coordenada
+scrapers/google_maps.py         142  conduz a busca no Google Maps: abre o navegador, percorre os cartoes
 scrapers/google_search.py       140  SEM PROPOSITO DECLARADO
 scrapers/instagram.py           137  SEM PROPOSITO DECLARADO
 scrapers/site_contacts.py       132  SEM PROPOSITO DECLARADO
@@ -98,17 +103,11 @@ web/js/disparo.js               268  disparo automatico: fila, migracao, envio e
 web/js/ui.js                    118  estado compartilhado do painel e as pecas visuais reusadas
 ```
 
-## Acima do teto de 350 linhas
-
-- `analysis/analyzer.py`
-- `scrapers/google_maps.py`
-
 ## Sem proposito declarado
 
 Cada um destes precisa de uma linha `proposito:` no cabecalho.
 
 - `analysis/__init__.py`
-- `analysis/analyzer.py`
 - `analysis/copy_sdr.py`
 - `config.py`
 - `contas.py`
@@ -120,7 +119,6 @@ Cada um destes precisa de uma linha `proposito:` no cabecalho.
 - `scrapers/cnpj_store.py`
 - `scrapers/cnpj_supabase.py`
 - `scrapers/disparo.py`
-- `scrapers/google_maps.py`
 - `scrapers/google_search.py`
 - `scrapers/instagram.py`
 - `scrapers/site_contacts.py`
