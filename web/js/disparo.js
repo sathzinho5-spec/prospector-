@@ -21,7 +21,7 @@ async function setModo(modo) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ disparo_modo: modo })
     });
-  } catch (e) { /* silencioso */ }
+  } catch { /* silencioso */ }
 }
 
 async function migrarMinerados() {
@@ -199,7 +199,7 @@ async function refreshDisparo() {
     if (st.rodando) {
       dispPoll = setInterval(refreshDisparo, 5000);
     }
-  } catch (e) { /* silencioso */ }
+  } catch { /* silencioso */ }
 }
 
 async function startDisp() {
@@ -215,7 +215,7 @@ async function startDisp() {
   try {
     const s = await (await fetch("/api/settings")).json();
     body.provider = s.disparo_provider || "simulado";
-  } catch (e) { /* usa simulado */ }
+  } catch { /* usa simulado */ }
   const r = await fetch("/api/disparo/iniciar", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

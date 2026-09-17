@@ -117,7 +117,7 @@ async function saveSettings() {
           $("cloudChipText").textContent = "Nuvem: local";
         }
       }).catch(function () { /* mantém padrão */ });
-    } catch (e) { /* mantém padrão */ }
+    } catch { /* mantém padrão */ }
       await loadSettings();
       setTimeout(function () { clearStatus("settingsStatus"); }, 3000);
     } else {

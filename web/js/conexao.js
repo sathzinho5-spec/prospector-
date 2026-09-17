@@ -20,7 +20,7 @@ async function refreshInstances() {
         esc(it.conectado ? "conectado" : (it.estado || "off")) +
         " <a class='link' href='#' onclick='connectWhatsApp(\"" + esc(it.instance || "") + "\");return false;'>conectar</a></span>";
     }).join("");
-  } catch (e) {
+  } catch {
     box.innerHTML = "<span class='hint'>Falha ao ver instâncias.</span>";
   }
 }
@@ -60,6 +60,6 @@ async function checkWaState() {
     } else {
       $("qrStatus").textContent = "Estado: " + (d.estado || "aguardando scan...") + (d.erro ? " — " + d.erro : "");
     }
-  } catch (e) { /* tenta de novo no próximo ciclo */ }
+  } catch { /* tenta de novo no próximo ciclo */ }
 }
 

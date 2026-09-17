@@ -119,7 +119,7 @@ function diaKey(ts) {
     const d = new Date(Number(ts) * 1000);
     if (isNaN(d.getTime())) return "";
     return ("0" + d.getDate()).slice(-2) + "/" + ("0" + (d.getMonth() + 1)).slice(-2) + "/" + d.getFullYear();
-  } catch (e) { return ""; }
+  } catch { return ""; }
 }
 
 async function loadWaMsgs(quiet) {

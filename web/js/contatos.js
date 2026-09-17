@@ -1,7 +1,7 @@
 // proposito: quem ja foi contatado e a fila de contato do painel
 // ===== CONTATADOS (localStorage) =====
 function getContacted() {
-  try { return JSON.parse(localStorage.getItem("pp_contacted") || "[]"); } catch (e) { return []; }
+  try { return JSON.parse(localStorage.getItem("pp_contacted") || "[]"); } catch { return []; }
 }
 
 function isContacted(name) { return getContacted().indexOf(name) !== -1; }

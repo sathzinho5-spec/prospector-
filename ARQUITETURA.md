@@ -97,7 +97,7 @@ web/js/contatos.js              116  quem ja foi contatado e a fila de contato d
 web/js/conversas.js             178  conversas do WhatsApp: listar chats, ler e responder
 web/js/copy.js                  192  geracao de copy de venda: pitch, sequencia, objecao e proposta
 web/js/crm.js                   128  CRM: carregar leads, filtrar e montar o quadro por estagio
-web/js/crm_cartao.js            216  cartao do lead, acao em massa e KPIs do CRM
+web/js/crm_cartao.js            220  cartao do lead, acao em massa e KPIs do CRM
 web/js/detalhe.js               154  modal de detalhe do lead, screenshot e extracao de contato
 web/js/disparo.js               268  disparo automatico: fila, migracao, envio e status
 web/js/ui.js                    118  estado compartilhado do painel e as pecas visuais reusadas

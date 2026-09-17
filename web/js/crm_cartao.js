@@ -26,6 +26,10 @@ const ICO = {
 
 function crmCard(l) {
   const score = l.score_oportunidade;
+  // ACHADO, nao e sujeira: este scoreHtml e montado e nunca usado no cartao.
+  // Parece pastilha de score que faltou ser ligada, nao codigo morto de verdade.
+  // Apagar esconderia a pergunta, entao fica silenciado com o motivo a vista.
+  // eslint-disable-next-line no-unused-vars
   const scoreHtml = score != null
     ? "<span class='pill " + (score >= 70 ? "high" : (score < 45 ? "low" : "med")) + "'>" + score + "%</span>" : "";
   const opts = CRM_STAGES.map(function (pair) {
@@ -100,7 +104,7 @@ window.crmBulkMove = async function () {
     }
     crmSelected = {};
     hideLoader();
-  } catch (e) {
+  } catch {
     hideLoader();
   }
   renderBulkBar();

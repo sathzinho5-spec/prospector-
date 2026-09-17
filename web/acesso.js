@@ -53,7 +53,7 @@
     }
     var r = await fetch(caminho, opcoes);
     var dados = {};
-    try { dados = await r.json(); } catch (e) { dados = {}; }
+    try { dados = await r.json(); } catch { dados = {}; }
     if (!r.ok) {
       throw new Error(dados.erro || dados.detail || "Nao deu pra completar. Tente de novo.");
     }
@@ -163,7 +163,7 @@
 
   /* ----------------------------------------------------------- acessos -- */
 
-  function linha(conta, dono) {
+  function linha(conta) {
     var div = document.createElement("div");
     div.className = "acesso-linha";
 

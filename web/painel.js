@@ -58,7 +58,7 @@
           ? d.erro
           : ((d && d.estado) ? "Estado da conexao: " + d.estado : "");
       }
-    } catch (e) {
+    } catch {
       pintar(pegar("estadoChip"), "chip: nao deu pra conferir", "closed");
     }
 
@@ -77,7 +77,7 @@
         var pendentes = s.pendentes || 0;
         hoje.textContent = enviadas + " enviadas hoje · " + pendentes + " na fila";
       }
-    } catch (e) {
+    } catch {
       pintar(pegar("estadoDisparo"), "disparo: nao deu pra conferir", "closed");
     }
   }
@@ -96,7 +96,7 @@
       // A fila de acessos so existe pra quem pode liberar alguem.
       var acessos = pegar("btnAcessos");
       if (acessos && eu.dono) acessos.hidden = false;
-    } catch (e) { /* o rodape fica em branco, e a ferramenta segue */ }
+    } catch { /* o rodape fica em branco, e a ferramenta segue */ }
   }
 
   /* -------------------------------------------------------------- ligacao -- */

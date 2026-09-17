@@ -14,7 +14,7 @@ async function loadScheduleStatus() {
     } else {
       el.innerHTML = "Busca automática: <span style='color:#ff9aa5'>desativada</span> (ative nas Configurações).";
     }
-  } catch (e) { /* silencioso */ }
+  } catch { /* silencioso */ }
 }
 
 async function loadScheduleResults() {
