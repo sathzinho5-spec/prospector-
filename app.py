@@ -113,6 +113,10 @@ class SettingsRequest(BaseModel):
     disparo_evo_key: str = ""
     disparo_evo_instance: str = ""
     disparo_evo_instances: str = ""
+    disparo_evo_chip2: str = ""
+    disparo_evo_chip3: str = ""
+    disparo_prompt: str = ""
+    disparo_tom: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
     disparo_modo: str = ""
@@ -174,6 +178,14 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_evo_instance"] = req.disparo_evo_instance.strip()
     if req.disparo_evo_instances:
         new["disparo_evo_instances"] = req.disparo_evo_instances.strip()
+    for _f in ("disparo_evo_chip2", "disparo_evo_chip3"):
+        _v = getattr(req, _f, "")
+        if _v:
+            new[_f] = _v.strip()
+    if req.disparo_prompt:
+        new["disparo_prompt"] = req.disparo_prompt.strip()
+    if req.disparo_tom in ("direto", "consultivo", "agressivo", "amigavel"):
+        new["disparo_tom"] = req.disparo_tom
     if req.disparo_meta_token:
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
@@ -657,15 +669,17 @@ def _evo_instances():
     from scrapers import disparo  # noqa: F401 (garante módulo carregado)
 
     s = config.load_settings()
-    insts = [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()]
-    if not insts and s.get("disparo_evo_instance"):
-        insts = [s["disparo_evo_instance"].strip()]
-    seen, out = set(), []
-    for i in insts:
-        if i not in seen:
-            seen.add(i)
-            out.append(i)
-    return out
+    insts = []
+    for v in (s.get("disparo_evo_instance"), s.get("disparo_evo_chip2"),
+              s.get("disparo_evo_chip3")):
+        v = str(v or "").strip()
+        if v and v not in insts:
+            insts.append(v)
+    for v in str(s.get("disparo_evo_instances") or "").split(","):
+        v = v.strip()
+        if v and v not in insts:
+            insts.append(v)
+    return insts[:3]
 
 
 @app.post("/api/disparo/evolution/qrcode")

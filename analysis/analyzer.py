@@ -410,6 +410,23 @@ Responda SOMENTE com JSON valido:
   "email_corpo": "corpo do e-mail"
 }}"""
 
+TONS = {
+    "direto": "Tom DIRETO e objetivo: frases curtas, sem rodeios, vá ao ponto e feche com pergunta.",
+    "consultivo": "Tom CONSULTIVO e parceiro: faça perguntas que façam o dono refletir, eduque sem vender.",
+    "agressivo": "Tom AGRESSIVO de resposta direta: urgência, dor amplificada, prova e CTA forte. Sem ser desrespeitoso.",
+    "amigavel": "Tom AMIGÁVEL e caloroso: conversa de bairro, empatia, leveza, como indicação de amigo.",
+}
+
+
+def _montar_prompt(settings):
+    """Prompt do disparador: customizado pelo usuário ou padrão da skill + tom."""
+    base = (settings.get("disparo_prompt") or "").strip() or PITCH_PROMPT
+    tom = (settings.get("disparo_tom") or "direto").lower()
+    instrucao = TONS.get(tom, TONS["direto"])
+    if "{dados}" not in base:
+        base += "\n\nDados do negocio:\n{dados}"
+    return base + "\n\nTom obrigatório: " + instrucao
+
 
 def _local_pitch(business):
     from analysis.copy_sdr import _angle
@@ -460,12 +477,13 @@ def pitch_message(business, settings):
             model = settings.get("openai_model", "gpt-4o-mini")
             dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
                                                    "cidade", "estado", "website", "telefone")}
+            prompt = _montar_prompt(settings).replace("{dados}", json.dumps(dados, ensure_ascii=False, indent=2))
             resp = requests.post(
                 f"{base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
                     "model": model,
-                    "messages": [{"role": "user", "content": PITCH_PROMPT.replace("{dados}", json.dumps(dados, ensure_ascii=False, indent=2))}],
+                    "messages": [{"role": "user", "content": prompt}],
                     "temperature": 0.7,
                 },
                 timeout=60,

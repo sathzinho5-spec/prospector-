@@ -1318,7 +1318,10 @@ async function saveSettings() {
     if ($("dispEvoUrl").value.trim()) body.disparo_evo_url = $("dispEvoUrl").value.trim();
     if ($("dispEvoKey").value.trim()) body.disparo_evo_key = $("dispEvoKey").value.trim();
     if ($("dispEvoInstance").value.trim()) body.disparo_evo_instance = $("dispEvoInstance").value.trim();
-    if ($("dispEvoInstances").value.trim()) body.disparo_evo_instances = $("dispEvoInstances").value.trim();
+    if ($("dispEvoChip2").value.trim()) body.disparo_evo_chip2 = $("dispEvoChip2").value.trim();
+    if ($("dispEvoChip3").value.trim()) body.disparo_evo_chip3 = $("dispEvoChip3").value.trim();
+    if ($("dispTom")) body.disparo_tom = $("dispTom").value;
+    if ($("dispPrompt").value.trim()) body.disparo_prompt = $("dispPrompt").value.trim();
     if ($("dispMetaToken").value.trim()) body.disparo_meta_token = $("dispMetaToken").value.trim();
     if ($("dispMetaPhone").value.trim()) body.disparo_meta_phone_id = $("dispMetaPhone").value.trim();
   }
@@ -1358,7 +1361,11 @@ async function saveSettings() {
       $("dispProvider").value = s.disparo_provider || "simulado";
       $("dispEvoUrl").value = s.disparo_evo_url || "";
       $("dispEvoInstance").value = s.disparo_evo_instance || "";
-      $("dispEvoInstances").value = s.disparo_evo_instances || "";
+      $("dispEvoChip2").value = s.disparo_evo_chip2 || "";
+      $("dispEvoChip3").value = s.disparo_evo_chip3 || "";
+      $("dispTom").value = s.disparo_tom || "direto";
+      $("dispPrompt").value = "";
+      $("dispPrompt").placeholder = s.disparo_prompt ? "Prompt personalizado ativo" : "Vazio = prompt da skill";
       $("dispMetaPhone").value = s.disparo_meta_phone_id || "";
       $("dispEvoKey").placeholder = s.disparo_evo_key ? "Key configurada" : "sua apikey";
       $("dispMetaToken").placeholder = s.disparo_meta_token ? "Token configurado" : "token permanente";

@@ -129,6 +129,11 @@ Responda SOMENTE com JSON valido:
 def gerar_sequencia(business, settings, niche_id=None):
     api_key = (settings.get("openai_api_key") or "").strip()
     ang = _angle(niche_id, business.get("categoria"))
+    try:
+        from analysis.analyzer import TONS
+        tom_txt = TONS.get((settings.get("disparo_tom") or "direto").lower(), "")
+    except Exception:
+        tom_txt = ""
     if api_key:
         try:
             base_url = settings.get("openai_base_url", "https://api.openai.com/v1").rstrip("/")
@@ -139,6 +144,8 @@ def gerar_sequencia(business, settings, niche_id=None):
                       .replace("{dados}", json.dumps(dados, ensure_ascii=False))
                       .replace("{dor}", ang["dor"])
                       .replace("{promessa}", ang["promessa"]))
+            if tom_txt:
+                prompt += "\n\nTom obrigatório: " + tom_txt
             resp = requests.post(
                 f"{base_url}/chat/completions",
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},

@@ -84,7 +84,7 @@
     </div>
 
     <div class="side-foot">
-      <div class="version-tag">Prospector <b>v36</b> · multi-chip</div>
+      <div class="version-tag">Prospector <b>v37</b> · prompt + tom + 3 chips</div>
     </div>
   </aside>
 
@@ -458,13 +458,31 @@
       <input id="dispEvoKey" type="password" placeholder="sua apikey">
     </div>
     <div class="field">
-      <label for="dispEvoInstance">Evolution — Instância</label>
+      <label for="dispEvoInstance">Evolution — Chip 1 (principal)</label>
       <input id="dispEvoInstance" type="text" placeholder="nome da instancia">
     </div>
     <div class="field">
-      <label for="dispEvoInstances">Evolution — Outras instâncias (chips extras, vírgula)</label>
-      <input id="dispEvoInstances" type="text" placeholder="Ex: chip2, chip3">
-      <p class="hint">O disparo reveza sozinho entre os chips conectados.</p>
+      <label for="dispEvoChip2">Evolution — Chip 2 (opcional)</label>
+      <input id="dispEvoChip2" type="text" placeholder="segundo chip">
+    </div>
+    <div class="field">
+      <label for="dispEvoChip3">Evolution — Chip 3 (opcional)</label>
+      <input id="dispEvoChip3" type="text" placeholder="terceiro chip">
+      <p class="hint">Até 3 chips. O disparo reveza sozinho entre os conectados.</p>
+    </div>
+    <div class="field">
+      <label for="dispTom">Tom das mensagens (skill copywriter)</label>
+      <select id="dispTom">
+        <option value="direto">Direto e objetivo</option>
+        <option value="consultivo">Consultivo e parceiro</option>
+        <option value="agressivo">Agressivo (resposta direta)</option>
+        <option value="amigavel">Amigável e caloroso</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="dispPrompt">Prompt do disparador (opcional, sobrescreve a skill)</label>
+      <textarea id="dispPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+      <p class="hint">Responda sempre em JSON: whatsapp, email_assunto, email_corpo.</p>
     </div>
     <div class="field">
       <label for="dispMetaToken">Meta — Token</label>
