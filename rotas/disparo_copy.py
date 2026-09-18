@@ -183,7 +183,8 @@ def api_disparo_migrar(req: DisparoMigrarRequest):
         if origem == "ia":
             com_ia += 1
         itens.append({"nome": b.get("nome", ""), "telefone": b.get("telefone", ""),
-                      "mensagem": msg, "copy_origem": origem})
+                      "mensagem": msg, "copy_origem": origem,
+                      "categoria": b.get("categoria", "")})
         na_fila.add(tel)
 
     n = disparo.enfileirar(itens, origem=req.origem or "minerados")

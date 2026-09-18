@@ -190,6 +190,22 @@ def api_disparo_cadencia(hora_ini: str = "", hora_fim: str = "", limite_dia: int
     return cad
 
 
+@router.get("/api/timing/janelas")
+def api_timing_janelas():
+    """Padrao por nicho + o que o operador ajustou. A tela monta o editor com
+    isso: ela nao duplica a tabela, senao padrao e tela divergem."""
+    import niches
+    from analysis import timing
+
+    s = config.load_settings()
+    salvas = s.get("timing_janelas") or {}
+    return {
+        "nichos": [{"id": n["id"], "label": n["label"]} for n in niches.NICHES],
+        "padrao": timing.JANELAS_PADRAO,
+        "salvas": salvas,
+    }
+
+
 @router.get("/api/disparo/kpis")
 def api_disparo_kpis():
     """Os quatro numeros da aba. Todos vem de quem ja os contava: nenhum

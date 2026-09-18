@@ -7,8 +7,14 @@ from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F4
 
 
 def enfileirar(itens, origem=""):
-    """itens: [{nome, telefone, mensagem, copy_origem}]. Retorna qtd enfileirada.
-    Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando)."""
+    """itens: [{nome, telefone, mensagem, copy_origem, categoria}]. Retorna qtd enfileirada.
+    Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando).
+    Cada item ganha agendado_para = melhor momento do nicho (analysis/timing):
+    a fila anda sozinha em ordem de horario, sem travar ninguem."""
+    import config
+    from analysis import timing
+
+    settings = config.load_settings()
     con = _conn()
     n = 0
     try:
@@ -32,11 +38,13 @@ def enfileirar(itens, origem=""):
                 continue
             if tel in existentes:
                 continue
+            agendado, motivo = timing.proximo_envio_em(it.get("categoria", ""), settings)
             con.execute(
-                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem) "
-                "VALUES (?,?,?,?,?)",
+                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem, agendado_para, timing_motivo) "
+                "VALUES (?,?,?,?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem,
-                 str(it.get("copy_origem") or "ia").strip().lower()),
+                 str(it.get("copy_origem") or "ia").strip().lower(),
+                 agendado, motivo),
             )
             existentes.add(tel)
             n += 1

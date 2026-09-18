@@ -85,6 +85,7 @@ _COLUNAS_NOVAS = (
     ("fila", "instancia", "TEXT"),
     ("fila", "editada_em", "TIMESTAMP"),
     ("fila", "copy_origem", "TEXT"),
+    ("fila", "timing_motivo", "TEXT DEFAULT ''"),
 )
 
 _migrado = False

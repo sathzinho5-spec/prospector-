@@ -241,7 +241,7 @@ async function bulkEnqueue() {
         body: JSON.stringify({ business: b })
       });
       const d = await r.json();
-      if (r.ok && d.whatsapp) itens.push({ nome: b.nome, telefone: b.telefone, mensagem: d.whatsapp });
+      if (r.ok && d.whatsapp) itens.push({ nome: b.nome, telefone: b.telefone, mensagem: d.whatsapp, categoria: b.categoria || "" });
       $("loaderText").textContent = "Gerando mensagens " + (i + 1) + "/" + list.length + "...";
     }
     const r2 = await fetch("/api/disparo/enfileirar", {

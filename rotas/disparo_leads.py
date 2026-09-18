@@ -73,6 +73,8 @@ def _linha(lead, tel, fila_row, copy_row, abordagem, bloqueado, liberado):
         "bloqueado": bloqueado,
         "apto": bool(estado == "copy_pronta" and liberado and not bloqueado),
         "fila_id": (fila_row or {}).get("id"),
+        "melhor_envio": (fila_row or {}).get("agendado_para"),
+        "timing_motivo": (fila_row or {}).get("timing_motivo") or "",
         "abordagem_id": (abordagem or {}).get("id"),
         "enviado_em": (abordagem or {}).get("enviado_em"),
         "respondido_em": (abordagem or {}).get("respondido_em"),

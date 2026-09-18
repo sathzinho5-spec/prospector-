@@ -168,7 +168,7 @@ async function enqueueAll() {
     for (let i = 0; i < alvos.length; i++) {
       const b = alvos[i];
       if (b._pitch && b._pitch.whatsapp) {
-        itens.push({ nome: b.nome, telefone: b.telefone, mensagem: b._pitch.whatsapp });
+        itens.push({ nome: b.nome, telefone: b.telefone, mensagem: b._pitch.whatsapp, categoria: b.categoria || "" });
       } else {
         const r = await fetch("/api/business/pitch?rapido=1", {
           method: "POST",
@@ -178,7 +178,7 @@ async function enqueueAll() {
         const d = await r.json();
         if (r.ok && d.whatsapp) {
           b._pitch = d;
-          itens.push({ nome: b.nome, telefone: b.telefone, mensagem: d.whatsapp });
+          itens.push({ nome: b.nome, telefone: b.telefone, mensagem: d.whatsapp, categoria: b.categoria || "" });
         }
       }
       $("loaderText").textContent = "Gerando mensagens " + (i + 1) + "/" + alvos.length + "...";

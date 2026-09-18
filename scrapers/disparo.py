@@ -145,7 +145,7 @@ def _worker_loop():
                 row = con.execute(
                     "SELECT * FROM fila WHERE status='pendente' "
                     "AND datetime(agendado_para) <= datetime('now') "
-                    "ORDER BY id ASC LIMIT 1").fetchone()
+                    "ORDER BY datetime(agendado_para) ASC, id ASC LIMIT 1").fetchone()
                 if not row:
                     _worker_state["proximo_em"] = "fila vazia"
                     con.close()
