@@ -67,6 +67,42 @@ def _sem_travessao(texto):
     return texto.replace("—", ",").replace("–", ",")
 
 
+def _dados_ricos(business):
+    """Tudo que a mineracao ja sabe e o copywriter precisa pra personalizar.
+    Antes iam so 8 campos rasos; score, estrategia e oportunidades ficavam de
+    fora e toda mensagem saia generica."""
+    dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
+                                          "cidade", "estado", "website", "telefone")}
+    for k in ("score_oportunidade", "score_ajustado", "score_motivo", "nivel_ia",
+              "nivel", "estrategia_resumo", "descricao", "horarios", "endereco"):
+        v = business.get(k)
+        if v not in (None, ""):
+            dados[k] = v
+    for k in ("oportunidades_ia", "oportunidades", "atributos"):
+        v = business.get(k)
+        if isinstance(v, list) and v:
+            dados[k] = v[:4]
+        elif v:
+            dados[k] = v
+    return {k: v for k, v in dados.items() if v not in (None, "")}
+
+
+def _violacoes(msg):
+    """Regras da skill que da pra checar por codigo. Modelo pequeno viola direto;
+    sem isso a validacao era so promessa no prompt."""
+    problemas = []
+    t = (msg or "").strip()
+    if not t:
+        return ["vazia"]
+    if "—" in t or "–" in t:
+        problemas.append("travessao proibido")
+    if len(t.split()) > 95:
+        problemas.append("passou de 90 palavras")
+    if not t.rstrip().endswith("?"):
+        problemas.append("nao termina em pergunta")
+    return problemas
+
+
 def _local_sequencia(business, niche_id=None):
     nome = business.get("nome") or "aí"
     cidade = (business.get("cidade") or "").strip()
@@ -126,7 +162,10 @@ REGRAS OBRIGATORIAS:
 5. Terminar em pergunta sobre a rotina do negocio
 6. Implicar a dor (o cliente que some calado), sem demonstracao
 7. Maximo 90 palavras por mensagem
-8. Nao citar cidade nem regiao quando o dado nao vier nos dados do negocio"""
+8. Nao citar cidade nem regiao quando o dado nao vier nos dados do negocio
+9. PERSONALIZAR DE VERDADE: citar pelo menos UM dado especifico do lead
+   (nota, avaliacoes, cidade, score, estrategia). Texto que serviria para
+   qualquer empresa do nicho trocando so o nome nao vale"""
 
 # O contrato de maquina: a tarefa, os dados e o formato da resposta. Mora no codigo
 # e NUNCA no playbook, porque quem edita o playbook e a copywriter-expert, e copy
@@ -188,8 +227,7 @@ def gerar_sequencia(business, settings, niche_id=None):
         try:
             base_url = settings.get("openai_base_url", "https://api.openai.com/v1").rstrip("/")
             model = settings.get("openai_model", "gpt-4o-mini")
-            dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
-                                                   "cidade", "estado", "website", "telefone")}
+            dados = _dados_ricos(business)
             bruto, versao = _montar_prompt_sequencia(settings)
             prompt = (bruto
                       .replace("{dados}", json.dumps(dados, ensure_ascii=False))
@@ -197,18 +235,40 @@ def gerar_sequencia(business, settings, niche_id=None):
                       .replace("{promessa}", ang["promessa"]))
             if tom_txt:
                 prompt += "\n\nTom obrigatório: " + tom_txt
-            resp = requests.post(
-                f"{base_url}/chat/completions",
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json={"model": model,
-                      "messages": [{"role": "user", "content": prompt}],
-                      "temperature": 0.7},
-                timeout=60,
-            )
-            if resp.status_code == 200:
+
+            def _chamar(prompt_txt):
+                resp = requests.post(
+                    f"{base_url}/chat/completions",
+                    headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                    json={"model": model,
+                          "messages": [{"role": "user", "content": prompt_txt}],
+                          "temperature": 0.7},
+                    timeout=60,
+                )
+                if resp.status_code != 200:
+                    return None
                 content = resp.json()["choices"][0]["message"]["content"]
                 content = re.sub(r"^```(json)?|```$", "", content.strip()).strip()
-                data = json.loads(content)
+                return json.loads(content)
+
+            data = _chamar(prompt)
+            # Uma chance de conserto: devolve SO as regras violadas, nao o
+            # prompt todo. Resolve travessao, tamanho e pergunta sem pagar
+            # outra geracao do zero.
+            if data:
+                ruins = [k for k in ("abertura", "followup", "fechamento")
+                         if data.get(k) and _violacoes(data[k])]
+                if ruins and len(str(prompt)) < 12000:
+                    fix = (prompt + "\n\nSua resposta violou estas regras: " +
+                           "; ".join(sorted({v for k in ruins for v in _violacoes(data[k])})) +
+                           ". Reescreva SOMENTE o mesmo JSON corrigido.")
+                    try:
+                        data2 = _chamar(fix)
+                        if data2 and all(data2.get(k) for k in ("abertura", "followup", "fechamento")):
+                            data = data2
+                    except Exception:
+                        pass
+            if data:
                 data["engine"] = "groq/openai"
                 # Carimbo da versao do conhecimento que escreveu este texto. E o
                 # que liga a copy ao relatorio de conversao depois.
@@ -216,7 +276,8 @@ def gerar_sequencia(business, settings, niche_id=None):
                 for k in ("abertura", "followup", "fechamento"):
                     if data.get(k):
                         data[k] = _sem_travessao(data[k])
-                return data
+                if data.get("abertura"):
+                    return data
         except Exception:
             pass
     return _local_sequencia(business, niche_id)

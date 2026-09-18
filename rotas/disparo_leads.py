@@ -74,6 +74,8 @@ def _linha(lead, tel, fila_row, copy_row, abordagem, bloqueado, liberado):
         "bloqueado": bloqueado,
         "apto": bool(estado == "copy_pronta" and liberado and not bloqueado),
         "fila_id": (fila_row or {}).get("id"),
+        "melhor_envio": (fila_row or {}).get("agendado_para"),
+        "timing_motivo": (fila_row or {}).get("timing_motivo") or "",
         "abordagem_id": (abordagem or {}).get("id"),
         "enviado_em": (abordagem or {}).get("enviado_em"),
         "respondido_em": (abordagem or {}).get("respondido_em"),
@@ -173,7 +175,11 @@ def enfileirar_aptos(origem="iniciar"):
             itens.append({"nome": linha["nome"], "telefone": linha["telefone"],
                           "mensagem": linha["mensagem"],
                           "copy_origem": linha["copy_origem"] or "ia",
-                          "copy_versao": linha["copy_versao"] or ""})
+                          "copy_versao": linha["copy_versao"] or "",
+                          # A categoria alimenta o agendamento por nicho que o
+                          # socio pos no enfileirar: sem ela todo lead cairia
+                          # no horario generico.
+                          "categoria": linha["categoria"] or ""})
         else:
             fora[_motivo_de_fora(linha)] += 1
     enfileirados = disparo.enfileirar(itens, origem=origem) if itens else 0

@@ -15,6 +15,24 @@ var dspSelecionados = {};
 function dspClasseDoEstado(estado) {
   return String(estado || "").replace(/_/g, "-");
 }
+
+// "2026-09-21 15:00:00" -> "hoje 15h" | "amanha 09h" | "seg 10h". So aparece
+// quando o melhor momento ainda nao chegou: passado e "pronto pra sair".
+function dspTiming(l) {
+  if (!l.melhor_envio) return "";
+  const m = String(l.melhor_envio).match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+  if (!m) return "";
+  const dt = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
+  if (isNaN(dt.getTime()) || dt <= new Date()) return "";
+  const hoje = new Date();
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
+  const mesmoDia = dt.toDateString() === hoje.toDateString();
+  const amanha = new Date(hoje);
+  amanha.setDate(amanha.getDate() + 1);
+  const rotulo = mesmoDia ? "hoje" : (dt.toDateString() === amanha.toDateString() ? "amanha" : dias[dt.getDay()]);
+  const titulo = "Melhor momento: " + rotulo + " " + m[4] + "h" + (l.timing_motivo ? " (" + l.timing_motivo + ")" : "");
+  return " <span class='mini-tag' title='" + titulo.replace(/'/g, "") + "'>&#128336; " + rotulo + " " + m[4] + "h</span>";
+}
 function dspEstadoDaClasse(classe) {
   return String(classe || "").replace(/-/g, "_");
 }
@@ -96,7 +114,7 @@ function dspLinha(l) {
   const estadoDisp = (l.estado === "sem_copy" || l.estado === "copy_pronta")
     ? (l.disparo_ativo ? "<span class='hint'>—</span>"
                        : "<span class='dsp-estado bloqueado'>desligado</span>")
-    : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>";
+    : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>" + dspTiming(l);
 
   return "<tr class='" + classeLinha + "' data-telefone='" + esc(l.telefone) + "'>" +
     "<td class='dsp-col-check'><input type='checkbox' onchange='dspMarcar(\"" +

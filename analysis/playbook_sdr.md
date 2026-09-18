@@ -1,5 +1,5 @@
 ---
-versao: 1.0
+versao: 1.1
 data: 2026-09-18
 dono: copywriter-expert
 fonte: |
@@ -68,6 +68,10 @@ olhou o negocio, achou uma coisa verdadeira e resolveu falar.
    sem ninguem ficar sabendo que ele existiu.
 8. **Termina em pergunta.** Afirmacao convida ao silencio. Pergunta mantem o turno
    com o cliente, e a pergunta boa e sobre a rotina dele, nao sobre a nossa oferta.
+9. **Personalizar de verdade: pelo menos UM dado especifico daquele lead.** A nota,
+   o numero de avaliacoes, a cidade quando existir, o que a mineracao achou.
+   Mensagem que serviria para qualquer empresa do nicho trocando so o nome nao
+   passa: ela e a definicao de disparo em massa, e e assim que o numero queima.
 
 ---
 
@@ -118,6 +122,7 @@ disparo em massa mais rapido que qualquer outra coisa.
 | Versao | Data | O que mudou | Por que |
 |---|---|---|---|
 | 1.0 | 18/09/26 | Primeira versao: metodo e as oito regras saem da skill e passam a morar no servidor | Ate aqui o prompt vivia embutido no `copy_sdr.py` e nao tinha como ser treinado por resultado |
+| 1.1 | 18/09/26 | Entra a regra 9, personalizar com um dado real do lead | Veio do socio, que a escreveu direto no prompt do codigo no mesmo dia. Sobe pro playbook porque conhecimento de escrita mora aqui agora; no codigo ela seria sobrescrita pela proxima versao deste arquivo |
 
 **Como a proxima versao nasce:** depois de um lote disparado, `GET /api/disparo/conversao`
 devolve enviadas, conversas iniciadas e taxa **por versao deste arquivo**. A

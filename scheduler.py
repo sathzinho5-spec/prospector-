@@ -84,10 +84,36 @@ def _check():
         save_settings({"schedule_last_run": today})
 
 
+def _check_aprendizado():
+    """Recalcula o score aprendido uma vez por dia, em silencio. Best-effort:
+    sem nuvem ou sem eventos suficientes, so registra e tenta amanha."""
+    s = load_settings()
+    hoje = datetime.datetime.now().strftime("%Y-%m-%d")
+    if s.get("aprendizado_last_run") == hoje:
+        return
+    try:
+        from analysis import aprendizado
+        from scrapers import cloud_store
+
+        r = aprendizado.recalcular(cloud_store.listar_leads(limite=500))
+        if r.get("ok"):
+            g = cloud_store.set_aprendizado(r["ajustes"])
+            print(f"[agendador] aprendizado: {r['eventos']} eventos, {len(r['ajustes'])} ajustes, {g} gravados")
+        else:
+            print(f"[agendador] aprendizado: {r.get('eventos', 0)} eventos, ainda aprendendo")
+    except Exception as e:
+        print(f"[agendador] aprendizado erro: {e}")
+    save_settings({"aprendizado_last_run": hoje})
+
+
 def _loop():
     while True:
         try:
             _check()
+        except Exception:
+            pass
+        try:
+            _check_aprendizado()
         except Exception:
             pass
         time.sleep(30)

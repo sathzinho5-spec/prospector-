@@ -103,11 +103,19 @@ function statusPill(b) {
   return "";
 }
 
+function scoreOf(b) {
+  if (!b) return null;
+  if (b.score_ajustado != null) return b.score_ajustado;
+  return b.score_oportunidade != null ? b.score_oportunidade : null;
+}
+
 function scorePill(b) {
-  if (b.score_oportunidade == null) return "";
-  const s = b.score_oportunidade;
+  const s = scoreOf(b);
+  if (s == null) return "";
   const cls = s >= 70 ? "high" : (s < 45 ? "low" : "med");
-  return "<span class='pill " + cls + "'>IA " + s + "%</span>";
+  const apr = b.score_ajustado != null && b.score_ajustado !== b.score_oportunidade;
+  const titulo = apr && b.score_motivo ? " title='Ajustado pelo aprendizado: " + esc(b.score_motivo) + "'" : "";
+  return "<span class='pill " + cls + "'" + titulo + ">IA " + s + "%" + (apr ? " ✦" : "") + "</span>";
 }
 
 window.copyText = function (btn, which) {

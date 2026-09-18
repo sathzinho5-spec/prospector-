@@ -200,8 +200,8 @@ function renderCrmKpis(arr) {
   const novos = by("novo"), fech = by("fechado"), perd = by("perdido");
   const andamento = Math.max(0, total - novos - fech - perd);
   const taxa = total ? Math.round(fech / total * 100) : 0;
-  const scored = arr.filter(function (l) { return l.score_oportunidade != null; });
-  const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + l.score_oportunidade; }, 0) / scored.length) : 0;
+  const scored = arr.filter(function (l) { return scoreOf(l) != null; });
+  const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + scoreOf(l); }, 0) / scored.length) : 0;
 
   function stat(label, value, cls, icon) {
     return "<div class='perf-stat " + (cls || "") + "'>" + kpiIcon(ICO[icon] || ICO.total) +

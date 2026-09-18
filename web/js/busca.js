@@ -215,13 +215,13 @@ function filteredBusinesses() {
     });
   }
   if (filters.sort === "score") {
-    arr.sort(function (a, b) { return (b.score_oportunidade || -1) - (a.score_oportunidade || -1); });
+    arr.sort(function (a, b) { return (scoreOf(b) != null ? scoreOf(b) : -1) - (scoreOf(a) != null ? scoreOf(a) : -1); });
   } else if (filters.sort === "urgencia") {
     arr.sort(function (a, b) {
       const ua = computeUrgency(a).nivel === "alta" ? 0 : 1;
       const ub = computeUrgency(b).nivel === "alta" ? 0 : 1;
       if (ua !== ub) return ua - ub;
-      return (b.score_oportunidade || -1) - (a.score_oportunidade || -1);
+      return (scoreOf(b) != null ? scoreOf(b) : -1) - (scoreOf(a) != null ? scoreOf(a) : -1);
     });
   } else if (filters.sort === "nota") {
     arr.sort(function (a, b) {
@@ -287,7 +287,7 @@ async function loadLeadsView(page) {
           "<div class='cell-sub'>" + esc(l.categoria || "—") + "</div></div></div></td>" +
           "<td>" + esc([l.cidade, l.estado].filter(Boolean).join(" - ") || "—") + "</td>" +
           "<td class='nowrap'>" + (esc(l.telefone) || "—") + "</td>" +
-          "<td>" + (l.score_oportunidade != null ? "<span class='pill " + (l.score_oportunidade >= 70 ? "high" : (l.score_oportunidade < 45 ? "low" : "med")) + "'>" + l.score_oportunidade + "%</span>" : "—") + "</td>" +
+          "<td>" + (scoreOf(l) != null ? "<span class='pill " + (scoreOf(l) >= 70 ? "high" : (scoreOf(l) < 45 ? "low" : "med")) + "'" + (l.score_motivo ? " title='Ajustado pelo aprendizado: " + esc(l.score_motivo) + "'" : "") + ">" + scoreOf(l) + "%" + (l.score_ajustado != null && l.score_ajustado !== l.score_oportunidade ? " ✦" : "") + "</span>" : "—") + "</td>" +
           "<td><span class='pill'>" + esc(st) + "</span></td>" +
           "<td><button class='btn small' onclick='viewCloudLead(\"" + String(l.id || "").replace(/"/g, "") + "\")'>Ver</button></td>" +
           "</tr>";

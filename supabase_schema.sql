@@ -34,6 +34,8 @@ create table if not exists leads (
   pitch_whatsapp text,
   contato_status text default 'novo',
   observacao text,
+  score_ajustado integer,
+  score_motivo text,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
@@ -76,12 +78,26 @@ create table if not exists vistos_cnpj (
   visto_em timestamp with time zone default now()
 );
 
+-- ---------- MIGRACAO: colunas do aprendizado em banco anterior ----------
+alter table leads add column if not exists score_ajustado integer;
+alter table leads add column if not exists score_motivo text;
+
+-- ---------- EVENTOS DO LEAD (historico fino pro aprendizado) ----------
+create table if not exists eventos_lead (  id bigint generated always as identity primary key,
+  lead_id text not null,
+  evento text not null,
+  de text,
+  para text,
+  em timestamp with time zone default now()
+);
+
 -- ---------- ÍNDICES ----------
 create index if not exists idx_leads_uf on leads(estado);
 create index if not exists idx_leads_cidade on leads(cidade);
 create index if not exists idx_leads_categoria on leads(categoria);
 create index if not exists idx_leads_score on leads(score_oportunidade desc);
 create index if not exists idx_leads_status on leads(contato_status);
+create index if not exists idx_eventos_lead on eventos_lead(lead_id);
 create index if not exists idx_fila_status on fila_disparo(status);
 create index if not exists idx_empresas_uf on empresas_grandes(uf);
 create index if not exists idx_empresas_capital on empresas_grandes(capital);
@@ -90,6 +106,7 @@ create index if not exists idx_empresas_email on empresas_grandes(email) where e
 
 -- ---------- RLS (service_role) ----------
 alter table leads disable row level security;
+alter table eventos_lead disable row level security;
 alter table fila_disparo disable row level security;
 alter table empresas_grandes disable row level security;
 alter table vistos_cnpj disable row level security;

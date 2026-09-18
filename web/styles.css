@@ -321,6 +321,19 @@ label.check input { width: 16px; height: 16px; flex-shrink: 0; }
 .row-2 > .field { flex: 1; }
 .row-2 > .field.narrow { flex: 0 0 96px; }
 
+.timing-row {
+  display: grid;
+  grid-template-columns: 1fr 92px 92px 96px;
+  gap: 8px;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12px;
+}
+.timing-row:last-child { border-bottom: none; }
+.timing-nome { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.timing-row input[type="time"], .timing-row select { padding: 6px 8px; font-size: 12px; }
+
 .side-section-title {
   color: var(--text-3);
   font-size: 11px;

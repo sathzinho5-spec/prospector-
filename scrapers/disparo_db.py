@@ -87,6 +87,7 @@ _COLUNAS_NOVAS = (
     ("fila", "instancia", "TEXT"),
     ("fila", "editada_em", "TIMESTAMP"),
     ("fila", "copy_origem", "TEXT"),
+    ("fila", "timing_motivo", "TEXT DEFAULT ''"),
     # A versao do playbook que escreveu o texto. Sem ela da pra saber que a copy
     # veio da IA, mas nao QUAL conhecimento a produziu, que e o unico jeito de a
     # copywriter-expert aprender com o resultado do lote.

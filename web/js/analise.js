@@ -51,8 +51,8 @@ function renderPerformance() {
   const urgentes = bizCache.filter(function (b) {
     return computeUrgency(b).nivel === "alta" && !isContacted(b.nome);
   }).length;
-  const scored = bizCache.filter(function (b) { return b.score_oportunidade != null; });
-  const media = scored.length ? Math.round(scored.reduce(function (s, b) { return s + b.score_oportunidade; }, 0) / scored.length) : 0;
+  const scored = bizCache.filter(function (b) { return scoreOf(b) != null; });
+  const media = scored.length ? Math.round(scored.reduce(function (s, b) { return s + scoreOf(b); }, 0) / scored.length) : 0;
 
   function stat(label, value, cls) {
     return "<div class='perf-stat " + (cls || "") + "'><div><div class='perf-num'>" + value + "</div><div class='perf-label'>" + label + "</div></div></div>";
@@ -65,10 +65,10 @@ function renderPerformance() {
     stat("Urgentes pendentes", urgentes, urgentes > 0 ? "warn" : "") +
     stat("Score médio IA", scored.length ? media + "%" : "—");
 
-  const top = scored.slice().sort(function (a, b) { return b.score_oportunidade - a.score_oportunidade; }).slice(0, 3);
+  const top = scored.slice().sort(function (a, b) { return scoreOf(b) - scoreOf(a); }).slice(0, 3);
   $("perfTop").innerHTML = top.length
     ? "<ul>" + top.map(function (b) {
-        return "<li><b>" + esc(b.nome) + "</b> — score " + b.score_oportunidade + "% (" + (isContacted(b.nome) ? "contatado" : "pendente") + ")</li>";
+        return "<li><b>" + esc(b.nome) + "</b> — score " + scoreOf(b) + "% (" + (isContacted(b.nome) ? "contatado" : "pendente") + ")</li>";
       }).join("") + "</ul>"
     : "Rode a análise em lote para ver o ranking aqui.";
 }
@@ -253,8 +253,8 @@ async function loadDashboard() {
     });
     const novos = counts.novo || 0;
     const andamento = Math.max(0, leads.length - novos - (counts.fechado || 0) - (counts.perdido || 0));
-    const scored = leads.filter(function (l) { return l.score_oportunidade != null; });
-    const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + l.score_oportunidade; }, 0) / scored.length) : null;
+    const scored = leads.filter(function (l) { return scoreOf(l) != null; });
+    const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + scoreOf(l); }, 0) / scored.length) : null;
 
     function stat(label, value, cls, goto) {
       return "<div class='perf-stat dash-kpi" + (cls ? " " + cls : "") + "'" + (goto ? " data-goto='" + goto + "' role='button' tabindex='0'" : "") + ">" +
