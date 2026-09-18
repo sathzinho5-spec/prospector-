@@ -2,6 +2,11 @@
 # varredura do Maps, do Google e do Instagram roda por navegador de verdade.
 FROM python:3.12-slim
 
+# Fuso fixo, nunca herdado do host. A operacao agenda por horario comercial
+# brasileiro: sem isto o container roda em UTC e a mensagem sai 3h cedo,
+# com "08:00" virando 05:00 da manha para quem recebe.
+ENV TZ=America/Sao_Paulo
+
 ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
     PROSPECTOR_HOST=0.0.0.0 \

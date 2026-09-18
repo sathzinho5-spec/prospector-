@@ -36,7 +36,7 @@ def salvar(telefone, mensagem, nome="", copy_origem="ia", manual=False,
     try:
         con.execute(
             "INSERT INTO copys (telefone, nome, mensagem, copy_origem, copy_versao, editada_em) "
-            "VALUES (?,?,?,?,?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END) "
+            "VALUES (?,?,?,?,?, CASE WHEN ? THEN datetime('now','localtime') ELSE NULL END) "
             "ON CONFLICT(telefone) DO UPDATE SET "
             "  nome=COALESCE(NULLIF(excluded.nome,''), copys.nome), "
             "  mensagem=excluded.mensagem, "

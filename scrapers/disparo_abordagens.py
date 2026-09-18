@@ -53,7 +53,8 @@ def enviadas_hoje(con):
     """Quantas sairam hoje. Le o registro, nao a fila: a fila zera na limpeza e
     o motor passaria a achar que o limite do dia foi reiniciado."""
     row = con.execute(
-        "SELECT COUNT(*) FROM abordagens WHERE date(enviado_em)=date('now')"
+        "SELECT COUNT(*) FROM abordagens "
+        "WHERE date(enviado_em)=date('now','localtime')"
     ).fetchone()
     return row[0] if row else 0
 
@@ -83,7 +84,7 @@ def marcar_respondido(abordagem_id=0, telefone=""):
             return False, None
         if not row["respondido_em"]:
             con.execute(
-                "UPDATE abordagens SET respondido_em=CURRENT_TIMESTAMP WHERE id=?",
+                "UPDATE abordagens SET respondido_em=datetime('now','localtime') WHERE id=?",
                 (row["id"],))
             con.commit()
             row = con.execute("SELECT * FROM abordagens WHERE id=?", (row["id"],)).fetchone()

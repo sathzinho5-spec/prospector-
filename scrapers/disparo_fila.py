@@ -87,7 +87,7 @@ def _reivindicar(item_id):
     con = _conn()
     try:
         cur = con.execute(
-            "UPDATE fila SET status='enviando', agendado_para=CURRENT_TIMESTAMP "
+            "UPDATE fila SET status='enviando', agendado_para=datetime('now','localtime') "
             "WHERE id=? AND status='pendente'",
             (item_id,))
         con.commit()
@@ -102,7 +102,7 @@ def _devolver_travados(minutos=15):
     try:
         con.execute(
             "UPDATE fila SET status='pendente' WHERE status='enviando' "
-            "AND datetime(agendado_para) < datetime('now', ?)",
+            "AND datetime(agendado_para) < datetime('now','localtime', ?)",
             (f"-{int(minutos)} minutes",))
         con.commit()
     except Exception:
@@ -175,7 +175,7 @@ def atualizar_mensagem(item_id, mensagem, manual=False):
     con = _conn()
     try:
         if manual:
-            con.execute("UPDATE fila SET mensagem=?, editada_em=CURRENT_TIMESTAMP, "
+            con.execute("UPDATE fila SET mensagem=?, editada_em=datetime('now','localtime'), "
                         "copy_origem='manual' WHERE id=?", (mensagem, item_id))
         else:
             con.execute("UPDATE fila SET mensagem=?, editada_em=NULL, "

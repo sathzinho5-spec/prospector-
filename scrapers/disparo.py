@@ -49,7 +49,7 @@ def _gravar_sucesso(con, item, msg, provider):
         con.execute("DELETE FROM fila WHERE id=?", (item["id"],))
         return False
     con.execute(
-        "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
+        "UPDATE fila SET status='enviado', enviado_em=datetime('now','localtime'), "
         "instancia=? WHERE id=?",
         (nome_chip, item["id"]))
     registrar_abordado(con, item["telefone"])
@@ -162,7 +162,7 @@ def _worker_loop():
                     continue
                 row = con.execute(
                     "SELECT * FROM fila WHERE status='pendente' "
-                    "AND datetime(agendado_para) <= datetime('now') "
+                    "AND datetime(agendado_para) <= datetime('now','localtime') "
                     "ORDER BY datetime(agendado_para) ASC, id ASC LIMIT 1").fetchone()
                 if not row:
                     _worker_state["proximo_em"] = "fila vazia"
@@ -217,7 +217,7 @@ def _worker_loop():
                     status = "falha" if tent >= 3 else "pendente"
                     con.execute(
                         "UPDATE fila SET status=?, tentativas=?, erro=?, "
-                        "agendado_para=datetime('now','+10 minutes') WHERE id=?",
+                        "agendado_para=datetime('now','localtime','+10 minutes') WHERE id=?",
                         (status, tent, err, item["id"]))
                     _worker_state["ultimo_erro"] = err
                 con.commit()

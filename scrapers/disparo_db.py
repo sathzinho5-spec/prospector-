@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS fila (
   mensagem TEXT NOT NULL,
   status TEXT DEFAULT 'pendente',
   tentativas INTEGER DEFAULT 0,
-  agendado_para TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  agendado_para TIMESTAMP DEFAULT (datetime('now','localtime')),
   enviado_em TIMESTAMP,
   erro TEXT,
   origem TEXT
@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_fila_status ON fila(status);
 -- sem ninguem perceber.
 CREATE TABLE IF NOT EXISTS numeros_abordados (
   telefone TEXT PRIMARY KEY,
-  primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  primeiro_envio TIMESTAMP DEFAULT (datetime('now','localtime'))
 );
 
 -- A tabela numeros_bloqueados foi REMOVIDA em 18/09/26, a pedido do fundador.
@@ -58,7 +58,7 @@ CREATE TABLE IF NOT EXISTS copys (
   mensagem TEXT NOT NULL,
   copy_origem TEXT DEFAULT 'ia',
   copy_versao TEXT,
-  criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  criada_em TIMESTAMP DEFAULT (datetime('now','localtime')),
   editada_em TIMESTAMP
 );
 
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS abordagens (
   copy_versao TEXT,
   instancia TEXT,
   origem TEXT,
-  enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  enviado_em TIMESTAMP DEFAULT (datetime('now','localtime')),
   respondido_em TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_abordagens_telefone ON abordagens(telefone);
@@ -122,7 +122,7 @@ def _semear_abordagens(con):
         "       CASE WHEN f.editada_em IS NOT NULL THEN 'manual' "
         "            ELSE COALESCE(f.copy_origem, 'desconhecida') END, "
         "       f.copy_versao, "
-        "       f.instancia, f.origem, COALESCE(f.enviado_em, CURRENT_TIMESTAMP) "
+        "       f.instancia, f.origem, COALESCE(f.enviado_em, datetime('now','localtime')) "
         "  FROM fila f "
         " WHERE f.status='enviado' "
         "   AND NOT EXISTS (SELECT 1 FROM abordagens a WHERE a.telefone = f.telefone)"
@@ -130,8 +130,27 @@ def _semear_abordagens(con):
     con.commit()
 
 
+# Tabela que saiu do projeto e precisa sair tambem do banco que ja rodava. O
+# DROP e por nome explicito e em lista: migracao destrutiva que aceitasse nome
+# variavel seria uma porta aberta pra apagar o que nao devia.
+_TABELAS_MORTAS = ("numeros_bloqueados",)
+
+
+def _derrubar_mortas(con):
+    """Apaga tabela que o projeto nao usa mais. Autorizado pelo fundador em
+    18/09/26 pra numeros_bloqueados, que virou dado inerte quando a lista de
+    bloqueio foi removida."""
+    for tabela in _TABELAS_MORTAS:
+        try:
+            con.execute("DROP TABLE IF EXISTS %s" % tabela)
+            con.commit()
+        except Exception:
+            pass
+
+
 def _migrar(con):
     """Roda uma vez por processo, na primeira conexao."""
+    _derrubar_mortas(con)
     for tabela, coluna, tipo in _COLUNAS_NOVAS:
         try:
             cols = [r[1] for r in con.execute("PRAGMA table_info(%s)" % tabela).fetchall()]
