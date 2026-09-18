@@ -1,5 +1,5 @@
 ---
-versao: 1.3
+versao: 1.4
 data: 2026-09-18
 dono: copywriter-expert
 fonte: |
@@ -135,6 +135,37 @@ em uma linha**, **a pergunta sobre a rotina dele**. O antigo primeiro movimento,
 A primeira coisa que a pessoa le passa a ser o nome dela e um fato sobre o negocio
 dela. E o que faz a mensagem parecer alguem falando com ela, e nao um disparo.
 
+### O nome vai ENCURTADO, do jeito que alguem chamaria
+
+Como o nome virou a primeira palavra da mensagem, ele carrega o peso todo. O que
+vem da mineracao e o cadastro do Google, nao o jeito de chamar: tem bullet, tem
+nome antigo, tem cidade, tem "Barbershop" no fim. Colar isso cru entrega robo na
+primeira palavra, que e exatamente onde a versao 1.3 tentou ganhar.
+
+Encurte para o que uma pessoa diria em voz alta:
+
+| Cadastro do Google | Na mensagem |
+|---|---|
+| ESPCI • ANTES ESPACO CIARA | Espaco Ciara |
+| Ze & Barba Barbershop | Ze & Barba |
+| Clinica de Estetica em Nilopolis - Sara Aladir | Sara |
+| Studio Bella Hair Designer & Beauty | Bella |
+
+As quatro regras do corte:
+
+1. **Tire o que e categoria**, nao nome: Barbershop, Studio, Clinica, Hair
+   Designer, Beauty, Salao de Beleza. A pessoa sabe o que ela faz.
+2. **Tire lugar**, marcador de unidade e nome antigo: "em Nilopolis", "Unidade
+   Centro", "ANTES ...", o que vem depois de bullet ou hifen.
+3. **Quando houver nome de pessoa, prefira o nome de pessoa.** "Sara" ganha de
+   "Clinica de Estetica Sara Aladir": e o unico caso em que a mensagem chega
+   como alguem chamando alguem.
+4. **Na duvida, corte menos.** Nome errado e pior que nome comprido, e cortar
+   demais pode virar outro negocio.
+
+**Se o nome nao der para encurtar com seguranca, use so "Oi, tudo bem?"** e va
+direto para a observacao. Perder o nome custa menos que errar o nome.
+
 **Tamanho:** o alvo e 55 a 75 palavras. O teto duro e 90, mas mensagem no teto ja
 esta comprida demais pra um WhatsApp que ninguem pediu.
 
@@ -165,6 +196,7 @@ Lista fechada, cada linha com o motivo:
 | "sua regiao", "aqui na sua cidade" | A carteira nao tem cidade. Lugar inventado queima o recorte |
 | "notei que", "reparei que seu perfil" | Voz de quem auditou. Quebra a regra 1 |
 | "aqui e o time de marketing", "meu nome e", ou qualquer apresentacao na abertura | Reprovado pelo fundador em 18/09. Apresentacao na primeira linha avisa que e abordagem comercial antes de a pessoa chegar no que interessa |
+| o nome do Google copiado cru, com bullet, cidade, "ANTES" ou categoria no fim | Ele virou a primeira palavra da mensagem. Cadastro colado cru entrega robo justamente onde a abertura tentava ganhar. Ver a secao do nome encurtado |
 | "parabens pelo trabalho" sozinho | E o elogio generico que a regra de conduta 1 proibe. So vale grudado num dado real |
 | "oportunidade", "potencial", "alavancar" | Vocabulario de proposta comercial. Soa massa |
 | qualquer valor em reais | Regra 3 |
@@ -202,6 +234,7 @@ da observacao vierem vazios.
 | 1.1 | 18/09/26 | Entra a regra 9, personalizar com um dado real do lead | Veio do socio, que a escreveu direto no prompt do codigo no mesmo dia. Sobe pro playbook porque conhecimento de escrita mora aqui agora; no codigo ela seria sobrescrita pela proxima versao deste arquivo |
 | 1.2 | 18/09/26 | A secao da observacao verdadeira, com o campo `descricao` em primeiro lugar; a regra 3 passa a proibir link alem de preco; entra a regra 10, nao disputar com o Instagram; tabela do que muda por nicho, com a pergunta de fechamento de cada um; lista fechada do que nunca escrever; alvo de tamanho | Conferencia da carteira real: os 30 leads tem `descricao` escrita a mao pelo fundador, 30 de 30 sem site, 30 de 30 com Instagram, 0 de 30 com cidade. A 1.1 mandava "usar um dado especifico" sem dizer qual, e o dado mais forte que existe estava sendo ignorado |
 | 1.3 | 18/09/26 | Sai a linha de apresentacao. O esqueleto passa de quatro movimentos para tres e abre direto na observacao: "Oi, [nome], tudo bem? Vi que voces tem..." | Reprovacao do fundador ao ler as tres mensagens da 1.2: *"nao gostei foi ser chamado de o time de marketing, nao e interessante ter isso"*. A apresentacao gastava a primeira linha, que e a unica garantida de ser lida, dizendo quem fala em vez de dizer algo sobre o negocio de quem le |
+| 1.4 | 18/09/26 | O nome vai encurtado, com as quatro regras do corte e a saida "Oi, tudo bem?" quando nao der para encurtar com seguranca | Efeito colateral da propria 1.3, visto nas tres mensagens dela: sem a apresentacao, o nome virou a PRIMEIRA palavra, e ali ficou "Oi, ESPCI • ANTES ESPACO CIARA!". Cadastro do Google colado cru entrega robo exatamente onde a abertura nova tentava ganhar. Aprovado pelo fundador |
 
 **Como a proxima versao nasce:** depois de um lote disparado, `GET /api/disparo/conversao`
 devolve enviadas, conversas iniciadas e taxa **por versao deste arquivo**. A

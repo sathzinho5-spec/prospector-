@@ -41,8 +41,8 @@ analysis/timing.py               145  melhor momento de envio por nicho: janela 
 rotas/__init__.py                  1  marca rotas/ como pacote; os routers vivem nos arquivos ao lado
 rotas/acesso.py                  148  telas de acesso e as rotas de conta: entrar, criar, liberar, tirar
 rotas/cnpj.py                     40  garimpo de empresas grandes por UF na base de CNPJ
-rotas/crm.py                     111  leads na nuvem e o CRM: listar, filtrar e mover de estagio
-rotas/disparo.py                 314  disparo: fila, envio da mensagem, cadencia, iniciar e pausar o motor
+rotas/crm.py                     131  leads na nuvem e o CRM: listar, filtrar e mover de estagio
+rotas/disparo.py                 316  disparo: fila, envio da mensagem, cadencia, iniciar e pausar o motor
 rotas/disparo_conversas.py        99  conversa iniciada: marcar, desmarcar e ler qual copy converteu
 rotas/disparo_copy.py            272  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
 rotas/disparo_evolution.py        84  instancias da Evolution: qrcode, estado do chip e o numero pareado
@@ -86,7 +86,7 @@ scripts/dev.js                   162  npm run dev: sobe o Prospector em Python p
 
 ```
 tools/criar_dono.py               51  cria ou promove conta de dono, quando a regra da primeira conta nao basta
-tools/importar_carteira.py       153  importa a carteira de leads da planilha do Drive pro Prospector
+tools/importar_carteira.py       163  importa a carteira de leads da planilha do Drive pro Prospector
 ```
 
 ## web/
@@ -117,7 +117,7 @@ web/js/disparo.js                301  disparo automatico: fila, migracao, envio 
 web/js/disparo_aba.js            266  aba Disparo: os KPIs, a cadencia mostrada e a lista de leads
 web/js/disparo_conversao.js       54  o painel de conversao por versao do playbook, na aba Disparo
 web/js/disparo_copy_lote.js      103  criar a copy dos leads em lote, respeitando tempo de proxy e teto de IA
-web/js/disparo_gaveta.js         188  a gaveta de detalhe do lead na aba Disparo: ficha, copy e resposta
+web/js/disparo_gaveta.js         191  a gaveta de detalhe do lead na aba Disparo: ficha, copy e resposta
 web/js/tabela.js                 280  tabela de resultados: ordenacao, selecao, paginacao e acoes em lote
 web/js/ui.js                     140  estado compartilhado do painel e as pecas visuais reusadas
 ```

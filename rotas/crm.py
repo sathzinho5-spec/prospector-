@@ -49,15 +49,35 @@ def api_crm_leads(busca: str = "", uf: str = "", status: str = "", min_score: in
 
 @router.post("/api/crm/disparo-ativo")
 def api_crm_disparo_ativo(req: DisparoAtivoRequest):
-    """Liga ou desliga o disparo de um lead ou de varios de uma vez."""
-    from scrapers import cloud_store
+    """Liga ou desliga o disparo de um lead ou de varios de uma vez.
+
+    Ligar TAMBEM tira o numero da lista de bloqueio. Sao dois mecanismos pra uma
+    decisao so, e essa duplicidade travou a operacao: a importacao da carteira
+    escreveu nos dois, o operador ligou pelo unico interruptor que a tela tinha,
+    e o disparo continuou barrado por uma lista que nenhuma tela mostrava e
+    nenhum botao desfazia. Agora o interruptor e um so e ele manda nos dois.
+
+    Desligar nao escreve na lista de bloqueio de proposito: a flag sozinha ja
+    barra (o 'apto' exige o lead liberado), e encher a lista de opt-out com
+    "ainda nao" e justamente o que criou este problema.
+    """
+    from scrapers import cloud_store, disparo
 
     if not req.ids:
         raise HTTPException(400, "Informe pelo menos um lead.")
     n = cloud_store.set_disparo_ativo(req.ids, req.ativo)
     if not n:
         raise HTTPException(502, "Nao deu pra gravar na nuvem. Tente de novo.")
-    return {"ok": True, "atualizados": n, "ativo": bool(req.ativo)}
+
+    desbloqueados = 0
+    if req.ativo:
+        for lead in cloud_store.listar_leads(limite=500):
+            if str(lead.get("id")) in set(str(i) for i in req.ids):
+                tel = disparo._norm_phone(lead.get("telefone"))
+                if tel and disparo.desbloquear(tel):
+                    desbloqueados += 1
+    return {"ok": True, "atualizados": n, "ativo": bool(req.ativo),
+            "desbloqueados": desbloqueados}
 
 
 @router.post("/api/crm/status")

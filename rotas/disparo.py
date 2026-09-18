@@ -262,10 +262,12 @@ def api_disparo_iniciar(req: DisparoStartRequest):
                       "verdade e nenhum lead e consumido. Troque o provedor em "
                       "Ajustes para disparar pra valer.")
     if not carga["aptos"]:
-        fora = carga["fora"]
-        detalhe = ", ".join(f"{v} {k.replace('_', ' ')}" for k, v in fora.items() if v)
-        avisos.append("Nenhum lead apto entrou na fila" +
-                      (f" ({detalhe})." if detalhe else "."))
+        # Sem o detalhe de proposito: quem escreve os motivos por extenso e a
+        # tela, que tem os rotulos em portugues. Repetir aqui produzia a mesma
+        # conta duas vezes na mesma frase e com grafias diferentes, "30
+        # bloqueados" ao lado de "30 bloqueado".
+        avisos.append("Nenhum lead apto entrou na fila. Veja o motivo de cada um "
+                      "logo abaixo dos botoes.")
     # A cadencia sai do status e NAO de uma conta refeita aqui. O recalculo que
     # existia nesta linha era apagado pelo **status() logo abaixo, que tem a
     # mesma chave: a rota prometia um objeto e entregava a string do motor, sem
