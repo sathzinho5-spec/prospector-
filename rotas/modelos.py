@@ -109,7 +109,6 @@ class SettingsRequest(BaseModel):
     disparo_tom: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
-    disparo_modo: str = ""
     # Janela e limite: os dois numeros de onde a cadencia e derivada.
     disparo_hora_ini: str = ""
     disparo_hora_fim: str = ""

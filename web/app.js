@@ -90,9 +90,6 @@ function bindEvents() {
   on("waInput", "keydown", function (ev) {
     if (ev.key === "Enter") sendWaReply();
   });
-  document.querySelectorAll("#modoSeg .seg-btn").forEach(function (b) {
-    b.addEventListener("click", function () { setModo(b.dataset.modo); });
-  });
   on("provider", "change", function () {
     const p = PROVIDERS[this.value];
     if (p) {

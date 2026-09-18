@@ -1,28 +1,11 @@
 // proposito: disparo automatico: fila, migracao, envio e status
 // ===== DISPARO AUTOMÁTICO =====
 let dispPoll = null;
-let dispModo = "auto";
 
-function paintModo() {
-  document.querySelectorAll("#modoSeg .seg-btn").forEach(function (b) {
-    b.classList.toggle("active", b.dataset.modo === dispModo);
-  });
-  $("modoHint").textContent = dispModo === "auto"
-    ? "O robô envia sozinho respeitando pausas, limite e horário."
-    : "Você envia um por um pelo botão Enviar de cada linha.";
-}
-
-async function setModo(modo) {
-  dispModo = modo;
-  paintModo();
-  try {
-    await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ disparo_modo: modo })
-    });
-  } catch { /* silencioso */ }
-}
+// O seletor "Modo: automatico / manual" saiu a pedido do fundador. Ele nao
+// controlava nada: o motor nunca leu o valor, e o envio avulso deixou de ser
+// barrado pelo modo manual quando a trava atomica da fila passou a fazer os dois
+// caminhos conviverem. Era um interruptor que so pintava um texto na tela.
 
 async function migrarMinerados() {
   showLoader("Puxando todos os leads minerados para a fila...");
@@ -204,11 +187,6 @@ async function refreshDisparo() {
     if (typeof window._instLast === "undefined" || Date.now() - window._instLast > 30000) {
       window._instLast = Date.now();
       refreshInstances();
-    }
-    const s = await (await fetch("/api/settings")).json();
-    if (s.disparo_modo) {
-      dispModo = s.disparo_modo;
-      paintModo();
     }
     const r = await fetch("/api/disparo/status");
     const st = await r.json();

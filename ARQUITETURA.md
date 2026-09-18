@@ -4,13 +4,13 @@ Mapa gerado por `Agente Orquestrador/tools/gerar_arquitetura.py`.
 Nao edite a mao: a proxima geracao sobrescreve. Pra mudar uma linha,
 mude o `proposito:` no cabecalho do arquivo.
 
-Teto por arquivo: 350 linhas. Arquivos: 75.
+Teto por arquivo: 350 linhas. Arquivos: 76.
 
 ## raiz do projeto
 
 ```
-app.py                           298  sobe o FastAPI, a porta de acesso e as rotas de busca e ajuste
-config.py                         83  caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
+app.py                           296  sobe o FastAPI, a porta de acesso e as rotas de busca e ajuste
+config.py                         82  caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
 contas.py                        349  porta de entrada: cadastro pendente, aprovacao do dono e cookie de sessao
 eslint.config.mjs                 47  teto de 350 linhas por arquivo e checagem de erro no JS do painel
 niches.py                        121  a lista de nichos que a busca oferece
@@ -28,8 +28,9 @@ analysis/analyzer.py              13  porta de entrada da analise; reexporta pra
 analysis/aprendizado.py          127  score que aprende: conversao por perfil vira ajuste do score
 analysis/copy_comercial.py       212  copy de estrategia e de proposta comercial, com prompt e fallback local
 analysis/copy_fechamento.py      184  copy de fechamento: pitch de abordagem e resposta a objecao
-analysis/copy_sdr.py             301  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
+analysis/copy_sdr.py             271  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
 analysis/instagram_report.py     186  relatorio do perfil de Instagram: metricas, tom, pontos fortes e score
+analysis/nichos_angulo.py         96  qual dor e qual promessa cada nicho carrega, e como achar o nicho
 analysis/playbook_sdr.py          80  carrega o playbook SDR do disco e diz qual versao dele esta no ar
 analysis/timing.py               145  melhor momento de envio por nicho: janela preferida e proximo slot
 ```
@@ -46,7 +47,7 @@ rotas/disparo_conversas.py        99  conversa iniciada: marcar, desmarcar e ler
 rotas/disparo_copy.py            272  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
 rotas/disparo_evolution.py        84  instancias da Evolution: qrcode, estado do chip e o numero pareado
 rotas/disparo_leads.py           187  a lista de leads do disparo com o estado de copy e de envio de cada um
-rotas/modelos.py                 206  os contratos de entrada da API, num lugar so
+rotas/modelos.py                 205  os contratos de entrada da API, num lugar so
 rotas/negocio.py                 176  analise e copy de um lead: contato, estrategia, pitch, proposta
 rotas/negocio_instagram.py       239  prospeccao e analise de perfis do Instagram
 rotas/whatsapp.py                 74  conversas do WhatsApp: chats, mensagens, responder e achar o lead
@@ -92,7 +93,7 @@ tools/importar_carteira.py       153  importa a carteira de leads da planilha do
 
 ```
 web/acesso.js                    297  decide qual das quatro telas de acesso aparece, pelo endereco e pela sessao
-web/app.js                       203  arranque do painel, ligacao de eventos e navegacao entre abas
+web/app.js                       200  arranque do painel, ligacao de eventos e navegacao entre abas
 web/painel.js                    130  aba de conexao do numero, faixa de estado e quem esta logado
 web/sessao.js                     24  link de Acessos pra quem e dono, e o Sair que sai de verdade
 ```
@@ -112,7 +113,7 @@ web/js/copy.js                   192  geracao de copy de venda: pitch, sequencia
 web/js/crm.js                    128  CRM: carregar leads, filtrar e montar o quadro por estagio
 web/js/crm_cartao.js             288  cartao do lead, acao em massa e KPIs do CRM
 web/js/detalhe.js                157  modal de detalhe do lead, screenshot e extracao de contato
-web/js/disparo.js                323  disparo automatico: fila, migracao, envio e status
+web/js/disparo.js                301  disparo automatico: fila, migracao, envio e status
 web/js/disparo_aba.js            266  aba Disparo: os KPIs, a cadencia mostrada e a lista de leads
 web/js/disparo_conversao.js       54  o painel de conversao por versao do playbook, na aba Disparo
 web/js/disparo_copy_lote.js      103  criar a copy dos leads em lote, respeitando tempo de proxy e teto de IA

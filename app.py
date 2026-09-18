@@ -125,8 +125,6 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
         new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
-    if req.disparo_modo in ("auto", "manual"):
-        new["disparo_modo"] = req.disparo_modo
     if req.disparo_hora_ini:
         new["disparo_hora_ini"] = req.disparo_hora_ini.strip()
     if req.disparo_hora_fim:

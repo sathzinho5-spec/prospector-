@@ -1,5 +1,5 @@
 ---
-versao: 1.2
+versao: 1.3
 data: 2026-09-18
 dono: copywriter-expert
 fonte: |
@@ -42,9 +42,19 @@ os servicos, os trabalhos, o endereco e o botao de WhatsApp num link so.
 
 ## A voz
 
-Quem envia e o time de marketing para negocios locais. Nao e um robo, nao e um
-consultor que veio apontar erro, nao e alguem que "analisou o perfil". E alguem que
-olhou aquele negocio, achou uma coisa verdadeira e resolveu falar.
+E alguem que olhou aquele negocio, achou uma coisa verdadeira e resolveu falar.
+Nao e um robo, nao e um consultor que veio apontar erro, nao e alguem que
+"analisou o perfil".
+
+**A mensagem NAO se apresenta.** Nada de "aqui e o time de marketing para negocios
+locais", nada de "meu nome e", nada de dizer de qual empresa se fala. Decisao do
+fundador em 18/09/26, e ela tem logica de conversao: quem abre se apresentando
+avisa na primeira linha que e abordagem comercial, e a pessoa decide se vai
+responder antes de chegar na parte que interessa. A mensagem abre direto na
+observacao sobre o negocio dela.
+
+Quem fala continua sendo "a gente", no plural (regra 1). O plural aparece no meio,
+quando diz o que se faz, nao no comeco como cracha.
 
 ---
 
@@ -106,18 +116,24 @@ Use nesta ordem de forca, sempre a primeira que existir:
 
 ---
 
-## O esqueleto aprovado (roteiro 1.1, nicho piloto)
+## O esqueleto
 
-Aprovado bloco a bloco pelo fundador em 27/08/26. E o molde, nao o texto a copiar:
+Vem do roteiro 1.1 aprovado pelo fundador em 27/08/26, com a linha de
+apresentacao removida por decisao dele em 18/09/26. E o molde, nao o texto a
+copiar:
 
-> Oi, [nome], tudo bem? Aqui e o time de marketing para negocios locais.
-> Vi [observacao verdadeira] e fui procurar o site de voces pra ver os servicos, nao achei.
+> Oi, [nome], tudo bem? Vi que [observacao verdadeira] e fui procurar o site de
+> voces pra ver os servicos, nao achei.
 > A gente monta pagina pra [tipo de negocio]: [o que a pagina mostra], tudo num link so.
 > Hoje, quando alguem descobre voces pelo Instagram ou pelo Google e quer saber
 > preco ou agendar, como e que faz?
 
-Quatro movimentos, nesta ordem: **quem fala**, **a observacao verdadeira**, **o que
-a gente faz em uma linha**, **a pergunta sobre a rotina dele**.
+**Tres movimentos**, nesta ordem: **a observacao verdadeira**, **o que a gente faz
+em uma linha**, **a pergunta sobre a rotina dele**. O antigo primeiro movimento,
+"quem fala", deixou de existir.
+
+A primeira coisa que a pessoa le passa a ser o nome dela e um fato sobre o negocio
+dela. E o que faz a mensagem parecer alguem falando com ela, e nao um disparo.
 
 **Tamanho:** o alvo e 55 a 75 palavras. O teto duro e 90, mas mensagem no teto ja
 esta comprida demais pra um WhatsApp que ninguem pediu.
@@ -148,6 +164,7 @@ Lista fechada, cada linha com o motivo:
 | "analise gratuita", "diagnostico", "auditoria" | Promete vistoria. Quebra a regra 4 e foi reprovado pelo fundador |
 | "sua regiao", "aqui na sua cidade" | A carteira nao tem cidade. Lugar inventado queima o recorte |
 | "notei que", "reparei que seu perfil" | Voz de quem auditou. Quebra a regra 1 |
+| "aqui e o time de marketing", "meu nome e", ou qualquer apresentacao na abertura | Reprovado pelo fundador em 18/09. Apresentacao na primeira linha avisa que e abordagem comercial antes de a pessoa chegar no que interessa |
 | "parabens pelo trabalho" sozinho | E o elogio generico que a regra de conduta 1 proibe. So vale grudado num dado real |
 | "oportunidade", "potencial", "alavancar" | Vocabulario de proposta comercial. Soa massa |
 | qualquer valor em reais | Regra 3 |
@@ -184,6 +201,7 @@ da observacao vierem vazios.
 | 1.0 | 18/09/26 | Primeira versao: metodo e as oito regras saem da skill e passam a morar no servidor | Ate aqui o prompt vivia embutido no `copy_sdr.py` e nao tinha como ser treinado por resultado |
 | 1.1 | 18/09/26 | Entra a regra 9, personalizar com um dado real do lead | Veio do socio, que a escreveu direto no prompt do codigo no mesmo dia. Sobe pro playbook porque conhecimento de escrita mora aqui agora; no codigo ela seria sobrescrita pela proxima versao deste arquivo |
 | 1.2 | 18/09/26 | A secao da observacao verdadeira, com o campo `descricao` em primeiro lugar; a regra 3 passa a proibir link alem de preco; entra a regra 10, nao disputar com o Instagram; tabela do que muda por nicho, com a pergunta de fechamento de cada um; lista fechada do que nunca escrever; alvo de tamanho | Conferencia da carteira real: os 30 leads tem `descricao` escrita a mao pelo fundador, 30 de 30 sem site, 30 de 30 com Instagram, 0 de 30 com cidade. A 1.1 mandava "usar um dado especifico" sem dizer qual, e o dado mais forte que existe estava sendo ignorado |
+| 1.3 | 18/09/26 | Sai a linha de apresentacao. O esqueleto passa de quatro movimentos para tres e abre direto na observacao: "Oi, [nome], tudo bem? Vi que voces tem..." | Reprovacao do fundador ao ler as tres mensagens da 1.2: *"nao gostei foi ser chamado de o time de marketing, nao e interessante ter isso"*. A apresentacao gastava a primeira linha, que e a unica garantida de ser lida, dizendo quem fala em vez de dizer algo sobre o negocio de quem le |
 
 **Como a proxima versao nasce:** depois de um lote disparado, `GET /api/disparo/conversao`
 devolve enviadas, conversas iniciadas e taxa **por versao deste arquivo**. A

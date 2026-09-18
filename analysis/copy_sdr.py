@@ -19,49 +19,10 @@ import requests
 
 from analysis import playbook_sdr
 
-# Angulo de dor/promessa por nicho (base do roteiro)
-NICHE_ANGLES = {
-    "restaurantes": {"dor": "mesas vazias no meio da semana", "promessa": "movimento no salao e no delivery"},
-    "bares": {"dor": "casa vazia nos dias fracos", "promessa": "noites cheias recorrentes"},
-    "hamburguerias": {"dor": "depender so do iFood e pagar taxa alta", "promessa": "pedido direto com margem cheia"},
-    "pizzarias": {"dor": "depender so do iFood e pagar taxa alta", "promessa": "pedido direto com margem cheia"},
-    "cafeterias": {"dor": "cliente que passa na porta e nao entra", "promessa": "fluxo constante de manha e tarde"},
-    "acai": {"dor": "vender so no verao e no calor", "promessa": "venda o ano todo"},
-    "beleza": {"dor": "cliente novo que gosta do trabalho, nao acha os servicos nem como falar, e vai no proximo",
-               "promessa": "servicos, fotos dos trabalhos, endereco e WhatsApp num link so"},
-    "barbearias": {"dor": "quem descobre a barbearia e nao acha preco, horario nem como marcar",
-                   "promessa": "servicos, precos, horario e WhatsApp num link so"},
-    "estetica": {"dor": "quem pergunta procedimento e preco no direct e desiste antes de marcar avaliacao",
-                 "promessa": "procedimentos, resultados, endereco e WhatsApp num link so"},
-    "academias": {"dor": "aluno que cancela em 3 meses", "promessa": "matricula e retencao constantes"},
-    "padarias": {"dor": "concorrer so por preco com mercado", "promessa": "cliente fiel do bairro que paga mais"},
-    "petshop": {"dor": "tutor que compra racao no mercado", "promessa": "tutor fiel com compra recorrente"},
-    "advocacia": {"dor": "depender de indicacao para fechar caso", "promessa": "casos qualificados todo mes"},
-    "imobiliarias": {"dor": "lead frio que nao responde", "promessa": "visitas agendadas com comprador pronto"},
-    "odontologia": {"dor": "orcamento que o paciente nao fecha", "promessa": "agenda de avaliacoes cheia"},
-    "moda": {"dor": "estoque parado e promocao que come a margem", "promessa": "giro de estoque com margem"},
-    "mecanica": {"dor": "oficina vazia fora de epoca de revisao", "promessa": "carro na rampa o mes todo"},
-    "moveis": {"dor": "orcamento que esfria e nunca fecha", "promessa": "projetos fechados com entrada"},
-    "cursos": {"dor": "turma que nao enche", "promessa": "turmas cheias todo ciclo"},
-    "farmacias": {"dor": "concorrer com rede grande no preco", "promessa": "cliente do bairro comprando todo mes"},
-    "reformas": {"dor": "orcamento que vira so comparacao de preco", "promessa": "obras fechadas com sinal"},
-    "limpeza": {"dor": "cliente que contrata uma vez e some", "promessa": "contratos recorrentes mensais"},
-    "floricultura": {"dor": "vender so em datas comemorativas", "promessa": "pedidos toda semana"},
-    "fotografia": {"dor": "depender de indicacao para fechar ensaio", "promessa": "ensaios agendados com entrada"},
-}
-
-GENERICO = {"dor": "cliente que pesquisa e escolhe o concorrente", "promessa": "ser encontrado primeiro e fechar mais"}
-
-
-def _angle(niche_id, categoria):
-    if niche_id and niche_id in NICHE_ANGLES:
-        return NICHE_ANGLES[niche_id]
-    cat = (categoria or "").lower()
-    for nid, a in NICHE_ANGLES.items():
-        if nid in cat or cat in nid:
-            return a
-    return GENERICO
-
+# Reexportado de proposito: a tabela de nichos mudou de arquivo, e estes quatro
+# nomes seguem alcancaveis como copy_sdr._angle, como sempre foram.
+from analysis.nichos_angulo import (APELIDOS, GENERICO,  # noqa: F401
+                                    NICHE_ANGLES, _angle, _sem_acento)
 
 def _sem_travessao(texto):
     return texto.replace("—", ",").replace("–", ",")
@@ -129,17 +90,24 @@ def _local_sequencia(business, niche_id=None):
     site = business.get("website")
     ang = _angle(niche_id, business.get("categoria"))
 
-    dado = f"nota {nota} com {av} avaliações no Google" if nota else "presença no Google Maps"
+    # Frase pronta pra entrar depois de "Vi que voces tem", pra nao precisar de
+    # emenda no meio do texto.
+    dado = f"{nota} com {av} avaliações no Google" if nota else "uma presença boa no Google"
     sem_site = not site
     # Cidade vem vazia na carteira. Sem ela a frase perde o trecho, nunca vira "sua região".
     onde = f" em {cidade}" if cidade else ""
 
+    # Sem apresentacao: a mensagem abre no nome da pessoa e num fato sobre o
+    # negocio dela. Decisao do fundador em 18/09, e e a regra da versao 1.3 do
+    # playbook. Quem abre se apresentando avisa que e abordagem comercial antes
+    # de a pessoa chegar na parte que interessa.
+    achou = ("fui procurar o site de vocês pra ver os serviços, não achei"
+             if sem_site else "dei uma olhada em como vocês aparecem pra quem pesquisa")
     abertura = (
-        f"Olá, tudo bem? Aqui é do time de marketing para negócios locais. "
-        f"Vi {nome} no Google, {dado}, parabéns pelo trabalho. "
-        f"Reparei que {('vocês ainda não têm um site próprio, então quem pesquisa acaba caindo no concorrente' if sem_site else 'dá para transformar essas buscas em muito mais contato')}. "
-        f"A gente resolve exatamente isso para {ang['dor']}: {ang['promessa']}. "
-        f"Quer ver um exemplo de como isso ficaria para vocês?"
+        f"Oi, {nome}, tudo bem? "
+        f"Vi que vocês têm {dado} e {achou}. "
+        f"A gente monta página com {ang['promessa']}. "
+        f"Hoje, quando alguém descobre vocês e quer saber preço ou agendar, como é que faz?"
     )
 
     followup = (
@@ -169,8 +137,10 @@ def _local_sequencia(business, niche_id=None):
 # Nao e copia do playbook de proposito: e o resumo curto que impede a copy de sair
 # errada, e nada alem disso. Playbook fora do ar deve doer um pouco na qualidade e
 # aparecer na metrica como versao 'embutido', nunca passar despercebido.
-REGRAS_MINIMAS = """Voce escreve a primeira mensagem fria de WhatsApp para um negocio local,
-na voz do time de marketing que envia (nunca "eu analisei seu perfil").
+REGRAS_MINIMAS = """Voce escreve a primeira mensagem fria de WhatsApp para um negocio local.
+A mensagem NAO se apresenta: nada de "aqui e o time de marketing", nada de dizer
+de qual empresa se fala. Ela abre no nome da pessoa e num fato sobre o negocio
+dela, e quem faz aparece depois, como "a gente".
 
 REGRAS OBRIGATORIAS:
 1. Voz de quem envia, nunca dizer que auditou o perfil
