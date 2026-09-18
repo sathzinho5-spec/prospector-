@@ -108,9 +108,15 @@ def api_disparo_criar_copy(req: DisparoCriarCopyRequest):
         tel = disparo._norm_phone(b.get("telefone"))
         if not tel or not _selecionado(b, tel, ids, telefones):
             continue
+        # Lead desligado CONTA, mas nao e barrado: escrever a copy nao e enviar.
+        # O fluxo do fundador poe a copy antes da decisao de disparar ("cria,
+        # revisa se quiser, depois inicia"), e barrar aqui fazia o primeiro
+        # clique dele devolver "0 criadas, 29 desativados" e travar o caminho
+        # inteiro. As duas travas que importam seguem intactas, e sao as do
+        # ENVIO: enfileirar_aptos e api_disparo_migrar continuam exigindo o
+        # lead ligado pra ele entrar na fila.
         if not cloud_store.disparo_liberado(b):
             desativados += 1
-            continue
         if tel in existentes and not req.refazer:
             ja_tinham += 1
             continue

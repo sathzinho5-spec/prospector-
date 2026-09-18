@@ -28,7 +28,7 @@ analysis/analyzer.py              13  porta de entrada da analise; reexporta pra
 analysis/aprendizado.py          127  score que aprende: conversao por perfil vira ajuste do score
 analysis/copy_comercial.py       212  copy de estrategia e de proposta comercial, com prompt e fallback local
 analysis/copy_fechamento.py      184  copy de fechamento: pitch de abordagem e resposta a objecao
-analysis/copy_sdr.py             283  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
+analysis/copy_sdr.py             301  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
 analysis/instagram_report.py     186  relatorio do perfil de Instagram: metricas, tom, pontos fortes e score
 analysis/playbook_sdr.py          80  carrega o playbook SDR do disco e diz qual versao dele esta no ar
 analysis/timing.py               145  melhor momento de envio por nicho: janela preferida e proximo slot
@@ -43,7 +43,7 @@ rotas/cnpj.py                     40  garimpo de empresas grandes por UF na base
 rotas/crm.py                     111  leads na nuvem e o CRM: listar, filtrar e mover de estagio
 rotas/disparo.py                 314  disparo: fila, envio da mensagem, cadencia, iniciar e pausar o motor
 rotas/disparo_conversas.py        99  conversa iniciada: marcar, desmarcar e ler qual copy converteu
-rotas/disparo_copy.py            249  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
+rotas/disparo_copy.py            255  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
 rotas/disparo_evolution.py        84  instancias da Evolution: qrcode, estado do chip e o numero pareado
 rotas/disparo_leads.py           187  a lista de leads do disparo com o estado de copy e de envio de cada um
 rotas/modelos.py                 206  os contratos de entrada da API, num lugar so

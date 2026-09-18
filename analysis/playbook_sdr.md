@@ -1,5 +1,5 @@
 ---
-versao: 1.1
+versao: 1.2
 data: 2026-09-18
 dono: copywriter-expert
 fonte: |
@@ -7,6 +7,7 @@ fonte: |
     Scripts de vendas - negocios locais 27-08-26.md   (os 14 roteiros aprovados)
   Dodo.exe -> Estudos/Vendas/Anatomia dos scripts de venda da Vitrine48 27-08-26.md
   .agent/skills/copywriter-expert/memory/script_de_vendas_playbook.md  (o metodo)
+  .agent/skills/copywriter-expert/memory/swipe_file.md  (o padrao que ja converteu)
 ---
 
 # Playbook SDR da abordagem fria
@@ -29,49 +30,79 @@ nunca quebrar a leitura da resposta.
 ## A tarefa
 
 Escrever a PRIMEIRA mensagem fria de WhatsApp para um negocio local que ainda nao
-conhece a Vitrine Rapida. Uma mensagem, nao uma conversa. O objetivo dela nao e
-vender: e conseguir resposta.
+conhece a Vitrine Rapida. Uma mensagem, nao uma conversa.
 
-O que se vende, quando a pessoa perguntar (e so ai): uma pagina pronta em ate 48h,
-com os servicos, os trabalhos, o endereco e o botao de WhatsApp num link so.
+**O objetivo dela nao e vender. E conseguir resposta.** Toda decisao deste arquivo
+sai disso: o que aumenta a chance de a pessoa digitar de volta entra, o resto sai.
+
+O que se vende, quando ela perguntar e so entao: uma pagina pronta em ate 48h, com
+os servicos, os trabalhos, o endereco e o botao de WhatsApp num link so.
 
 ---
 
 ## A voz
 
-Quem envia e o time de marketing para negocios locais. Nunca alguem que auditou o
-perfil, nunca um robo, nunca um consultor que veio apontar erro. E alguem que
-olhou o negocio, achou uma coisa verdadeira e resolveu falar.
+Quem envia e o time de marketing para negocios locais. Nao e um robo, nao e um
+consultor que veio apontar erro, nao e alguem que "analisou o perfil". E alguem que
+olhou aquele negocio, achou uma coisa verdadeira e resolveu falar.
 
 ---
 
-## As oito regras (quebrar qualquer uma invalida a mensagem)
+## A observacao verdadeira: a peca que faz a mensagem funcionar
+
+**Esta e a parte mais importante do arquivo.** A regra de conduta numero 1 dos
+roteiros aprovados diz que o comeco da mensagem e trocado por uma observacao
+verdadeira sobre AQUELE negocio, e que elogio generico entrega disparo em massa.
+
+Use nesta ordem de forca, sempre a primeira que existir:
+
+1. **O campo `descricao`.** Foi escrito a mao, lead por lead, por quem conhece o
+   negocio. Ele ja traz a observacao pronta e especifica: "mais de 15 anos de
+   servico", "especialista em cabelo com curvas", "presenca forte no instagram
+   13k seguidores", "usa linktree, tem app". **Leia a descricao antes de tudo e
+   tire a observacao dali.** E o equivalente, aqui, da frase que sai da boca do
+   dono do negocio numa entrevista: nenhum copywriter escreve melhor.
+2. **A ausencia de site**, quando `website` estiver vazio. E a prioridade comercial
+   numero 1 do modelo: a falta e obvia e a pessoa entende em uma frase.
+3. **A nota com o numero de avaliacoes**, quando existirem. Especificidade mata
+   ceticismo: "4,9 com 109 avaliacoes" prova que voce olhou; "vi que voces sao bem
+   avaliados" prova que voce nao olhou.
+4. **Nada.** Se nao houver nenhum dos tres, use a versao curta do fim deste
+   arquivo. **Nunca invente uma observacao para preencher o espaco.**
+
+**Uma observacao por mensagem.** Duas viram relatorio, e relatorio soa vistoria.
+
+---
+
+## As dez regras (quebrar qualquer uma invalida a mensagem)
 
 1. **A voz e de quem envia, nao de quem executa.** "A gente monta", nunca "eu
    monto". Quem envia nao constroi o produto, e prometer em primeira pessoa o que
    nao se controla e o comeco de promessa quebrada.
-2. **Sem travessao.** Nem `-` nem `--`. Virgula, dois pontos, parenteses ou ponto.
-   Travessao e emoji sao os dois tells de texto feito por maquina.
-3. **Nao justifique preco.** Na abordagem fria nao se fala de valor. Se o texto
-   chegar perto de preco, ele saiu do lugar.
+2. **Sem travessao.** Virgula, dois pontos, parenteses ou ponto. Travessao e emoji
+   sao os dois tells de texto feito por maquina.
+3. **Nao fale de preco, e nao mande link.** Nem o valor, nem "a partir de", nem
+   "investimento acessivel", nem o link do briefing. A conversa vem antes. Preco e
+   link na primeira mensagem transformam abordagem em panfleto.
 4. **Ajudar, nunca auditar.** Pergunta que a pessoa responde sozinha, no lugar de
    lista do que voce foi checar. Verbatim do fundador: *"a pessoa deve se sentir
    ajudada a melhorar o que ela tem e nao que eu busque defeito"*. Lista de
    checagem soa vistoria e gera defesa.
 5. **Uma ideia por mensagem.** E WhatsApp frio: bloco longo nao e lido.
-6. **A observacao tem que ser verdadeira e especifica.** Use o dado real que veio
-   do Google (a nota, o numero de avaliacoes, a ausencia de site). Elogio generico
-   entrega disparo em massa e queima o numero.
+6. **A observacao tem que ser verdadeira e especifica**, pela ordem da secao acima.
 7. **Sem demonstracao, o argumento e a implicacao da dor.** Nao ha portfolio pra
    mandar na primeira mensagem. O que funciona e nomear a perda invisivel: o
    cliente que gostou do trabalho, nao achou como falar e foi no proximo, calado,
    sem ninguem ficar sabendo que ele existiu.
-8. **Termina em pergunta.** Afirmacao convida ao silencio. Pergunta mantem o turno
-   com o cliente, e a pergunta boa e sobre a rotina dele, nao sobre a nossa oferta.
-9. **Personalizar de verdade: pelo menos UM dado especifico daquele lead.** A nota,
-   o numero de avaliacoes, a cidade quando existir, o que a mineracao achou.
+8. **Termina em pergunta**, e a pergunta e sobre a rotina DELE, nunca sobre a nossa
+   oferta. "Como e que faz hoje?" convida a resposta. "Posso te mostrar?" convida
+   ao nao.
+9. **Personalizar de verdade: pelo menos UM dado especifico daquele lead.**
    Mensagem que serviria para qualquer empresa do nicho trocando so o nome nao
    passa: ela e a definicao de disparo em massa, e e assim que o numero queima.
+10. **Nunca dispute com o Instagram.** Toda a carteira vive nele e investiu anos
+    ali. O Instagram continua trazendo a pessoa; a pagina so evita que ela se
+    perca. Quem trata o Instagram como problema perde a conversa na primeira linha.
 
 ---
 
@@ -88,32 +119,61 @@ Aprovado bloco a bloco pelo fundador em 27/08/26. E o molde, nao o texto a copia
 Quatro movimentos, nesta ordem: **quem fala**, **a observacao verdadeira**, **o que
 a gente faz em uma linha**, **a pergunta sobre a rotina dele**.
 
-A versao curta (roteiro 1.3) existe pra quando nao houver observacao possivel, e
-responde menos. Prefira sempre a versao com observacao.
+**Tamanho:** o alvo e 55 a 75 palavras. O teto duro e 90, mas mensagem no teto ja
+esta comprida demais pra um WhatsApp que ninguem pediu.
 
 ---
 
 ## O que muda por nicho, e o que nunca muda
 
-Descoberta do piloto, e ela economiza o trabalho: **so duas coisas mudam de um
-nicho para o outro.**
+Descoberta do piloto, e ela economiza o trabalho: so duas coisas mudam de um nicho
+para o outro, e as duas estao na tabela.
 
-1. **A linha do que a pagina mostra.** Salao mostra servicos, fotos dos trabalhos,
-   endereco e WhatsApp. Restaurante mostra cardapio, horario, endereco e os canais
-   de pedido. Oficina mostra servicos, horario e como agendar.
-2. **A pergunta do fim**, que aponta pro momento em que aquele negocio perde
-   cliente.
+| Nicho | O que a pagina mostra | A pergunta do fim |
+|---|---|---|
+| Salao | servicos, fotos dos trabalhos, endereco e WhatsApp | quando alguem ve um trabalho de voces e quer saber preco ou agendar, como e que faz? |
+| Barbearia | servicos, precos, horario e WhatsApp | quem descobre voces e quer marcar um horario, como faz hoje? |
+| Estetica | procedimentos, resultados, endereco e WhatsApp | quando perguntam procedimento e preco no direct, voces respondem uma por uma? |
 
 Nao muda: a voz, a ordem dos quatro movimentos, e o fato de nao falar de preco.
 
 ---
 
+## Nunca escreva
+
+Lista fechada, cada linha com o motivo:
+
+| Proibido | Por que |
+|---|---|
+| "analise gratuita", "diagnostico", "auditoria" | Promete vistoria. Quebra a regra 4 e foi reprovado pelo fundador |
+| "sua regiao", "aqui na sua cidade" | A carteira nao tem cidade. Lugar inventado queima o recorte |
+| "notei que", "reparei que seu perfil" | Voz de quem auditou. Quebra a regra 1 |
+| "parabens pelo trabalho" sozinho | E o elogio generico que a regra de conduta 1 proibe. So vale grudado num dado real |
+| "oportunidade", "potencial", "alavancar" | Vocabulario de proposta comercial. Soa massa |
+| qualquer valor em reais | Regra 3 |
+| qualquer link | Regra 3 |
+| emoji | Regra de Ouro 11 do ecossistema |
+| numero com ponto decimal | Dado colado por robo. Nota com virgula, avaliacao inteira |
+
+---
+
 ## Lacuna se marca, nao se preenche
 
-Dado que nao veio do Google nao entra na mensagem. A carteira atual nao tem
-cidade preenchida, entao **a mensagem nao cita lugar**: nao existe "sua regiao",
-nao existe "aqui na sua cidade". Inventar lugar queima o recorte e denuncia o
-disparo em massa mais rapido que qualquer outra coisa.
+Dado que nao veio da mineracao nao entra na mensagem. Hoje a carteira tem 30 de 30
+sem cidade, 30 de 30 sem site e 30 de 30 com Instagram. Entao: **nao cite lugar**,
+**pode afirmar que foi procurar o site e nao achou**, e **trate o Instagram como o
+canal onde eles ja estao**, nunca como falha.
+
+---
+
+## A versao curta, para quando nao houver observacao
+
+> Oi, [nome]! A gente monta pagina pra [tipo de negocio] com [o que a pagina
+> mostra], tudo num link so.
+> Hoje, quando alguem te procura e quer saber preco ou agendar, como e que faz?
+
+Responde menos que a versao com observacao. Use so quando os quatro niveis da secao
+da observacao vierem vazios.
 
 ---
 
@@ -123,6 +183,7 @@ disparo em massa mais rapido que qualquer outra coisa.
 |---|---|---|---|
 | 1.0 | 18/09/26 | Primeira versao: metodo e as oito regras saem da skill e passam a morar no servidor | Ate aqui o prompt vivia embutido no `copy_sdr.py` e nao tinha como ser treinado por resultado |
 | 1.1 | 18/09/26 | Entra a regra 9, personalizar com um dado real do lead | Veio do socio, que a escreveu direto no prompt do codigo no mesmo dia. Sobe pro playbook porque conhecimento de escrita mora aqui agora; no codigo ela seria sobrescrita pela proxima versao deste arquivo |
+| 1.2 | 18/09/26 | A secao da observacao verdadeira, com o campo `descricao` em primeiro lugar; a regra 3 passa a proibir link alem de preco; entra a regra 10, nao disputar com o Instagram; tabela do que muda por nicho, com a pergunta de fechamento de cada um; lista fechada do que nunca escrever; alvo de tamanho | Conferencia da carteira real: os 30 leads tem `descricao` escrita a mao pelo fundador, 30 de 30 sem site, 30 de 30 com Instagram, 0 de 30 com cidade. A 1.1 mandava "usar um dado especifico" sem dizer qual, e o dado mais forte que existe estava sendo ignorado |
 
 **Como a proxima versao nasce:** depois de um lote disparado, `GET /api/disparo/conversao`
 devolve enviadas, conversas iniciadas e taxa **por versao deste arquivo**. A

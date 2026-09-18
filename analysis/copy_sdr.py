@@ -67,12 +67,30 @@ def _sem_travessao(texto):
     return texto.replace("—", ",").replace("–", ",")
 
 
+def _numero_legivel(campo, valor):
+    """A nuvem guarda nota e avaliacoes como texto com decimal: '4.9' e '109.0'.
+    Mandado assim pra IA, sai 'nota 4.9 com 109.0 avaliacoes' na mensagem, que e
+    a cara de dado colado por robo. Avaliacao e contagem e nao tem casa decimal;
+    nota tem, e no Brasil se escreve com virgula."""
+    try:
+        n = float(str(valor).replace(",", "."))
+    except (TypeError, ValueError):
+        return valor
+    if campo == "avaliacoes":
+        return str(int(round(n)))
+    texto = ("%.1f" % n).rstrip("0").rstrip(".")
+    return texto.replace(".", ",")
+
+
 def _dados_ricos(business):
     """Tudo que a mineracao ja sabe e o copywriter precisa pra personalizar.
     Antes iam so 8 campos rasos; score, estrategia e oportunidades ficavam de
     fora e toda mensagem saia generica."""
     dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
                                           "cidade", "estado", "website", "telefone")}
+    for k in ("nota", "avaliacoes"):
+        if dados.get(k) not in (None, ""):
+            dados[k] = _numero_legivel(k, dados[k])
     for k in ("score_oportunidade", "score_ajustado", "score_motivo", "nivel_ia",
               "nivel", "estrategia_resumo", "descricao", "horarios", "endereco"):
         v = business.get(k)
