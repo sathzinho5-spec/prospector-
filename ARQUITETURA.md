@@ -30,6 +30,7 @@ analysis/copy_fechamento.py      184  copy de fechamento: pitch de abordagem e r
 analysis/copy_sdr.py             189  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
 analysis/instagram_report.py     186  relatorio do perfil de Instagram: metricas, tom, pontos fortes e score
 analysis/timing.py               128  melhor momento de envio por nicho: janela preferida e proximo slot
+analysis/aprendizado.py          108  score que aprende: conversao por perfil vira ajuste do score
 ```
 
 ## rotas/

@@ -69,7 +69,43 @@ def api_crm_status(req: CrmStatusRequest):
     _id = req.id
     if not _id:
         _id = cloud_store.lead_id({"nome": req.nome, "endereco": req.endereco, "telefone": req.telefone})
+    anterior = None
+    try:
+        lead = cloud_store.obter_lead(_id)
+        anterior = (lead or {}).get("contato_status")
+    except Exception:
+        pass
     ok = cloud_store.set_contato_status_by_id(_id, req.status, req.observacao)
+    if ok and anterior != req.status:
+        try:
+            cloud_store.log_evento(_id, req.status, anterior, req.status)
+        except Exception:
+            pass
     return {"ok": ok}
+
+
+@router.get("/api/crm/aprendizado")
+def api_crm_aprendizado():
+    """Previa do aprendizado: calcula sem gravar. A tela mostra e quem decide
+    se aplica e o botao Recalcular (POST)."""
+    from analysis import aprendizado
+    from scrapers import cloud_store
+
+    leads = cloud_store.listar_leads(limite=500)
+    return aprendizado.recalcular(leads)
+
+
+@router.post("/api/crm/aprendizado/recalcular")
+def api_crm_aprendizado_recalcular():
+    """Recalcula e grava score_ajustado + motivo na nuvem. Best-effort como o
+    resto da nuvem: sem colunas novas no banco, calcula e devolve sem gravar."""
+    from analysis import aprendizado
+    from scrapers import cloud_store
+
+    leads = cloud_store.listar_leads(limite=500)
+    r = aprendizado.recalcular(leads)
+    gravados = cloud_store.set_aprendizado(r.get("ajustes") or {}) if r.get("ok") else 0
+    r["gravados"] = gravados
+    return r
 
 

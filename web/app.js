@@ -112,6 +112,7 @@ function bindEvents() {
   on("btnBulkExport", "click", bulkExportCsv);
   on("btnBulkClear", "click", clearSelection);
   on("btnLeadsRefresh", "click", function () { loadLeadsView(1); });
+  on("btnAprRecalc", "click", recalcAprendizado);
   on("leadSearch", "input", function () { leadsState.q = this.value; loadLeadsView(1); });
   on("leadUf", "change", function () { leadsState.uf = this.value; loadLeadsView(1); });
   on("btnMenu", "click", function () {
@@ -175,6 +176,7 @@ window.switchTab = function (name) {
   }
   if (name === "metricas") {
     renderPerformance();
+    renderAprendizado();
   }
   if (name === "home") {
     loadDashboard();

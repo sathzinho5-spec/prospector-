@@ -13,7 +13,7 @@ _leads_cols = ["id", "nome", "categoria", "nota", "avaliacoes", "endereco",
                "status_funcionamento", "preco", "plus_code", "atributos",
                "latitude", "longitude", "foto", "descricao", "consulta", "url",
                "score_oportunidade", "nivel", "oportunidades", "pitch_whatsapp",
-               "contato_status", "observacao"]
+               "contato_status", "observacao", "score_ajustado", "score_motivo"]
 
 CRM_STAGES = ["novo", "enviado", "contatado", "respondido", "negociando", "fechado", "perdido"]
 
@@ -259,3 +259,69 @@ def listar_leads(estado=None, min_score=None, apenas_pendentes=False, limite=200
         return _with_timeout(_do, timeout=15)
     except Exception:
         return []
+
+
+def obter_lead(_id):
+    """Um lead pelo id, ou None. Leitura leve pra quem precisa do antes."""
+    def _do():
+        sb = _client()
+        if not sb:
+            return None
+        r = sb.table("leads").select("*").eq("id", str(_id)).limit(1).execute()
+        return (r.data or [None])[0]
+
+    try:
+        return _with_timeout(_do, timeout=8)
+    except Exception:
+        return None
+
+
+def set_aprendizado(ajustes):
+    """Grava score_ajustado + score_motivo por lead_id. Devolve quantos foram.
+    Tolera banco anterior ao schema novo: sem as colunas, avisa uma vez e
+    devolve 0 em vez de quebrar o recalculado (rode supabase_schema.sql)."""
+    alvos = [(str(i), dict(v)) for i, v in (ajustes or {}).items() if str(i or "").strip()]
+
+    def _do():
+        sb = _client()
+        if not sb:
+            return 0
+        n = 0
+        for lid, aj in alvos:
+            try:
+                sb.table("leads").update({
+                    "score_ajustado": int(aj.get("score_ajustado")),
+                    "score_motivo": str(aj.get("motivo") or "")[:200],
+                }).eq("id", lid).execute()
+                n += 1
+            except Exception as e:
+                print(f"[cloud] set_aprendizado pulou {lid}: {e}")
+                break
+        return n
+
+    try:
+        return _with_timeout(_do, timeout=25)
+    except Exception as e:
+        print(f"[cloud] set_aprendizado falhou: {e}")
+        return 0
+
+
+def log_evento(lead_id, evento, de=None, para=None):
+    """Historico fino pra v2 e pro radar do follow-up. Tabela pode nao existir
+    ainda: nesse caso registra em silencio (o retrato da v1 nao depende dele)."""
+    def _do():
+        sb = _client()
+        if not sb:
+            return False
+        sb.table("eventos_lead").insert({
+            "lead_id": str(lead_id),
+            "evento": str(evento),
+            "de": str(de or "") or None,
+            "para": str(para or "") or None,
+        }).execute()
+        return True
+
+    try:
+        return _with_timeout(_do, timeout=8)
+    except Exception:
+        return False
