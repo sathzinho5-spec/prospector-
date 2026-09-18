@@ -40,9 +40,10 @@ def registrar(con, item, texto_enviado, instancia=""):
         return False
     con.execute(
         "INSERT INTO abordagens "
-        "  (telefone, nome, mensagem, copy_origem, instancia, origem) "
-        "VALUES (?,?,?,?,?,?)",
+        "  (telefone, nome, mensagem, copy_origem, copy_versao, instancia, origem) "
+        "VALUES (?,?,?,?,?,?,?)",
         (tel, (item or {}).get("nome", ""), texto, _origem_da_copy(item),
+         str((item or {}).get("copy_versao") or ""),
          str(instancia or ""), (item or {}).get("origem", "")),
     )
     return True
@@ -136,25 +137,52 @@ def conversas_iniciadas():
         con.close()
 
 
-def resumo_por_copy():
-    """Qual copy converteu: enviadas, respondidas e taxa, por origem do texto."""
+def _taxa(enviadas, respondidas):
+    return round(100.0 * respondidas / enviadas, 1) if enviadas else 0.0
+
+
+def _agrupar(colunas):
+    """enviadas, respondidas e taxa agrupadas pelas colunas pedidas."""
+    campos = ", ".join(colunas)
     con = _conn()
     try:
         rows = con.execute(
-            "SELECT COALESCE(copy_origem,'desconhecida') AS copy_origem, "
+            "SELECT " + campos + ", "
             "       COUNT(*) AS enviadas, "
             "       SUM(CASE WHEN respondido_em IS NOT NULL THEN 1 ELSE 0 END) AS respondidas "
-            "  FROM abordagens GROUP BY 1 ORDER BY 2 DESC").fetchall()
+            "  FROM abordagens GROUP BY " +
+            ", ".join(str(i + 1) for i in range(len(colunas))) +
+            " ORDER BY enviadas DESC").fetchall()
     finally:
         con.close()
     saida = []
     for r in rows:
-        enviadas = r["enviadas"] or 0
-        respondidas = r["respondidas"] or 0
-        saida.append({
-            "copy_origem": r["copy_origem"],
-            "enviadas": enviadas,
-            "respondidas": respondidas,
-            "taxa": round(100.0 * respondidas / enviadas, 1) if enviadas else 0.0,
-        })
+        d = dict(r)
+        d["enviadas"] = d.get("enviadas") or 0
+        d["respondidas"] = d.get("respondidas") or 0
+        d["taxa"] = _taxa(d["enviadas"], d["respondidas"])
+        saida.append(d)
     return saida
+
+
+_ORIGEM = "COALESCE(copy_origem,'desconhecida') AS copy_origem"
+_VERSAO = "COALESCE(NULLIF(copy_versao,''),'sem_versao') AS copy_versao"
+
+
+def resumo_por_copy():
+    """Qual copy converteu: enviadas, respondidas e taxa, por origem do texto."""
+    return _agrupar([_ORIGEM])
+
+
+def resumo_por_versao():
+    """A mesma conta, por VERSAO do playbook que escreveu o texto.
+
+    E este numero, e nao o de cima, que treina a copywriter-expert: 'ia' diz
+    que a maquina escreveu, a versao diz QUAL conhecimento escreveu. Sem ele,
+    trocar o playbook seria mudar no escuro e comparar com nada.
+
+    Cruza com a origem de proposito: copy editada a mao pelo operador carrega a
+    versao do texto que ele recebeu pra editar, e misturar as duas faria a
+    versao levar credito pela reescrita de outra pessoa.
+    """
+    return _agrupar([_VERSAO, _ORIGEM])

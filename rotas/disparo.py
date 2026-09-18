@@ -212,7 +212,7 @@ def api_disparo_iniciar(req: DisparoStartRequest):
     """Liga o motor. delay_min/delay_max sao aceitos e ignorados: a pausa entre
     envios virou regra fixa. O envio avulso NAO e mais barrado pelo modo manual,
     porque os dois caminhos convivem pela trava atomica da fila."""
-    from scrapers import disparo, disparo_cadencia
+    from scrapers import disparo
 
     s, ini, fim, limite = _janela_e_limite(req)
     cfg = {
@@ -228,13 +228,33 @@ def api_disparo_iniciar(req: DisparoStartRequest):
         "meta_token": s.get("disparo_meta_token", ""),
         "meta_phone_id": s.get("disparo_meta_phone_id", ""),
     }
+    # A FILA NASCE AQUI. Antes ela so era carregada pelo botao "enfileirar", que
+    # saiu da tela quando a aba virou Disparo: o motor passou a ligar em cima de
+    # fila vazia e a nao mandar nada, sem erro nenhum. Agora "iniciar" faz o que
+    # o nome promete, e quem entra e so quem a propria lista mostra como apto.
+    from rotas.disparo_leads import enfileirar_aptos
+
+    carga = enfileirar_aptos(origem="iniciar")
+
     ok = disparo.iniciar(cfg)
     avisos = []
     if req.delay_min is not None or req.delay_max is not None:
         avisos.append("delay_min e delay_max foram ignorados: a cadencia agora "
                       "sai da janela e do limite do dia.")
-    return {"iniciado": ok, "avisos": avisos,
-            "cadencia": disparo_cadencia.calcular(ini, fim, limite),
+    if (req.provider or "").lower() == "simulado":
+        avisos.append("Modo ensaio: o provedor esta em 'simulado', nada sai de "
+                      "verdade e nenhum lead e consumido. Troque o provedor em "
+                      "Ajustes para disparar pra valer.")
+    if not carga["aptos"]:
+        fora = carga["fora"]
+        detalhe = ", ".join(f"{v} {k.replace('_', ' ')}" for k, v in fora.items() if v)
+        avisos.append("Nenhum lead apto entrou na fila" +
+                      (f" ({detalhe})." if detalhe else "."))
+    # A cadencia sai do status e NAO de uma conta refeita aqui. O recalculo que
+    # existia nesta linha era apagado pelo **status() logo abaixo, que tem a
+    # mesma chave: a rota prometia um objeto e entregava a string do motor, sem
+    # ninguem perceber. Ficou a do motor de proposito, que e a que ele pratica.
+    return {"iniciado": ok, "avisos": avisos, "carga": carga,
             **disparo.status()}
 
 

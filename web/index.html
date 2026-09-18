@@ -521,8 +521,11 @@
           <div class="dsp-acoes">
             <button id="btnStartDisp" class="btn primary dsp-acao-principal">Iniciar disparo</button>
             <button id="btnDspCriarCopy" class="btn">Criar copy</button>
+            <button id="btnDspLigar" class="btn">Ligar disparo dos marcados</button>
+            <button id="btnDspDesligar" class="btn">Desligar</button>
             <button id="btnPauseDisp" class="btn">Pausar</button>
           </div>
+          <p class="hint" id="dspCargaInfo"></p>
         </section>
 
         <!-- 3. Lista de leads da aba -->
@@ -561,6 +564,23 @@
             </table>
           </div>
           <p class="dsp-vazio hidden" id="dspTabelaVazia">Nenhum lead nesta visão.</p>
+        </section>
+
+        <!-- 4. O que a operacao aprendeu: taxa por versao do playbook -->
+        <section class="panel" id="dspConversaoCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Conversão por copy</h3>
+            <span class="hint" id="dspConversaoVersao"></span>
+          </div>
+          <p class="hint">
+            Quantas conversas cada versão do playbook iniciou. É este número que a
+            copywriter lê antes de escrever a versão seguinte: a taxa só significa
+            alguma coisa depois de um lote inteiro medido.
+          </p>
+          <div class="dsp-ficha" id="dspConversaoCorpo"></div>
+          <p class="dsp-vazio hidden" id="dspConversaoVazia">
+            Nenhuma abordagem saiu ainda. A taxa aparece aqui depois do primeiro disparo.
+          </p>
         </section>
 
       </div><!-- /secComercial -->
@@ -858,6 +878,7 @@
       <p class="hint" id="dspGavetaMsgInfo"></p>
       <div class="btn-row">
         <button class="btn primary" id="btnDspSalvarMensagem">Salvar mensagem</button>
+        <button class="btn" id="btnDspLigarLead">Ligar disparo</button>
       </div>
     </div>
 
@@ -893,6 +914,7 @@
 <script src="/static/js/disparo.js"></script>
 <script src="/static/js/disparo_aba.js"></script>
 <script src="/static/js/disparo_gaveta.js"></script>
+<script src="/static/js/disparo_conversao.js"></script>
 <script src="/static/js/conversas.js"></script>
 <script src="/static/js/crm.js"></script>
 <script src="/static/js/crm_cartao.js"></script>

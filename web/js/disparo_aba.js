@@ -184,8 +184,66 @@ async function dspCriarCopy() {
   }
 }
 
+// Os motivos que o servidor devolve em carga.fora, na lingua de quem opera.
+var DSP_MOTIVO = {
+  ja_abordado: "já receberam a abordagem",
+  ja_na_fila: "já estavam na fila",
+  bloqueado: "bloqueados",
+  desligado: "com o disparo desligado",
+  sem_copy: "sem copy pronta"
+};
+
+function dspMostrarCarga(resposta) {
+  const alvo = $("dspCargaInfo");
+  if (!alvo) return;
+  const c = (resposta || {}).carga;
+  if (!c) { alvo.textContent = ""; return; }
+  const fora = Object.keys(DSP_MOTIVO)
+    .filter(function (k) { return (c.fora || {})[k]; })
+    .map(function (k) { return c.fora[k] + " " + DSP_MOTIVO[k]; });
+  let txt = c.enfileirados + " lead" + (c.enfileirados === 1 ? "" : "s") + " na fila";
+  if (fora.length) txt += ". Fora: " + fora.join(", ") + ".";
+  // Aviso do servidor vem junto: e onde o modo ensaio se anuncia.
+  const avisos = (resposta.avisos || []).join(" ");
+  alvo.textContent = avisos ? txt + " " + avisos : txt;
+}
+
+async function dspLigarSelecionados(ativo) {
+  const alvos = dspTelefonesSelecionados();
+  if (!alvos.length) {
+    toast("Marque pelo menos um lead na lista.", "info");
+    return;
+  }
+  // A rota trabalha por id do lead, nao por telefone: e a mesma que o CRM usa.
+  const ids = dspLeads
+    .filter(function (l) { return dspSelecionados[l.telefone]; })
+    .map(function (l) { return l.id; })
+    .filter(Boolean);
+  if (!ids.length) { toast("Não achei o id desses leads.", "error"); return; }
+  try {
+    const r = await fetch("/api/crm/disparo-ativo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: ids, ativo: !!ativo })
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.detail || "Não deu pra gravar.", "error"); return; }
+    toast((d.atualizados || 0) + " lead(s) com disparo " +
+          (ativo ? "ligado" : "desligado") + ".", "ok");
+    await dspAtualizarTudo();
+  } catch (err) {
+    toast("Erro: " + err.message, "error");
+  }
+}
+
 async function dspAtualizarTudo() {
-  await Promise.all([dspCarregarKpis(), dspCarregarLeads(), dspCarregarCadencia()]);
+  const tarefas = [dspCarregarKpis(), dspCarregarLeads(), dspCarregarCadencia()];
+  // A conversao mora em outro arquivo e pode nao estar carregada: guarda em vez
+  // de assumir, pelo mesmo motivo de todo o resto desta aba.
+  if (typeof window.dspCarregarConversao === "function") {
+    tarefas.push(window.dspCarregarConversao());
+  }
+  await Promise.all(tarefas);
 }
 
 function dspIniciarAba() {
@@ -193,6 +251,12 @@ function dspIniciarAba() {
   if ($("dspFiltroEstado")) $("dspFiltroEstado").addEventListener("change", dspCarregarLeads);
   if ($("btnDspAtualizar")) $("btnDspAtualizar").addEventListener("click", dspAtualizarTudo);
   if ($("btnDspCriarCopy")) $("btnDspCriarCopy").addEventListener("click", dspCriarCopy);
+  if ($("btnDspLigar")) {
+    $("btnDspLigar").addEventListener("click", function () { dspLigarSelecionados(true); });
+  }
+  if ($("btnDspDesligar")) {
+    $("btnDspDesligar").addEventListener("click", function () { dspLigarSelecionados(false); });
+  }
   if ($("dspSelTodos")) {
     $("dspSelTodos").addEventListener("change", function () { dspMarcarTodos(this.checked); });
   }
@@ -205,6 +269,8 @@ function dspIniciarAba() {
 }
 
 window.dspMarcar = dspMarcar;
+window.dspMostrarCarga = dspMostrarCarga;
+window.dspLigarSelecionados = dspLigarSelecionados;
 window.dspCriarCopy = dspCriarCopy;
 window.dspAtualizarTudo = dspAtualizarTudo;
 window.dspIniciarAba = dspIniciarAba;

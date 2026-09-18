@@ -35,12 +35,16 @@ def _teto_ia(settings):
 
 
 def _mensagem_abordagem(business, settings, usar_ia, exigir_ia):
-    """Mensagem de um lead da fila. Devolve (texto, engine).
+    """Mensagem de um lead da fila. Devolve (texto, engine, copy_versao).
 
     Com IA configurada (exigir_ia), texto de template local NAO entra na fila:
     o fallback local carrega copy que o fundador reprovou, e uma queda da IA
     mandaria ela pro cliente sem aviso. Melhor o lead ficar de fora e a tela
     dizer quantos ficaram. Sem chave de IA nada muda: tudo sai do template.
+
+    A versao viaja junto desde aqui porque so aqui ela ainda existe: da fila pra
+    frente so ha o texto pronto, e sem o carimbo nao ha como saber depois qual
+    playbook escreveu a copy que converteu.
     """
     if usar_ia:
         try:
@@ -49,15 +53,15 @@ def _mensagem_abordagem(business, settings, usar_ia, exigir_ia):
             msg = (seq.get("abertura") or "").strip()
             engine = seq.get("engine") or "local"
             if msg and engine != "local":
-                return msg, engine
+                return msg, engine, str(seq.get("copy_versao") or "")
         except Exception:
             pass
     if exigir_ia:
-        return "", "local"
+        return "", "local", ""
     try:
-        return (analyzer._local_pitch(business).get("whatsapp") or "").strip(), "local"
+        return (analyzer._local_pitch(business).get("whatsapp") or "").strip(), "local", "local"
     except Exception:
-        return "", "local"
+        return "", "local", ""
 
 
 def _origem(engine):
@@ -113,16 +117,17 @@ def api_disparo_criar_copy(req: DisparoCriarCopyRequest):
         usar_ia = tentativas_ia < teto_ia
         if usar_ia:
             tentativas_ia += 1
-        msg, engine = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
+        msg, engine, versao = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
         if not msg:
             sem_mensagem += 1
             continue
         origem = _origem(engine)
         if origem == "ia":
             com_ia += 1
-        disparo_copys.salvar(tel, msg, b.get("nome", ""), origem)
+        disparo_copys.salvar(tel, msg, b.get("nome", ""), origem, copy_versao=versao)
         criados.append({"telefone": tel, "nome": b.get("nome", ""),
-                        "mensagem": msg, "copy_origem": origem})
+                        "mensagem": msg, "copy_origem": origem,
+                        "copy_versao": versao})
 
     return {"criados": len(criados), "ja_tinham": ja_tinham,
             "desativados": desativados, "sem_mensagem": sem_mensagem,
@@ -168,22 +173,25 @@ def api_disparo_migrar(req: DisparoMigrarRequest):
         pronta = copys.get(tel)
         if pronta:
             msg, origem = pronta["mensagem"], (pronta.get("copy_origem") or "ia")
+            versao = pronta.get("copy_versao") or ""
             da_copy += 1
         else:
             usar_ia = tentativas_ia < teto_ia
             if usar_ia:
                 tentativas_ia += 1
-            msg, engine = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
+            msg, engine, versao = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
             origem = _origem(engine)
             if msg:
-                disparo_copys.salvar(tel, msg, b.get("nome", ""), origem)
+                disparo_copys.salvar(tel, msg, b.get("nome", ""), origem,
+                                     copy_versao=versao)
         if not msg:
             sem_mensagem += 1
             continue
         if origem == "ia":
             com_ia += 1
         itens.append({"nome": b.get("nome", ""), "telefone": b.get("telefone", ""),
-                      "mensagem": msg, "copy_origem": origem})
+                      "mensagem": msg, "copy_origem": origem,
+                      "copy_versao": versao})
         na_fila.add(tel)
 
     n = disparo.enfileirar(itens, origem=req.origem or "minerados")
@@ -219,8 +227,13 @@ def api_disparo_copy(req: DisparoCopyRequest):
                                  "pode mais ser alterado.")
 
     anterior = disparo_copys.obter(tel) or {}
+    # A versao do texto ORIGINAL segue no registro: quem reescreveu foi o
+    # operador, e apagar o carimbo faria a reescrita dele sumir da comparacao
+    # entre playbooks em vez de aparecer como o que ela e, uma copy manual que
+    # nasceu daquela versao.
     disparo_copys.salvar(tel, msg, nome=anterior.get("nome", ""),
-                         copy_origem="manual", manual=True)
+                         copy_origem="manual", manual=True,
+                         copy_versao=anterior.get("copy_versao") or "")
 
     # A fila so e tocada quando o item ainda esta pendente: item em voo ou ja
     # finalizado nao se reescreve.

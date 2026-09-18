@@ -267,14 +267,24 @@ async function startDisp() {
     body: JSON.stringify(body)
   });
   const d = await r.json();
+  // A fila nasce no mesmo clique, entao o resultado dela e a primeira coisa que
+  // quem opera precisa ver: "rodando" com fila vazia nao manda nada, e antes
+  // disso nao havia nada na tela dizendo que ninguem tinha entrado.
+  if (typeof window.dspMostrarCarga === "function") window.dspMostrarCarga(d);
+  const entraram = ((d.carga || {}).enfileirados) || 0;
   if (d.iniciado || d.rodando) {
-    showStatus("searchStatus", "Disparo rodando no modo " + body.provider + "! Acompanhe aqui.", "ok");
+    showStatus("searchStatus",
+      entraram
+        ? "Disparo rodando no modo " + body.provider + " com " + entraram + " na fila."
+        : "Disparo ligado, mas nenhum lead entrou na fila. Veja o aviso na aba.",
+      entraram ? "ok" : "info");
   } else if (d.motivo) {
     showStatus("searchStatus", d.motivo + ". Use o botão Enviar de cada linha.", "info");
   } else {
     showStatus("searchStatus", "Disparo já estava rodando.", "info");
   }
   refreshDisparo();
+  if (typeof window.dspAtualizarTudo === "function") window.dspAtualizarTudo();
 }
 
 async function pauseDisp() {

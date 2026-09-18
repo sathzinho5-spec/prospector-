@@ -31,6 +31,35 @@ _worker_lock = threading.Lock()
 _worker_state = {"rodando": False, "provider": "simulado", "enviados_hoje": 0,
                  "proximo_em": None, "ultimo_erro": "",
                  "cadencia": "", "intervalo_seg": 0}
+def _gravar_sucesso(con, item, msg, provider):
+    """O que acontece com a linha depois que o provedor aceitou a mensagem.
+
+    O corte que este arquivo nao tinha: **ensaio nao consome lead.** O provedor
+    Simulado devolve sucesso sem mandar nada, e ate aqui o sucesso dele era
+    gravado igual ao de verdade: a linha virava 'enviado', o numero entrava no
+    numeros_abordados (que e permanente, de proposito) e uma abordagem falsa
+    entrava na metrica de conversao. Resultado: um clique em Iniciar disparo com
+    o interruptor desarmado queimava a carteira inteira para o envio real e
+    sujava a unica medida de qual copy converteu.
+
+    Agora o ensaio apaga a propria linha. O lead volta a 'copy pronta', volta a
+    ser apto e pode ser ensaiado de novo, sem deixar rastro que minta.
+    """
+    nome_chip = getattr(provider, "instance", provider.name)
+    if getattr(provider, "name", "") == "simulado":
+        con.execute("DELETE FROM fila WHERE id=?", (item["id"],))
+        return False
+    con.execute(
+        "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
+        "instancia=? WHERE id=?",
+        (nome_chip, item["id"]))
+    registrar_abordado(con, item["telefone"])
+    # Mesma transacao do UPDATE de proposito: o registro do que saiu e a metrica
+    # de conversao, e ele nao pode divergir da fila nem por uma falha no meio.
+    disparo_abordagens.registrar(con, item, msg, nome_chip)
+    return True
+
+
 def enviar_agora(item_id, provider):
     """Envia um item específico na hora, a qualquer momento. Retorna (ok, err).
 
@@ -60,18 +89,10 @@ def enviar_agora(item_id, provider):
             return False, erro
         msg = item["mensagem"]
         ok, err = provider.send(item["telefone"], msg)
-        nome_chip = getattr(provider, "instance", provider.name)
         if ok:
-            con.execute(
-                "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
-                "instancia=? WHERE id=?",
-                (nome_chip, item_id,))
-            registrar_abordado(con, item["telefone"])
-            # Mesma transacao do UPDATE de proposito: o registro do que saiu e a
-            # metrica de conversao, e ele nao pode divergir da fila nem por uma
-            # falha no meio. O envio avulso nao acrescenta opt-out, entao o
-            # texto gravado e exatamente o que o provedor recebeu.
-            disparo_abordagens.registrar(con, item, msg, nome_chip)
+            # O envio avulso nao acrescenta opt-out, entao o texto gravado e
+            # exatamente o que o provedor recebeu.
+            _gravar_sucesso(con, item, msg, provider)
         else:
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
@@ -186,7 +207,6 @@ def _worker_loop():
                 _worker_state["proximo_em"] = "chips indisponíveis, tentando de novo"
                 _worker_stop.wait(60)
                 continue
-            nome_chip = getattr(provider, "instance", provider.name)
 
             msg = item["mensagem"] + (optout_txt if optout else "")
             ok, err = provider.send(item["telefone"], msg)
@@ -196,15 +216,10 @@ def _worker_loop():
             con = _conn()
             try:
                 if ok:
-                    con.execute(
-                        "UPDATE fila SET status='enviado', enviado_em=CURRENT_TIMESTAMP, "
-                        "instancia=? WHERE id=?",
-                        (nome_chip, item["id"]))
-                    registrar_abordado(con, item["telefone"])
                     # msg, e nao item["mensagem"]: o texto gravado tem que ser o
                     # que o provedor recebeu, opt-out incluido. Medir conversao
                     # por um texto diferente do que o lead leu nao mede nada.
-                    disparo_abordagens.registrar(con, item, msg, nome_chip)
+                    _gravar_sucesso(con, item, msg, provider)
                     ultimo_envio = datetime.datetime.now()
                 else:
                     tent = item.get("tentativas", 0) + 1

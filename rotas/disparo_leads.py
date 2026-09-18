@@ -68,6 +68,7 @@ def _linha(lead, tel, fila_row, copy_row, abordagem, bloqueado, liberado):
         "estado": estado,
         "mensagem": mensagem,
         "copy_origem": (fonte.get("copy_origem") or (abordagem or {}).get("copy_origem")),
+        "copy_versao": (fonte.get("copy_versao") or (abordagem or {}).get("copy_versao")),
         "editada": bool(fonte.get("editada_em")),
         "disparo_ativo": liberado,
         "bloqueado": bloqueado,
@@ -128,3 +129,53 @@ def api_disparo_leads(estado: str = "", busca: str = "", limite: int = 500):
     return {"total": len(linhas), "totais": totais,
             "aptos": sum(1 for linha in linhas if linha["apto"]),
             "leads": linhas}
+
+
+# Ordem em que um motivo ganha do outro quando o lead cai em mais de um. E de
+# ciclo de vida, do fim pro comeco: quem ja recebeu nao volta a ser "sem copy".
+_MOTIVOS = ("ja_abordado", "ja_na_fila", "bloqueado", "desligado", "sem_copy")
+
+
+def _motivo_de_fora(linha):
+    if linha["estado"] in ("enviado", "respondeu"):
+        return "ja_abordado"
+    if linha["estado"] in ("na_fila", "falha", "duplicado"):
+        return "ja_na_fila"
+    if linha["bloqueado"] or linha["estado"] == "bloqueado":
+        return "bloqueado"
+    if not linha["disparo_ativo"]:
+        return "desligado"
+    return "sem_copy"
+
+
+def enfileirar_aptos(origem="iniciar"):
+    """Carrega a fila com os leads aptos, e diz quem ficou de fora e por que.
+
+    Este e o passo que faltava entre "criar copy" e "iniciar disparo": o botao
+    de enfileirar a mao saiu da tela por decisao do fundador, e com ele foi
+    embora o unico caminho de um lead com copy pronta chegar na fila. O motor
+    passou a ligar em cima de fila vazia e a nao mandar nada, sem erro nenhum.
+
+    Quem decide o que e apto NAO e este arquivo duas vezes: a definicao mora em
+    _linha() ("apto") e a tela consome a mesma. Se divergissem, a lista diria
+    que 29 estao prontos e a fila receberia outro numero.
+
+    A fila e a tabela `fila` que ja existia. Ela continua sendo a ordem de
+    servico, e o anti-duplicata dela (numero na fila, numero ja abordado,
+    numero bloqueado) segue valendo por cima do que for mandado daqui.
+    """
+    from scrapers import disparo
+
+    linhas = montar_linhas()
+    itens, fora = [], {m: 0 for m in _MOTIVOS}
+    for linha in linhas:
+        if linha["apto"]:
+            itens.append({"nome": linha["nome"], "telefone": linha["telefone"],
+                          "mensagem": linha["mensagem"],
+                          "copy_origem": linha["copy_origem"] or "ia",
+                          "copy_versao": linha["copy_versao"] or ""})
+        else:
+            fora[_motivo_de_fora(linha)] += 1
+    enfileirados = disparo.enfileirar(itens, origem=origem) if itens else 0
+    return {"enfileirados": enfileirados, "aptos": len(itens),
+            "total": len(linhas), "fora": fora}

@@ -17,6 +17,8 @@ import re
 
 import requests
 
+from analysis import playbook_sdr
+
 # Angulo de dor/promessa por nicho (base do roteiro)
 NICHE_ANGLES = {
     "restaurantes": {"dor": "mesas vazias no meio da semana", "promessa": "movimento no salao e no delivery"},
@@ -101,6 +103,7 @@ def _local_sequencia(business, niche_id=None):
 
     return {
         "engine": "local",
+        "copy_versao": "local",
         "alavanca": f"dor: {ang['dor']} / promessa: {ang['promessa']}",
         "abertura": _sem_travessao(abertura),
         "followup": _sem_travessao(followup),
@@ -108,43 +111,69 @@ def _local_sequencia(business, niche_id=None):
     }
 
 
-SEQUENCIA_PROMPT = """Voce e um copywriter de resposta direta e um closer B2B de marketing digital no Brasil.
-Monte uma sequencia de abordagem WhatsApp para o negocio abaixo.
+# O conhecimento minimo, pra quando o playbook nao chegou junto com a imagem.
+# Nao e copia do playbook de proposito: e o resumo curto que impede a copy de sair
+# errada, e nada alem disso. Playbook fora do ar deve doer um pouco na qualidade e
+# aparecer na metrica como versao 'embutido', nunca passar despercebido.
+REGRAS_MINIMAS = """Voce escreve a primeira mensagem fria de WhatsApp para um negocio local,
+na voz do time de marketing que envia (nunca "eu analisei seu perfil").
+
+REGRAS OBRIGATORIAS:
+1. Voz de quem envia, nunca dizer que auditou o perfil
+2. PROIBIDO travessao (- ou --). Use virgula ou dois pontos
+3. Nao falar de preco nem de valores
+4. Ajudar, nao auditar: apontar UM caminho, nao listar defeitos
+5. Terminar em pergunta sobre a rotina do negocio
+6. Implicar a dor (o cliente que some calado), sem demonstracao
+7. Maximo 90 palavras por mensagem
+8. Nao citar cidade nem regiao quando o dado nao vier nos dados do negocio"""
+
+# O contrato de maquina: a tarefa, os dados e o formato da resposta. Mora no codigo
+# e NUNCA no playbook, porque quem edita o playbook e a copywriter-expert, e copy
+# escrita a mao nao pode quebrar a leitura do JSON.
+CONTRATO = """Escreva a sequencia de abordagem para o negocio abaixo.
 
 Dados do negocio: {dados}
-Nichos e angulo: dor = "{dor}", promessa = "{promessa}".
+Angulo do nicho: dor = "{dor}", promessa = "{promessa}".
 
-REGRAS OBRIGATORIAS (se violar, a resposta e invalida):
-1. Voz de quem envia (time de marketing), nunca dizer que auditou o perfil
-2. PROIBIDO usar travessao (— ou –). Use virgula ou dois-pontos
-3. Nunca justificar preco nem falar de valores
-4. Ajudar, nao auditar: apontar UM caminho, nao listar defeitos
-5. Cada mensagem TERMINA em pergunta
-6. Implicar a dor (o que ele perde se nao agir), sem demonstracao longa
-7. Maximo 90 palavras por mensagem
-
-Responda SOMENTE com JSON valido:
+Responda SOMENTE com JSON valido, sem cerca de codigo:
 {
   "alavanca": "dor e promessa usadas em 1 linha",
-  "abertura": "primeira mensagem",
+  "abertura": "primeira mensagem, a unica que sera enviada no disparo frio",
   "followup": "mensagem de 2 dias depois",
   "fechamento": "ultima mensagem (break-up)"
 }"""
 
+# Nome antigo preservado: era o prompt inteiro antes do playbook existir, e ainda
+# e o que alguem procura ao abrir este arquivo atras do texto padrao.
+SEQUENCIA_PROMPT = REGRAS_MINIMAS + "\n\n" + CONTRATO
+
+
+def _conhecimento(settings):
+    """De onde saem as regras de escrita, e o carimbo de qual versao saiu.
+
+    A ordem e deliberada: o que o operador colou na tela vence, porque a tela
+    promete isso ("vazio = prompt da skill"); apagar o campo devolve o playbook.
+    """
+    colado = (settings.get("abordagem_prompt") or "").strip()
+    if colado:
+        return colado, "custom"
+    do_disco = playbook_sdr.texto()
+    if do_disco:
+        return do_disco, playbook_sdr.versao()
+    return REGRAS_MINIMAS, "embutido"
+
 
 def _montar_prompt_sequencia(settings):
-    """Prompt da abordagem: customizado pelo usuario ou padrao da skill.
+    """Devolve (prompt, versao). O contrato de formato e SEMPRE acrescentado.
 
-    Espelha analysis.copy_fechamento._montar_prompt: se o prompt colado nao
-    trouxer os marcadores, eles sao acrescentados no fim, senao a IA receberia
-    o pedido sem os dados do lead e sem o angulo do nicho.
+    Antes o texto colado substituia o prompt inteiro, contrato de JSON incluido:
+    quem colasse instrucao em prosa recebia resposta em prosa, o json.loads
+    falhava e a copy caia no template local sem nada na tela dizer por que. Agora
+    o colado troca so o conhecimento, e o formato continua garantido pelo codigo.
     """
-    base = (settings.get("abordagem_prompt") or "").strip() or SEQUENCIA_PROMPT
-    if "{dados}" not in base:
-        base += "\n\nDados do negocio: {dados}"
-    if "{dor}" not in base or "{promessa}" not in base:
-        base += '\n\nAngulo do nicho: dor = "{dor}", promessa = "{promessa}".'
-    return base
+    base, versao = _conhecimento(settings)
+    return base.rstrip() + "\n\n" + CONTRATO, versao
 
 
 def gerar_sequencia(business, settings, niche_id=None):
@@ -161,7 +190,8 @@ def gerar_sequencia(business, settings, niche_id=None):
             model = settings.get("openai_model", "gpt-4o-mini")
             dados = {k: business.get(k) for k in ("nome", "categoria", "nota", "avaliacoes",
                                                    "cidade", "estado", "website", "telefone")}
-            prompt = (_montar_prompt_sequencia(settings)
+            bruto, versao = _montar_prompt_sequencia(settings)
+            prompt = (bruto
                       .replace("{dados}", json.dumps(dados, ensure_ascii=False))
                       .replace("{dor}", ang["dor"])
                       .replace("{promessa}", ang["promessa"]))
@@ -180,6 +210,9 @@ def gerar_sequencia(business, settings, niche_id=None):
                 content = re.sub(r"^```(json)?|```$", "", content.strip()).strip()
                 data = json.loads(content)
                 data["engine"] = "groq/openai"
+                # Carimbo da versao do conhecimento que escreveu este texto. E o
+                # que liga a copy ao relatorio de conversao depois.
+                data["copy_versao"] = versao
                 for k in ("abertura", "followup", "fechamento"):
                     if data.get(k):
                         data[k] = _sem_travessao(data[k])

@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS copys (
   nome TEXT,
   mensagem TEXT NOT NULL,
   copy_origem TEXT DEFAULT 'ia',
+  copy_versao TEXT,
   criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   editada_em TIMESTAMP
 );
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS abordagens (
   nome TEXT,
   mensagem TEXT NOT NULL,
   copy_origem TEXT,
+  copy_versao TEXT,
   instancia TEXT,
   origem TEXT,
   enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -85,6 +87,12 @@ _COLUNAS_NOVAS = (
     ("fila", "instancia", "TEXT"),
     ("fila", "editada_em", "TIMESTAMP"),
     ("fila", "copy_origem", "TEXT"),
+    # A versao do playbook que escreveu o texto. Sem ela da pra saber que a copy
+    # veio da IA, mas nao QUAL conhecimento a produziu, que e o unico jeito de a
+    # copywriter-expert aprender com o resultado do lote.
+    ("fila", "copy_versao", "TEXT"),
+    ("copys", "copy_versao", "TEXT"),
+    ("abordagens", "copy_versao", "TEXT"),
 )
 
 _migrado = False
@@ -107,10 +115,11 @@ def _semear_abordagens(con):
     """
     con.execute(
         "INSERT INTO abordagens "
-        "  (telefone, nome, mensagem, copy_origem, instancia, origem, enviado_em) "
+        "  (telefone, nome, mensagem, copy_origem, copy_versao, instancia, origem, enviado_em) "
         "SELECT f.telefone, f.nome, f.mensagem, "
         "       CASE WHEN f.editada_em IS NOT NULL THEN 'manual' "
         "            ELSE COALESCE(f.copy_origem, 'desconhecida') END, "
+        "       f.copy_versao, "
         "       f.instancia, f.origem, COALESCE(f.enviado_em, CURRENT_TIMESTAMP) "
         "  FROM fila f "
         " WHERE f.status='enviado' "

@@ -33,10 +33,11 @@ def enfileirar(itens, origem=""):
             if tel in existentes:
                 continue
             con.execute(
-                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem) "
-                "VALUES (?,?,?,?,?)",
+                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem, copy_versao) "
+                "VALUES (?,?,?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem,
-                 str(it.get("copy_origem") or "ia").strip().lower()),
+                 str(it.get("copy_origem") or "ia").strip().lower(),
+                 str(it.get("copy_versao") or "").strip()),
             )
             existentes.add(tel)
             n += 1
