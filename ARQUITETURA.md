@@ -27,7 +27,7 @@ analysis/__init__.py               1  marca analysis/ como pacote; a analise viv
 analysis/analyzer.py              13  porta de entrada da analise; reexporta pra nenhuma chamada de fora mudar
 analysis/copy_comercial.py       212  copy de estrategia e de proposta comercial, com prompt e fallback local
 analysis/copy_fechamento.py      184  copy de fechamento: pitch de abordagem e resposta a objecao
-analysis/copy_sdr.py             189  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
+analysis/copy_sdr.py             219  copy do SDR pro disparador: mensagem por nicho, na voz de quem envia
 analysis/instagram_report.py     186  relatorio do perfil de Instagram: metricas, tom, pontos fortes e score
 analysis/timing.py               128  melhor momento de envio por nicho: janela preferida e proximo slot
 analysis/aprendizado.py          108  score que aprende: conversao por perfil vira ajuste do score

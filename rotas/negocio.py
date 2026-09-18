@@ -82,6 +82,21 @@ async def api_pitch(req: StrategyRequest, rapido: int = 0):
     if not req.business:
         raise HTTPException(400, "Informe o negocio.")
     if rapido:
+        # Rapido = 1 chamada so (abertura), MAS com IA quando ha chave. Antes
+        # era template local sempre, e e por aqui que a fila se alimenta:
+        # todo enfileirar em lote saia sem personalizacao nenhuma.
+        try:
+            settings = config.load_settings()
+            if str(settings.get("openai_api_key") or "").strip():
+                from analysis import copy_sdr
+
+                seq = await asyncio.to_thread(copy_sdr.gerar_sequencia, req.business, settings)
+                msg = (seq.get("abertura") or "").strip()
+                if msg and (seq.get("engine") or "local") != "local":
+                    return {"whatsapp": msg, "email_assunto": "", "email_corpo": "",
+                            "engine": seq.get("engine")}
+        except Exception:
+            pass
         return analyzer._local_pitch(req.business)
     settings = config.load_settings()
     result = await asyncio.to_thread(analyzer.pitch_message, req.business, settings)
