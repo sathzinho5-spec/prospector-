@@ -51,15 +51,14 @@ def api_crm_leads(busca: str = "", uf: str = "", status: str = "", min_score: in
 def api_crm_disparo_ativo(req: DisparoAtivoRequest):
     """Liga ou desliga o disparo de um lead ou de varios de uma vez.
 
-    Ligar TAMBEM tira o numero da lista de bloqueio. Sao dois mecanismos pra uma
-    decisao so, e essa duplicidade travou a operacao: a importacao da carteira
-    escreveu nos dois, o operador ligou pelo unico interruptor que a tela tinha,
-    e o disparo continuou barrado por uma lista que nenhuma tela mostrava e
-    nenhum botao desfazia. Agora o interruptor e um so e ele manda nos dois.
+    Este e o UNICO interruptor. A lista de bloqueio paralela acabou em 18/09:
+    duas maneiras de tomar a mesma decisao travaram a carteira num estado sem
+    volta pela ferramenta, porque a tela so alcancava uma delas.
 
-    Desligar nao escreve na lista de bloqueio de proposito: a flag sozinha ja
-    barra (o 'apto' exige o lead liberado), e encher a lista de opt-out com
-    "ainda nao" e justamente o que criou este problema.
+    Desligar TIRA o lead da fila. Antes a flag valia so na entrada, entao um
+    lead ja enfileirado e desligado depois continuava saindo. Agora a fila
+    carrega a decisao: quem esta nela e quem foi liberado, e nao ha segunda
+    lista pra conferir contra.
     """
     from scrapers import cloud_store, disparo
 
@@ -69,15 +68,14 @@ def api_crm_disparo_ativo(req: DisparoAtivoRequest):
     if not n:
         raise HTTPException(502, "Nao deu pra gravar na nuvem. Tente de novo.")
 
-    desbloqueados = 0
-    if req.ativo:
-        for lead in cloud_store.listar_leads(limite=500):
-            if str(lead.get("id")) in set(str(i) for i in req.ids):
-                tel = disparo._norm_phone(lead.get("telefone"))
-                if tel and disparo.desbloquear(tel):
-                    desbloqueados += 1
+    tirados_da_fila = 0
+    if not req.ativo:
+        alvos = set(str(i) for i in req.ids)
+        telefones = [l.get("telefone") for l in cloud_store.listar_leads(limite=500)
+                     if str(l.get("id")) in alvos]
+        tirados_da_fila = disparo.remover_pendentes(telefones)
     return {"ok": True, "atualizados": n, "ativo": bool(req.ativo),
-            "desbloqueados": desbloqueados}
+            "tirados_da_fila": tirados_da_fila}
 
 
 @router.post("/api/crm/status")

@@ -15,10 +15,9 @@ from scrapers import disparo_abordagens, disparo_cadencia
 # disparo.listar, disparo._make_provider. Nenhuma chamada de fora muda.
 from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
                                    _enviados_hoje, _norm_phone, _reivindicar,
-                                   atualizar_mensagem, bloquear, bloqueado,
-                                   desbloquear, enfileirar, ja_recebeu,
+                                   atualizar_mensagem, enfileirar, ja_recebeu,
                                    limpar_finalizados, listar, registrar_abordado,
-                                   telefones_bloqueados, telefones_na_fila)
+                                   remover_pendentes, telefones_na_fila)
 from scrapers.disparo_providers import (EvolutionProvider, MetaCloudProvider,
                                         SimuladoProvider, _build_providers,
                                         _eh_falha_conexao, _erro_amigavel,
@@ -75,12 +74,10 @@ def enviar_agora(item_id, provider):
         if not row:
             return False, "Item não encontrado na fila"
         item = dict(row)
-        if bloqueado(con, item["telefone"]):
-            erro = "Este numero esta desativado pro disparo."
-            con.execute("UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
-                        (erro, item_id))
-            con.commit()
-            return False, erro
+        # A conferencia contra a lista de bloqueio saiu com a lista. Quem esta na
+        # fila e, por definicao, quem foi liberado: desligar um lead agora tira
+        # ele daqui (disparo_fila.remover_pendentes), em vez de deixar a linha
+        # parada esperando uma segunda lista dizer que ela nao vale.
         if ja_recebeu(con, item["telefone"], item_id):
             erro = "Este numero ja recebeu uma abordagem."
             con.execute("UPDATE fila SET status='duplicado', erro=? WHERE id=?",
@@ -187,12 +184,6 @@ def _worker_loop():
             # enviada nao pode gastar a vez de um chip no rodizio.
             con = _conn()
             try:
-                if bloqueado(con, item["telefone"]):
-                    con.execute(
-                        "UPDATE fila SET status='bloqueado', erro=? WHERE id=?",
-                        ("Este numero esta desativado pro disparo.", item["id"]))
-                    con.commit()
-                    continue
                 if ja_recebeu(con, item["telefone"], item["id"]):
                     con.execute(
                         "UPDATE fila SET status='duplicado', erro=? WHERE id=?",

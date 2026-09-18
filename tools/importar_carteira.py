@@ -17,11 +17,10 @@ Duas coisas que ela faz e que nao sao obvias:
    entrada da fila, no robo e no envio manual, entao o lead pode ser visto,
    editado e movido no CRM sem nunca sair uma mensagem.
 
-   Ate 18/09/26 isto tambem escrevia o telefone na lista de numero bloqueado, e
-   foi um erro: aquela lista e opt-out permanente, vive fora da fila pra nenhuma
-   faxina reabrir, e nao tinha botao nenhum capaz de desfazer. Resultado: o
-   fundador ligou os 30 leads pela tela, criou a copy, e o disparo continuou
-   barrado por uma lista invisivel. Interruptor reversivel e o disparo_ativo.
+   Ate 18/09/26 isto tambem escrevia o telefone numa lista de bloqueio paralela,
+   e foi um erro: ela nao tinha botao capaz de desfazer, e o fundador ligou os 30
+   leads pela tela, criou a copy, e o disparo seguiu barrado por uma lista
+   invisivel. A lista foi removida do projeto. O interruptor e o disparo_ativo.
 
 Uso:
     python tools/importar_carteira.py --planilha "CAMINHO.xlsx" \
@@ -149,12 +148,10 @@ def main():
     print("gravados no banco: %d" % gravados)
 
     if args.desativado:
-        # NAO usa disparo.bloquear() aqui. Aquela lista e opt-out permanente,
-        # "esta pessoa nao quer ser contatada", e vive fora da fila justamente
-        # pra nenhuma faxina reabrir. Usar ela como "ainda nao" deixou os 30
-        # leads travados sem nenhum botao na tela capaz de desfazer.
-        # O campo disparo_ativo, que ja foi gravado como False no upsert acima,
-        # faz o mesmo bloqueio e e reversivel pelo interruptor da aba Disparo.
+        # O campo disparo_ativo, ja gravado como False no upsert acima, e a
+        # unica trava. Ate 18/09 isto tambem escrevia numa lista de bloqueio
+        # paralela, que travou os 30 leads sem botao capaz de desfazer; aquela
+        # lista foi removida do projeto no mesmo dia.
         print("desativados pro disparo: %d leads (campo disparo_ativo)" % len(leads))
         print("ligue na aba Disparo quando quiser disparar.")
 

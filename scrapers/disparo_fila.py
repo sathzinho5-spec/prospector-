@@ -28,9 +28,6 @@ def enfileirar(itens, origem=""):
         existentes.update(
             r[0] for r in con.execute("SELECT telefone FROM numeros_abordados").fetchall()
         )
-        existentes.update(
-            r[0] for r in con.execute("SELECT telefone FROM numeros_bloqueados").fetchall()
-        )
         for it in itens:
             tel = _norm_phone(it.get("telefone"))
             msg = (it.get("mensagem") or "").strip()
@@ -129,45 +126,26 @@ def ja_recebeu(con, telefone, item_id=-1):
     return bool(row)
 
 
-def bloquear(telefone, motivo=""):
-    """Desativa um numero pro disparo. Idempotente."""
-    tel = _norm_phone(telefone)
-    if not tel:
-        return False
+def remover_pendentes(telefones):
+    """Tira da fila as linhas PENDENTES desses numeros. Retorna quantas sairam.
+
+    E o que substitui a lista de bloqueio: desligar um lead deixou de escrever
+    numa lista paralela e passou a fazer a coisa obvia, tirar ele da fila. A
+    decisao passa a morar num lugar so, e quem esta na fila e, por definicao,
+    quem foi liberado. So mexe em 'pendente': linha 'enviando' ja foi
+    reivindicada por um processo, e ja enviada e historico.
+    """
+    alvos = [t for t in (_norm_phone(x) for x in (telefones or [])) if t]
+    if not alvos:
+        return 0
     con = _conn()
     try:
-        con.execute("INSERT OR IGNORE INTO numeros_bloqueados (telefone, motivo) VALUES (?,?)",
-                    (tel, motivo))
+        marcas = ",".join("?" for _ in alvos)
+        cur = con.execute(
+            "DELETE FROM fila WHERE status='pendente' AND telefone IN (%s)" % marcas,
+            alvos)
         con.commit()
-    finally:
-        con.close()
-    return True
-
-
-def desbloquear(telefone):
-    tel = _norm_phone(telefone)
-    con = _conn()
-    try:
-        con.execute("DELETE FROM numeros_bloqueados WHERE telefone=?", (tel,))
-        con.commit()
-    finally:
-        con.close()
-    return True
-
-
-def bloqueado(con, telefone):
-    tel = _norm_phone(telefone)
-    if not tel:
-        return False
-    return bool(con.execute(
-        "SELECT 1 FROM numeros_bloqueados WHERE telefone=?", (tel,)).fetchone())
-
-
-def telefones_bloqueados():
-    con = _conn()
-    try:
-        return set(r[0] for r in con.execute(
-            "SELECT telefone FROM numeros_bloqueados").fetchall())
+        return cur.rowcount or 0
     finally:
         con.close()
 

@@ -38,15 +38,16 @@ CREATE TABLE IF NOT EXISTS numeros_abordados (
   primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Numero desativado pro disparo por decisao de quem opera. Diferente do
--- abordado: aqui nao houve envio nenhum, e a pessoa escolheu que nao ha de
--- haver. Mora fora da fila pelo mesmo motivo: limpar a fila nao pode reabrir
--- o envio pra quem foi desativado de proposito.
-CREATE TABLE IF NOT EXISTS numeros_bloqueados (
-  telefone TEXT PRIMARY KEY,
-  motivo TEXT,
-  bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- A tabela numeros_bloqueados foi REMOVIDA em 18/09/26, a pedido do fundador.
+-- Ela era um segundo mecanismo para a mesma decisao que o campo disparo_ativo
+-- ja tomava, e travou a carteira num estado sem volta pela ferramenta: a
+-- importacao escreveu 30 numeros nela, o operador ligou os leads pelo unico
+-- interruptor que a tela tinha, e o disparo continuou barrado por uma lista
+-- invisivel. Decisao que se toma em dois lugares e decisao que diverge.
+--
+-- O que ela protegia nao se perdeu: numeros_abordados ja garante uma abordagem
+-- por numero pra sempre, e desligar um lead agora TIRA ele da fila, entao a
+-- fila carrega a decisao em vez de ser conferida contra uma lista paralela.
 
 -- A copy de abordagem de um lead, escrita ANTES de ele entrar na fila. Mora
 -- fora da fila pelo mesmo motivo das duas de cima: limpar a fila nao pode

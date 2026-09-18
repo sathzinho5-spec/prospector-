@@ -48,9 +48,6 @@ function dspAbrirGaveta(telefone) {
       dspFichaLinha("Avaliacoes", l.avaliacoes) +
       dspFichaLinha("Site", l.website) +
       dspFichaLinha("Disparo", l.disparo_ativo ? "ligado" : "desligado") +
-      // O bloqueio nao aparecia em lugar nenhum da tela. Foi assim que 30 leads
-      // ficaram travados com o interruptor ligado e ninguem viu por que.
-      dspFichaLinha("Bloqueado", l.bloqueado ? "sim, não entra na fila" : "") +
       dspFichaLinha("Enviado em", l.enviado_em) +
       dspFichaLinha("Respondeu em", l.respondido_em) +
       dspFichaLinha("Erro", l.erro);

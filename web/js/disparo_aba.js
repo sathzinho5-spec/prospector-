@@ -179,7 +179,9 @@ function dspTelefonesSelecionados() {
 var DSP_MOTIVO = {
   ja_abordado: "já receberam a abordagem",
   ja_na_fila: "já estavam na fila",
-  bloqueado: "bloqueados",
+  // Sobra de linha de fila anterior a 18/09, quando existia lista de bloqueio.
+  // O servidor ainda conta isso; rótulo que falta aqui some da mensagem calado.
+  bloqueado: "com linha de fila antiga (limpe a fila)",
   desligado: "com o disparo desligado",
   sem_copy: "sem copy pronta"
 };

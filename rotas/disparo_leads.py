@@ -47,7 +47,7 @@ def _estado_do_lead(fila_row, copy_row, abordagem):
     return "copy_pronta" if copy_row else "sem_copy"
 
 
-def _linha(lead, tel, fila_row, copy_row, abordagem, bloqueado, liberado):
+def _linha(lead, tel, fila_row, copy_row, abordagem, liberado):
     from scrapers import cloud_store
 
     estado = _estado_do_lead(fila_row, copy_row, abordagem)
@@ -71,8 +71,7 @@ def _linha(lead, tel, fila_row, copy_row, abordagem, bloqueado, liberado):
         "copy_versao": (fonte.get("copy_versao") or (abordagem or {}).get("copy_versao")),
         "editada": bool(fonte.get("editada_em")),
         "disparo_ativo": liberado,
-        "bloqueado": bloqueado,
-        "apto": bool(estado == "copy_pronta" and liberado and not bloqueado),
+        "apto": bool(estado == "copy_pronta" and liberado),
         "fila_id": (fila_row or {}).get("id"),
         "melhor_envio": (fila_row or {}).get("agendado_para"),
         "timing_motivo": (fila_row or {}).get("timing_motivo") or "",
@@ -90,7 +89,6 @@ def montar_linhas(limite=500):
     leads = leads_do_disparo(limite=limite)
     copys = disparo_copys.mapa()
     abordagens = disparo_abordagens.mapa_por_telefone()
-    bloqueados = disparo.telefones_bloqueados()
     fila = {}
     for row in disparo.listar(limite=2000):
         # Da mais nova pra mais velha: listar() ja vem por id DESC, entao a
@@ -105,7 +103,7 @@ def montar_linhas(limite=500):
             continue
         vistos.add(tel)
         linhas.append(_linha(lead, tel, fila.get(tel), copys.get(tel),
-                             abordagens.get(tel), tel in bloqueados,
+                             abordagens.get(tel),
                              cloud_store.disparo_liberado(lead)))
     return linhas
 
@@ -143,7 +141,10 @@ def _motivo_de_fora(linha):
         return "ja_abordado"
     if linha["estado"] in ("na_fila", "falha", "duplicado"):
         return "ja_na_fila"
-    if linha["bloqueado"] or linha["estado"] == "bloqueado":
+    # 'bloqueado' sobrevive so como status ANTIGO de linha de fila: a lista de
+    # bloqueio acabou em 18/09 e nada escreve mais esse status. Fica pra banco
+    # que ja rodava nao mostrar linha sem motivo.
+    if linha["estado"] == "bloqueado":
         return "bloqueado"
     if not linha["disparo_ativo"]:
         return "desligado"
@@ -163,8 +164,8 @@ def enfileirar_aptos(origem="iniciar"):
     que 29 estao prontos e a fila receberia outro numero.
 
     A fila e a tabela `fila` que ja existia. Ela continua sendo a ordem de
-    servico, e o anti-duplicata dela (numero na fila, numero ja abordado,
-    numero bloqueado) segue valendo por cima do que for mandado daqui.
+    servico, e o anti-duplicata dela (numero ja na fila, numero ja abordado)
+    segue valendo por cima do que for mandado daqui.
     """
     from scrapers import disparo
 
