@@ -1,0 +1,218 @@
+/* ============================================================
+   PROSPECTOR · Aba Disparo, peca 2 de 3
+   proposito: os estados de copy e de disparo e a tabela propria de
+   leads da aba, que em tela estreita vira cartao empilhado.
+
+   .dsp-estado tambem e usada pela gaveta (peca 3). Ela mora aqui
+   porque nasceu da tabela e e aqui que ela e lida em massa.
+
+   Carrega DEPOIS de disparo.css. O bloco responsivo mora no fim.
+   ============================================================ */
+
+/* ---------- 1. ESTADOS (copy e disparo) ---------- */
+.dsp-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 11px;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.dsp-estado::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+/* sem copy: nao esta apto pro disparo. Ponto oco e borda tracejada
+   dizem "falta coisa aqui" sem depender de ler o texto. */
+.dsp-estado.sem-copy {
+  background: transparent;
+  border: 1px dashed var(--warn);
+  color: #fcd34d;
+}
+
+.dsp-estado.sem-copy::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* pronta e contorno, enviado e preenchido: o mesmo verde, leituras diferentes */
+.dsp-estado.copy-pronta {
+  background: transparent;
+  border-color: rgba(16, 185, 129, .45);
+  color: #6ee7b7;
+}
+
+.dsp-estado.na-fila {
+  background: rgba(96, 165, 250, .14);
+  border-color: rgba(96, 165, 250, .3);
+  color: #93c5fd;
+}
+
+.dsp-estado.enviado {
+  background: var(--ok-soft);
+  border-color: rgba(16, 185, 129, .3);
+  color: #6ee7b7;
+}
+
+.dsp-estado.falha {
+  background: var(--bad-soft);
+  border-color: rgba(244, 63, 94, .35);
+  color: #fda4af;
+}
+
+/* respondeu alimenta a metrica do topo: e o unico solido */
+.dsp-estado.respondeu {
+  background: var(--brand);
+  border-color: var(--brand-hover);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .18);
+}
+
+.dsp-celula-estado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ---------- 2. LISTA DE LEADS ---------- */
+.dsp-lista-filtro {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.dsp-lista-filtro select,
+.dsp-lista-filtro input { width: auto; min-width: 150px; }
+
+.dsp-tabela-wrap {
+  overflow-x: auto;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+
+table.dsp-tabela {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dsp-tabela thead th {
+  padding: 11px 14px;
+  text-align: left;
+  white-space: nowrap;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.dsp-tabela tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+.dsp-tabela tbody tr { transition: background var(--tr); }
+.dsp-tabela tbody tr:last-child td { border-bottom: none; }
+.dsp-tabela tbody tr:hover { background: rgba(148, 163, 184, .05); }
+.dsp-tabela tbody tr.selecionada { background: var(--brand-soft); }
+.dsp-tabela input[type="checkbox"] { width: 15px; height: 15px; cursor: pointer; }
+
+.dsp-col-check { width: 40px; text-align: center; }
+.dsp-col-acao { width: 78px; text-align: right; white-space: nowrap; }
+
+.dsp-lead-nome { font-weight: 600; font-size: 13.5px; }
+.dsp-lead-cat { margin-top: 2px; color: var(--text-3); font-size: 12px; }
+.dsp-tel { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* lead sem copy nao entra no disparo: a linha inteira avisa */
+.dsp-tabela tbody tr.sem-copy { background: rgba(245, 158, 11, .05); }
+.dsp-tabela tbody tr.sem-copy td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+
+.dsp-vazio {
+  padding: 34px 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* ---------- 3. RESPONSIVO (mora no fim, depois das bases) ---------- */
+@media (max-width: 860px) {
+  .dsp-lista-filtro select,
+  .dsp-lista-filtro input { flex: 1 1 100%; min-width: 0; }
+}
+
+@media (max-width: 720px) {
+  /* a tabela vira cartao empilhado: sem rolagem lateral em tela estreita */
+  .dsp-tabela-wrap { overflow: visible; background: none; border: none; }
+  table.dsp-tabela { display: block; min-width: 0; }
+  .dsp-tabela thead { display: none; }
+  .dsp-tabela tbody { display: flex; flex-direction: column; gap: 10px; }
+
+  .dsp-tabela tbody tr {
+    position: relative;
+    display: block;
+    padding: 13px 46px 13px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--r-md);
+  }
+
+  .dsp-tabela tbody tr:hover { background: var(--surface); }
+  .dsp-tabela tbody tr.selecionada { background: var(--brand-soft); }
+  .dsp-tabela tbody tr.sem-copy { border-left: 3px solid var(--warn); }
+  .dsp-tabela tbody tr.sem-copy td:first-child { box-shadow: none; }
+
+  .dsp-tabela tbody td {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    padding: 3px 0;
+    border: none;
+  }
+
+  /* o rotulo da coluna volta como prefixo da linha do cartao */
+  .dsp-tabela tbody td::before {
+    content: attr(data-rotulo);
+    flex: 0 0 76px;
+    color: var(--text-3);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+
+  .dsp-tabela tbody td.dsp-col-check {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: auto;
+    padding: 0;
+  }
+
+  .dsp-tabela tbody td.dsp-col-lead { display: block; margin-bottom: 7px; }
+  .dsp-tabela tbody td.dsp-col-acao { margin-top: 9px; text-align: left; }
+
+  .dsp-tabela tbody td.dsp-col-check::before,
+  .dsp-tabela tbody td.dsp-col-lead::before,
+  .dsp-tabela tbody td.dsp-col-acao::before { content: none; }
+}

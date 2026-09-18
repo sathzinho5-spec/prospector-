@@ -233,9 +233,14 @@ async function refreshDisparo() {
         esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
         "<td><div class='row-actions'><button class='btn small' onclick='verMensagem(" + f.id + ")'>Ver</button>" + action + "</div></td></tr>";
     }).join("");
-    $("disparoTable").innerHTML = rows
-      ? "<table class='disp-table'><thead><tr><th>Lead</th><th>Telefone</th><th>Status</th><th>Chip</th><th>Mensagem</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
-      : "<p class='hint'>Fila vazia. Clique em 'Enfileirar resultados' ou 'Puxar todos os minerados'.</p>";
+    // A tabela da fila virou a lista de leads da aba Disparo, em disparo_aba.js.
+    // A guarda fica porque o poll logo abaixo depende desta funcao chegar ao fim.
+    const tabelaVelha = $("disparoTable");
+    if (tabelaVelha) {
+      tabelaVelha.innerHTML = rows
+        ? "<table class='disp-table'><tbody>" + rows + "</tbody></table>"
+        : "<p class='hint'>Fila vazia.</p>";
+    }
 
     clearInterval(dispPoll);
     if (st.rodando) {
@@ -247,8 +252,6 @@ async function refreshDisparo() {
 async function startDisp() {
   const body = {
     provider: "simulado",
-    delay_min: parseFloat($("dispDelayMin").value) || 45,
-    delay_max: parseFloat($("dispDelayMax").value) || 120,
     limite_dia: parseInt($("dispLimite").value, 10) || 30,
     hora_ini: $("dispHoraIni").value || "08:00",
     hora_fim: $("dispHoraFim").value || "20:00",

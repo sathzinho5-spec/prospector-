@@ -1,16 +1,16 @@
 """
 Disparador automático de mensagens (nível 3).
 - Fila persistente em SQLite (output/disparo.db)
-- Worker em thread: delays aleatórios, limite diário, janela de horário
+- Worker em thread: cadência derivada da janela e do limite, janela de horário
 - Provedores: Simulado (teste), Evolution API (QR code), Meta Cloud API (oficial)
 
 proposito: o motor do disparo: janela de horario, worker em thread, iniciar e pausar
 """
 import datetime
-import random
 import threading
 import time
 
+from scrapers import disparo_abordagens, disparo_cadencia
 # Reexportado de proposito: quem chama continua fazendo disparo.enfileirar,
 # disparo.listar, disparo._make_provider. Nenhuma chamada de fora muda.
 from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
@@ -18,7 +18,7 @@ from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
                                    atualizar_mensagem, bloquear, bloqueado,
                                    desbloquear, enfileirar, ja_recebeu,
                                    limpar_finalizados, listar, registrar_abordado,
-                                   telefones_na_fila)
+                                   telefones_bloqueados, telefones_na_fila)
 from scrapers.disparo_providers import (EvolutionProvider, MetaCloudProvider,
                                         SimuladoProvider, _build_providers,
                                         _eh_falha_conexao, _erro_amigavel,
@@ -29,10 +29,15 @@ _worker_stop = threading.Event()
 _worker_cfg = {}
 _worker_lock = threading.Lock()
 _worker_state = {"rodando": False, "provider": "simulado", "enviados_hoje": 0,
-                 "proximo_em": None, "ultimo_erro": ""}
+                 "proximo_em": None, "ultimo_erro": "",
+                 "cadencia": "", "intervalo_seg": 0}
 def enviar_agora(item_id, provider):
-    """Envia um item específico na hora (modo manual). Retorna (ok, err).
-    Usa a mesma trava atômica do worker."""
+    """Envia um item específico na hora, a qualquer momento. Retorna (ok, err).
+
+    Convive com o motor automático em vez de pausá-lo: quem impede os dois de
+    brigarem pelo mesmo item é a trava atômica _reivindicar, a mesma que o
+    worker usa. Quem chegar primeiro leva o item; o outro recebe False e segue.
+    """
     if not _reivindicar(item_id):
         return False, "Item já está sendo enviado por outro processo"
     con = _conn()
@@ -62,6 +67,11 @@ def enviar_agora(item_id, provider):
                 "instancia=? WHERE id=?",
                 (nome_chip, item_id,))
             registrar_abordado(con, item["telefone"])
+            # Mesma transacao do UPDATE de proposito: o registro do que saiu e a
+            # metrica de conversao, e ele nao pode divergir da fila nem por uma
+            # falha no meio. O envio avulso nao acrescenta opt-out, entao o
+            # texto gravado e exatamente o que o provedor recebeu.
+            disparo_abordagens.registrar(con, item, msg, nome_chip)
         else:
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
@@ -90,11 +100,15 @@ def _worker_loop():
     prov_idx = 0
     ruim_ate = {}
     nomes = ",".join(getattr(p, "instance", p.name) for p in providers)
-    delay_min = float(cfg.get("delay_min", 45))
-    delay_max = float(cfg.get("delay_max", 120))
-    limite_dia = int(cfg.get("limite_dia", 50))
-    hora_ini = cfg.get("hora_ini", "08:00")
-    hora_fim = cfg.get("hora_fim", "20:00")
+    hora_ini = cfg.get("hora_ini", disparo_cadencia.PADRAO_HORA_INI)
+    hora_fim = cfg.get("hora_fim", disparo_cadencia.PADRAO_HORA_FIM)
+    # A pausa entre envios nao vem mais da tela: ela e derivada da janela e do
+    # limite do dia, pela regra fixa de cadencia. Um numero so, calculado num
+    # lugar so, entao o que o operador le e o que o motor faz.
+    cadencia = disparo_cadencia.calcular(hora_ini, hora_fim, cfg.get("limite_dia", 30))
+    limite_dia = cadencia["limite_dia"]
+    intervalo_seg = cadencia["intervalo_seg"]
+    ultimo_envio = None
     optout = bool(cfg.get("optout", True))
     optout_txt = "\n\nResponda SAIR para não receber mais mensagens."
 
@@ -108,7 +122,9 @@ def _worker_loop():
                 return i, providers[i]
         return None, None
 
-    _worker_state.update({"rodando": True, "provider": nomes, "ultimo_erro": ""})
+    _worker_state.update({"rodando": True, "provider": nomes, "ultimo_erro": "",
+                          "cadencia": cadencia["resumo"],
+                          "intervalo_seg": intervalo_seg})
     _devolver_travados(15)
 
     while not _worker_stop.is_set():
@@ -185,6 +201,11 @@ def _worker_loop():
                         "instancia=? WHERE id=?",
                         (nome_chip, item["id"]))
                     registrar_abordado(con, item["telefone"])
+                    # msg, e nao item["mensagem"]: o texto gravado tem que ser o
+                    # que o provedor recebeu, opt-out incluido. Medir conversao
+                    # por um texto diferente do que o lead leu nao mede nada.
+                    disparo_abordagens.registrar(con, item, msg, nome_chip)
+                    ultimo_envio = datetime.datetime.now()
                 else:
                     tent = item.get("tentativas", 0) + 1
                     status = "falha" if tent >= 3 else "pendente"
@@ -206,11 +227,9 @@ def _worker_loop():
                 except Exception:
                     pass
 
-            espera = random.uniform(delay_min, delay_max)
-            _worker_state["proximo_em"] = (
-                datetime.datetime.now() + datetime.timedelta(seconds=espera)
-            ).strftime("%H:%M:%S")
-            _worker_stop.wait(espera)
+            alvo = disparo_cadencia.proximo_envio(intervalo_seg, ultimo_envio)
+            _worker_state["proximo_em"] = alvo.strftime("%H:%M:%S")
+            _worker_stop.wait(disparo_cadencia.espera_segundos(alvo))
         except Exception as e:
             _worker_state["ultimo_erro"] = str(e)[:200]
             _worker_stop.wait(10)
@@ -244,8 +263,12 @@ def status():
         env = con.execute("SELECT COUNT(*) FROM fila WHERE status='enviado'").fetchone()[0]
         falha = con.execute("SELECT COUNT(*) FROM fila WHERE status='falha'").fetchone()[0]
         hoje = _enviados_hoje(con)
+        # Fora da fila de proposito: e o unico numero que sobrevive a limpeza.
+        conversas = con.execute(
+            "SELECT COUNT(*) FROM abordagens WHERE respondido_em IS NOT NULL").fetchone()[0]
     finally:
         con.close()
     out = dict(_worker_state)
-    out.update({"pendentes": pend, "enviados": env, "falhas": falha, "enviados_hoje": hoje})
+    out.update({"pendentes": pend, "enviados": env, "falhas": falha,
+                "enviados_hoje": hoje, "conversas_iniciadas": conversas})
     return out

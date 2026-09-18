@@ -1,0 +1,167 @@
+/* ============================================================
+   PROSPECTOR · Aba Disparo, peca 3 de 3
+   proposito: a gaveta de detalhe do lead da aba Disparo, que entra
+   pela direita no desktop e sobe de baixo no celular.
+
+   NAO e o .drawer do styles.css. Aquele e o drawer geral do painel
+   (#detailModal), do socio, e nao pode ser tocado. Este e outro,
+   com id e classes proprias, porque a aba foi isolada de proposito.
+
+   Carrega DEPOIS de disparo-lista.css, de onde vem .dsp-estado.
+   O bloco responsivo mora no fim.
+   ============================================================ */
+
+/* ---------- 1. GAVETA ---------- */
+.dsp-gaveta-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dsp-gaveta-fundo {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 16, .72);
+  animation: dspFade .18s ease-out;
+}
+
+@keyframes dspFade { from { opacity: 0; } to { opacity: 1; } }
+
+.dsp-gaveta {
+  position: relative;
+  z-index: 1;
+  width: min(520px, 100vw);
+  height: 100vh;
+  max-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-2);
+  animation: dspEntra .22s ease-out;
+}
+
+@keyframes dspEntra {
+  from { transform: translateX(28px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+.dsp-gaveta-head {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  flex-shrink: 0;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.dsp-gaveta-head h2 { font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.dsp-gaveta-head .hint { margin-top: 3px; }
+
+.dsp-gaveta-fechar {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dsp-gaveta-fechar:hover { background: var(--bad); color: #fff; }
+
+/* so o corpo rola: cabecalho e rodape ficam ancorados */
+.dsp-gaveta-body { flex: 1; overflow-y: auto; padding: 20px 22px 26px; }
+.dsp-gaveta-body h4 { margin: 22px 0 10px; }
+.dsp-gaveta-body h4:first-of-type { margin-top: 0; }
+
+.dsp-gaveta-estados { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+
+/* ---------- 2. FICHA DO LEAD ---------- */
+.dsp-ficha { display: flex; flex-direction: column; }
+
+.dsp-ficha-linha {
+  display: flex;
+  gap: 14px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 13.5px;
+}
+
+.dsp-ficha-linha:last-child { border-bottom: none; }
+
+.dsp-ficha-rotulo {
+  width: 116px;
+  flex-shrink: 0;
+  padding-top: 3px;
+  color: var(--text-3);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.dsp-ficha-valor { flex: 1; min-width: 0; line-height: 1.55; overflow-wrap: anywhere; }
+
+/* ---------- 3. MENSAGEM E ACOES ---------- */
+.dsp-gaveta-texto { min-height: 190px; resize: vertical; line-height: 1.6; font-size: 13.5px; }
+
+.dsp-gaveta-pe {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 22px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-1);
+}
+
+.dsp-gaveta-pe .btn { flex: 1 1 auto; }
+
+/* ---------- 4. RESPONSIVO (mora no fim, depois das bases) ---------- */
+@media (max-width: 720px) {
+  /* no celular a gaveta vira folha que sobe de baixo */
+  .dsp-gaveta-overlay { justify-content: center; align-items: flex-end; }
+
+  .dsp-gaveta {
+    width: 100vw;
+    height: 92vh;
+    max-height: 92vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+    animation: dspSobe .24s ease-out;
+  }
+
+  @keyframes dspSobe {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
+
+  .dsp-gaveta-head { padding: 22px 16px 14px; }
+
+  /* alca da folha, o sinal de que da pra arrastar/fechar */
+  .dsp-gaveta-head::before {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 38px;
+    height: 4px;
+    border-radius: var(--r-pill);
+    background: var(--surface-3);
+  }
+
+  .dsp-gaveta-body { padding: 18px 16px 24px; }
+  .dsp-ficha-linha { flex-direction: column; gap: 2px; }
+  .dsp-ficha-rotulo { width: auto; padding-top: 0; }
+  .dsp-gaveta-pe { padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  .dsp-gaveta-pe .btn { flex: 1 1 100%; }
+}

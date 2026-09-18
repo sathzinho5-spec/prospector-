@@ -1,73 +1,13 @@
 # proposito: a fila do disparo em SQLite, o bloqueio de telefone e o anti-duplicata
-import datetime
-import os
-import re
-import sqlite3
-
-from config import OUTPUT_DIR
-
-DB_PATH = os.path.join(OUTPUT_DIR, "disparo.db")
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS fila (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nome TEXT,
-  telefone TEXT NOT NULL,
-  mensagem TEXT NOT NULL,
-  status TEXT DEFAULT 'pendente',
-  tentativas INTEGER DEFAULT 0,
-  agendado_para TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  enviado_em TIMESTAMP,
-  erro TEXT,
-  origem TEXT
-);
-CREATE INDEX IF NOT EXISTS idx_fila_status ON fila(status);
-
--- Numero que ja recebeu abordagem, para nunca receber uma segunda.
--- Vive FORA da fila de proposito: limpar a fila apaga o historico dela, e se a
--- protecao dependesse dele, a primeira limpeza reabriria o disparo duplicado
--- sem ninguem perceber.
-CREATE TABLE IF NOT EXISTS numeros_abordados (
-  telefone TEXT PRIMARY KEY,
-  primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Numero desativado pro disparo por decisao de quem opera. Diferente do
--- abordado: aqui nao houve envio nenhum, e a pessoa escolheu que nao ha de
--- haver. Mora fora da fila pelo mesmo motivo: limpar a fila nao pode reabrir
--- o envio pra quem foi desativado de proposito.
-CREATE TABLE IF NOT EXISTS numeros_bloqueados (
-  telefone TEXT PRIMARY KEY,
-  motivo TEXT,
-  bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-"""
-def _conn():
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    con = sqlite3.connect(DB_PATH)
-    con.row_factory = sqlite3.Row
-    con.executescript(_SCHEMA)
-    try:
-        cols = [r[1] for r in con.execute("PRAGMA table_info(fila)").fetchall()]
-        if "instancia" not in cols:
-            con.execute("ALTER TABLE fila ADD COLUMN instancia TEXT")
-            con.commit()
-        if "editada_em" not in cols:
-            con.execute("ALTER TABLE fila ADD COLUMN editada_em TIMESTAMP")
-            con.commit()
-    except Exception:
-        pass
-    return con
-
-
-def _norm_phone(raw):
-    d = re.sub(r"\D", "", str(raw or ""))
-    if 10 <= len(d) <= 11 and not d.startswith("55"):
-        d = "55" + d
-    return d if len(d) >= 12 else ""
+# Reexportado de proposito: o esquema e a conexao mudaram de arquivo quando o
+# disparo ganhou copy de lead e registro de abordagem, e estes quatro nomes
+# seguem alcancaveis como disparo_fila._conn, como sempre foram.
+from scrapers.disparo_abordagens import enviadas_hoje as _enviados_hoje  # noqa: F401
+from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F401
 
 
 def enfileirar(itens, origem=""):
-    """itens: [{nome, telefone, mensagem}]. Retorna qtd enfileirada.
+    """itens: [{nome, telefone, mensagem, copy_origem}]. Retorna qtd enfileirada.
     Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando)."""
     con = _conn()
     n = 0
@@ -93,8 +33,10 @@ def enfileirar(itens, origem=""):
             if tel in existentes:
                 continue
             con.execute(
-                "INSERT INTO fila (nome, telefone, mensagem, origem) VALUES (?,?,?,?)",
-                (it.get("nome", ""), tel, msg, origem),
+                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem) "
+                "VALUES (?,?,?,?,?)",
+                (it.get("nome", ""), tel, msg, origem,
+                 str(it.get("copy_origem") or "ia").strip().lower()),
             )
             existentes.add(tel)
             n += 1
@@ -123,8 +65,9 @@ def limpar_finalizados():
     con = _conn()
     try:
         # 'duplicado' entra aqui porque tambem e estado final. O historico de
-        # quem ja foi abordado nao mora na fila, entao limpar nao reabre o
-        # disparo repetido.
+        # quem ja foi abordado, a copy do lead e o registro do que saiu nao
+        # moram na fila, entao limpar nao reabre o disparo repetido nem apaga
+        # a medida de qual copy converteu.
         con.execute("DELETE FROM fila WHERE status IN ('enviado','falha','cancelado','duplicado','bloqueado')")
         con.commit()
     finally:
@@ -210,6 +153,15 @@ def bloqueado(con, telefone):
         "SELECT 1 FROM numeros_bloqueados WHERE telefone=?", (tel,)).fetchone())
 
 
+def telefones_bloqueados():
+    con = _conn()
+    try:
+        return set(r[0] for r in con.execute(
+            "SELECT telefone FROM numeros_bloqueados").fetchall())
+    finally:
+        con.close()
+
+
 def registrar_abordado(con, telefone):
     """Grava o numero no historico que a limpeza da fila nao alcanca."""
     tel = _norm_phone(telefone)
@@ -230,25 +182,17 @@ def atualizar_mensagem(item_id, mensagem, manual=False):
     """Troca o texto de um item da fila. manual=True carimba a edicao a mao;
     manual=False (o padrao, que e o refazer com IA) LIMPA o carimbo, porque
     regenerar sobrescreve o que a pessoa escreveu e a tela nao pode seguir
-    dizendo que aquele texto e dela."""
+    dizendo que aquele texto e dela. O carimbo de origem anda junto: e ele que
+    responde, la na frente, qual copy converteu."""
     con = _conn()
     try:
         if manual:
-            con.execute("UPDATE fila SET mensagem=?, editada_em=CURRENT_TIMESTAMP WHERE id=?",
-                        (mensagem, item_id))
+            con.execute("UPDATE fila SET mensagem=?, editada_em=CURRENT_TIMESTAMP, "
+                        "copy_origem='manual' WHERE id=?", (mensagem, item_id))
         else:
-            con.execute("UPDATE fila SET mensagem=?, editada_em=NULL WHERE id=?",
-                        (mensagem, item_id))
+            con.execute("UPDATE fila SET mensagem=?, editada_em=NULL, "
+                        "copy_origem='ia' WHERE id=?", (mensagem, item_id))
         con.commit()
         return True
     finally:
         con.close()
-
-def _enviados_hoje(con):
-    row = con.execute(
-        "SELECT COUNT(*) FROM fila WHERE status='enviado' AND date(enviado_em)=date('now')"
-    ).fetchone()
-    return row[0] if row else 0
-
-
-# ---------------- Provedores ----------------
