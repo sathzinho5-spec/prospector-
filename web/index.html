@@ -6,6 +6,10 @@
 <title>Prospector — Sales Intelligence</title>
 <link rel="stylesheet" href="/static/styles.css">
 <link rel="stylesheet" href="/static/painel.css">
+<!-- aba Disparo: tres pecas proprias, nesta ordem (lista antes da gaveta) -->
+<link rel="stylesheet" href="/static/disparo.css">
+<link rel="stylesheet" href="/static/disparo-lista.css">
+<link rel="stylesheet" href="/static/disparo-gaveta.css">
 </head>
 <body>
 
@@ -429,56 +433,82 @@
       <!-- ===== DISPARO (COMERCIAL) ===== -->
       <div class="tabsec hidden" id="secComercial">
 
-        <section class="panel" id="queueCard">
-          <div class="card-head">
-            <h3 style="margin-bottom:0;">Fila de contato</h3>
-            <span id="queueStats" class="tag"></span>
+        <!-- 1. KPIs do funil -->
+        <div class="dsp-kpis" id="dspKpis">
+          <div class="dsp-kpi">
+            <span class="dsp-kpi-num" id="dspKpiNovos">0</span>
+            <span class="dsp-kpi-rotulo">Leads novos</span>
           </div>
-          <p class="hint" style="margin-bottom:14px;">Ordenada por score de IA. Leads urgentes primeiro. O status fica salvo no navegador.</p>
-          <div id="queueList" class="queue-list"></div>
-        </section>
+          <div class="dsp-kpi">
+            <span class="dsp-kpi-num" id="dspKpiEnviadas">0</span>
+            <span class="dsp-kpi-rotulo">Enviadas hoje</span>
+          </div>
+          <div class="dsp-kpi">
+            <span class="dsp-kpi-num" id="dspKpiFila">0</span>
+            <span class="dsp-kpi-rotulo">Na fila</span>
+          </div>
+          <div class="dsp-kpi destaque">
+            <span class="dsp-kpi-num" id="dspKpiConversas">0</span>
+            <span class="dsp-kpi-rotulo">Conversas iniciadas</span>
+            <span class="dsp-kpi-nota" id="dspKpiConversasNota"></span>
+          </div>
+        </div>
 
+        <!-- 2. Bloco Disparo -->
         <section class="panel" id="disparoCard">
           <div class="card-head">
-            <h3 style="margin-bottom:0;">Disparo automático</h3>
+            <h3 style="margin-bottom:0;">Disparo</h3>
             <span id="disparoStatusLine" class="tag">parado</span>
           </div>
           <p class="hint" style="margin-bottom:14px;">
-            Envia sozinho, com pausas aleatórias, limite diário e janela de horário.
-            Comece pelo modo <b>Simulado</b>. Disparo em massa no WhatsApp normal pode
-            derrubar o número — use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
+            Envia sozinho dentro da janela de horário e do limite do dia. Comece pelo modo
+            <b>Simulado</b>. Disparo em massa no WhatsApp normal pode derrubar o número:
+            use Evolution API ou Meta Cloud, limite baixo e mensagem com SAIR.
           </p>
-          <div id="instList" class="hint" style="margin-bottom:12px;"></div>
-          <div class="disparo-grid">
+          <div id="instList" class="hint" style="margin-bottom:16px;"></div>
+
+          <h4 style="margin-bottom:12px;">Automático</h4>
+          <div class="dsp-auto">
             <div class="field">
-              <label for="dispDelayMin">Pausa mín (seg)</label>
-              <input id="dispDelayMin" type="number" min="5" value="45">
-            </div>
-            <div class="field">
-              <label for="dispDelayMax">Pausa máx (seg)</label>
-              <input id="dispDelayMax" type="number" min="5" value="120">
+              <label for="dispHoraIni">Janela (início e fim)</label>
+              <div class="dsp-janela">
+                <input id="dispHoraIni" type="time" value="08:00" aria-label="Início da janela">
+                <input id="dispHoraFim" type="time" value="20:00" aria-label="Fim da janela">
+              </div>
             </div>
             <div class="field">
               <label for="dispLimite">Limite por dia</label>
               <input id="dispLimite" type="number" min="1" max="500" value="30">
             </div>
-            <div class="field">
-              <label for="dispHora">Janela (início-fim)</label>
-              <div style="display:flex;gap:8px;">
-                <input id="dispHoraIni" type="time" value="08:00">
-                <input id="dispHoraFim" type="time" value="20:00">
-              </div>
+          </div>
+
+          <p class="dsp-intervalo">
+            <span class="dsp-intervalo-ponto" aria-hidden="true"></span>
+            <span class="dsp-intervalo-rotulo">Ritmo calculado</span>
+            <b class="dsp-intervalo-valor" id="dspIntervalo" aria-live="polite"></b>
+          </p>
+
+          <details class="dsp-explica" id="dspExplica">
+            <summary>Como funciona?</summary>
+            <div class="dsp-explica-corpo">
+              <p>
+                O intervalo não é digitado: ele nasce das duas coisas que você define acima.
+                O sistema pega o tamanho da <b>janela</b> e divide pelo <b>limite por dia</b>,
+                e o resultado é o espaçamento médio entre um envio e o seguinte.
+              </p>
+              <p>
+                Em cima desse espaçamento entra uma <b>variação aleatória</b> a cada disparo,
+                para o ritmo nunca ficar mecânico. Duas travas fixas completam a regra:
+                nunca saem dois envios no mesmo minuto, e o horário de cada envio cai em
+                <b>segundos quebrados</b>, nunca em segundo redondo.
+              </p>
+              <p>
+                Por isso não existem mais os campos de pausa mínima e máxima: essa parte
+                deixou de ser configurável e passou a ser fixa por dentro.
+              </p>
             </div>
-          </div>
-          <div class="btn-row">
-            <button id="btnEnqueue" class="btn primary">Enfileirar resultados</button>
-            <button id="btnMigrar" class="btn primary">Puxar todos os minerados</button>
-            <button id="btnConnectWa" class="btn primary">Conectar WhatsApp</button>
-            <button id="btnStartDisp" class="btn danger">Iniciar disparo</button>
-            <button id="btnPauseDisp" class="btn">Pausar</button>
-            <button id="btnTestDisp" class="btn">Testar no meu número</button>
-            <button id="btnClearDisp" class="btn">Limpar finalizados</button>
-          </div>
+          </details>
+
           <div class="btn-row" style="align-items:center;">
             <span class="hint" style="margin:0;">Modo:</span>
             <div class="seg" id="modoSeg">
@@ -487,7 +517,50 @@
             </div>
             <span class="hint" id="modoHint" style="margin:0;"></span>
           </div>
-          <div id="disparoTable" class="hint"></div>
+
+          <div class="dsp-acoes">
+            <button id="btnStartDisp" class="btn primary dsp-acao-principal">Iniciar disparo</button>
+            <button id="btnDspCriarCopy" class="btn">Criar copy</button>
+            <button id="btnPauseDisp" class="btn">Pausar</button>
+          </div>
+        </section>
+
+        <!-- 3. Lista de leads da aba -->
+        <section class="panel" id="dspLeadsCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Leads do disparo</h3>
+            <span class="hint" id="dspLeadsInfo"></span>
+          </div>
+
+          <div class="dsp-lista-filtro">
+            <select id="dspFiltroEstado" aria-label="Filtrar por estado">
+              <option value="">Estado: todos</option>
+              <option value="sem-copy">Sem copy</option>
+              <option value="copy-pronta">Copy pronta</option>
+              <option value="na-fila">Na fila</option>
+              <option value="enviado">Enviado</option>
+              <option value="falha">Falha</option>
+              <option value="respondeu">Respondeu</option>
+            </select>
+            <button class="btn small" id="btnDspAtualizar">Atualizar</button>
+          </div>
+
+          <div class="dsp-tabela-wrap">
+            <table class="dsp-tabela" id="dspTabela">
+              <thead>
+                <tr>
+                  <th class="dsp-col-check"><input type="checkbox" id="dspSelTodos" aria-label="Selecionar todos"></th>
+                  <th>Lead</th>
+                  <th>Telefone</th>
+                  <th>Copy</th>
+                  <th>Disparo</th>
+                  <th class="dsp-col-acao">Ação</th>
+                </tr>
+              </thead>
+              <tbody id="dspTabelaBody"></tbody>
+            </table>
+          </div>
+          <p class="dsp-vazio hidden" id="dspTabelaVazia">Nenhum lead nesta visão.</p>
         </section>
 
       </div><!-- /secComercial -->
@@ -753,6 +826,48 @@
   </div>
 </div>
 
+<!-- Gaveta: detalhe do lead da aba Disparo.
+     NAO e o #detailModal acima: aquele e o drawer geral do painel. Este
+     e proprio da aba, com id e classes proprias, porque a aba Disparo foi
+     isolada de proposito. Fecha por: #btnDspGavetaFechar, clique em
+     #dspGavetaFundo e tecla Esc (data-fecha-esc marca a intencao). -->
+<div id="dspGaveta" class="dsp-gaveta-overlay hidden" data-fecha-esc="true">
+  <div class="dsp-gaveta-fundo" id="dspGavetaFundo"></div>
+  <aside class="dsp-gaveta" role="dialog" aria-modal="true" aria-labelledby="dspGavetaTitulo" tabindex="-1">
+    <header class="dsp-gaveta-head">
+      <div>
+        <h2 id="dspGavetaTitulo">Lead</h2>
+        <p class="hint" id="dspGavetaSub"></p>
+      </div>
+      <button class="dsp-gaveta-fechar" id="btnDspGavetaFechar" aria-label="Fechar">&times;</button>
+    </header>
+
+    <div class="dsp-gaveta-body">
+      <div class="dsp-gaveta-estados">
+        <span class="dsp-estado" id="dspGavetaEstadoCopy" hidden></span>
+        <span class="dsp-estado" id="dspGavetaEstadoDisparo" hidden></span>
+        <span class="pill open" id="dspGavetaSua" hidden>sua</span>
+      </div>
+
+      <h4>Informações do lead</h4>
+      <div class="dsp-ficha" id="dspGavetaFicha"></div>
+
+      <h4>Mensagem</h4>
+      <textarea id="dspGavetaMensagem" class="dsp-gaveta-texto" rows="9"
+        placeholder="Este lead ainda não tem mensagem. Escreva aqui, ou use Criar copy na aba."></textarea>
+      <p class="hint" id="dspGavetaMsgInfo"></p>
+      <div class="btn-row">
+        <button class="btn primary" id="btnDspSalvarMensagem">Salvar mensagem</button>
+      </div>
+    </div>
+
+    <footer class="dsp-gaveta-pe">
+      <button class="btn" id="btnDspConversaIniciada">Marcar conversa iniciada</button>
+      <button class="btn primary" id="btnDspEnviarAgora">Enviar agora</button>
+    </footer>
+  </aside>
+</div>
+
 <!-- Loader -->
 <div id="loader" class="loader-overlay hidden">
   <div class="loader-box">
@@ -776,6 +891,8 @@
 <script src="/static/js/detalhe.js"></script>
 <script src="/static/js/conexao.js"></script>
 <script src="/static/js/disparo.js"></script>
+<script src="/static/js/disparo_aba.js"></script>
+<script src="/static/js/disparo_gaveta.js"></script>
 <script src="/static/js/conversas.js"></script>
 <script src="/static/js/crm.js"></script>
 <script src="/static/js/crm_cartao.js"></script>

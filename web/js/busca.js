@@ -313,7 +313,7 @@ window.viewCloudLead = async function (id) {
     const d = await r.json();
     const lead = (d.leads || []).find(function (l) { return String(l.id) === String(id); });
     if (lead) openDetailModal(lead);
-  } catch (e) {
+  } catch {
     toast("Falha ao abrir lead", "error");
   }
 };

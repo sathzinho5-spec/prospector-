@@ -43,6 +43,12 @@ DEFAULT_SETTINGS = {
     # 30 porque a carteira tem 30 e o objetivo e carregar todos num clique.
     # Acima disso o lead fica de fora e a tela avisa. Zero desliga a IA.
     "abordagem_ia_max": 30,
+    # Janela e limite do dia: os dois unicos numeros que descrevem o ritmo do
+    # disparo. A pausa entre um envio e outro NAO se configura mais, ela e
+    # derivada destes dois (scrapers/disparo_cadencia.py).
+    "disparo_hora_ini": "08:00",
+    "disparo_hora_fim": "20:00",
+    "disparo_limite_dia": 30,
     "disparo_tom": "direto",
     "disparo_meta_token": "",
     "disparo_meta_phone_id": "",

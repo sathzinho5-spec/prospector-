@@ -48,11 +48,18 @@ class DisparoEnqueueRequest(BaseModel):
 
 class DisparoStartRequest(BaseModel):
     provider: str = "simulado"
-    delay_min: float = 45
-    delay_max: float = 120
-    limite_dia: int = 50
-    hora_ini: str = "08:00"
-    hora_fim: str = "20:00"
+    # DEPRECADOS: a pausa entre envios deixou de ser escolhida na tela e passou
+    # a ser derivada da janela e do limite do dia (regra fixa de cadencia, em
+    # scrapers/disparo_cadencia.py). Continuam aqui, aceitos e IGNORADOS, so
+    # para nao quebrar chamador antigo; a resposta do /iniciar avisa.
+    delay_min: float | None = None
+    delay_max: float | None = None
+    # None = nao veio no pedido, entao vale o que esta salvo nas configuracoes.
+    # Valor presente sobrescreve E fica salvo, senao a cadencia que a tela
+    # mostra divergiria da que o motor esta rodando.
+    limite_dia: int | None = None
+    hora_ini: str | None = None
+    hora_fim: str | None = None
     optout: bool = True
 
 
@@ -103,6 +110,10 @@ class SettingsRequest(BaseModel):
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
     disparo_modo: str = ""
+    # Janela e limite: os dois numeros de onde a cadencia e derivada.
+    disparo_hora_ini: str = ""
+    disparo_hora_fim: str = ""
+    disparo_limite_dia: int | None = None
     supabase_url: str = ""
     supabase_secret: str = ""
 class EntrarRequest(BaseModel):
@@ -153,6 +164,21 @@ class DisparoMensagemRequest(BaseModel):
     id: int
     mensagem: str = ""
 
+
+class DisparoCriarCopyRequest(BaseModel):
+    # Selecao vazia = todos os leads sem copy. Com ids ou telefones, so eles.
+    ids: list = []
+    telefones: list = []
+    refazer: bool = False
+
+
+class DisparoRespostaRequest(BaseModel):
+    # id da abordagem, ou o telefone do lead. lead_id so serve para espelhar o
+    # estagio no CRM da nuvem, e e opcional.
+    id: int = 0
+    telefone: str = ""
+    lead_id: str = ""
+
 class WaResponderRequest(BaseModel):
     jid: str = ""
     telefone: str = ""
@@ -169,3 +195,9 @@ class CnpjGrandesRequest(BaseModel):
 class CnpjMarcarRequest(BaseModel):
     cnpjs: list
 
+
+
+class DisparoCopyRequest(BaseModel):
+    # A copy escrita a mao pelo operador, antes de o lead entrar na fila.
+    telefone: str = ""
+    mensagem: str = ""

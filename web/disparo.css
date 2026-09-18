@@ -1,0 +1,225 @@
+/* ============================================================
+   PROSPECTOR · Aba Disparo, peca 1 de 3
+   proposito: os KPIs do funil e o bloco de disparo (janela, limite,
+   ritmo calculado, explicacao da regra fixa e as tres acoes).
+
+   As outras duas pecas: disparo-lista.css (estados e tabela de
+   leads) e disparo-gaveta.css (a gaveta de detalhe). Cada uma e
+   um componente proprio da aba, isolado de proposito.
+
+   Tudo prefixado dsp- para nao colidir com .drawer, .table nem
+   .modal-overlay do styles.css. Carrega DEPOIS de styles.css e
+   painel.css: herda os tokens. O bloco responsivo mora no fim.
+   ============================================================ */
+
+/* ---------- 1. KPIs DO FUNIL ---------- */
+.dsp-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.dsp-kpi {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-2);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+}
+
+.dsp-kpi::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--border);
+}
+
+.dsp-kpi-num {
+  display: block;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+.dsp-kpi-rotulo {
+  display: block;
+  margin-top: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-3);
+}
+
+.dsp-kpi-nota {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+/* a metrica que importa: conversas iniciadas */
+.dsp-kpi.destaque {
+  background: linear-gradient(158deg, rgba(99, 102, 241, .2), var(--surface-2) 64%);
+  border-color: rgba(99, 102, 241, .45);
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, .13), var(--shadow-1);
+}
+
+.dsp-kpi.destaque::before { background: var(--brand); }
+.dsp-kpi.destaque .dsp-kpi-num { font-size: 38px; color: var(--brand-ink); }
+.dsp-kpi.destaque .dsp-kpi-rotulo { color: var(--brand-ink); }
+
+/* ---------- 2. BLOCO DISPARO ---------- */
+.dsp-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+.dsp-auto .field { margin-bottom: 0; }
+.dsp-janela { display: flex; gap: 8px; }
+
+/* a linha viva do ritmo: o comportamento preenche .dsp-intervalo-valor */
+.dsp-intervalo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: var(--brand-soft);
+  border: 1px solid rgba(99, 102, 241, .3);
+  border-radius: var(--r-md);
+  font-size: 13px;
+}
+
+.dsp-intervalo-ponto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-hover);
+  flex-shrink: 0;
+  animation: dspPulso 1.8s ease-in-out infinite;
+}
+
+@keyframes dspPulso {
+  0%, 100% { opacity: .3; transform: scale(.75); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.dsp-intervalo-rotulo {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-2);
+}
+
+.dsp-intervalo-valor {
+  color: var(--brand-ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* vazio ainda e um estado legivel, nao um buraco no layout */
+.dsp-intervalo-valor:empty::after {
+  content: "calculando...";
+  color: var(--text-3);
+  font-weight: 500;
+  font-style: italic;
+}
+
+.dsp-explica {
+  margin-top: 14px;
+  background: var(--bg-1);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--r-md);
+}
+
+.dsp-explica > summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.dsp-explica > summary::-webkit-details-marker { display: none; }
+.dsp-explica > summary:hover { color: var(--text-1); }
+
+.dsp-explica > summary::before {
+  content: "\203A";
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--text-1);
+  font-size: 13px;
+  line-height: 1;
+  transition: transform var(--tr);
+}
+
+.dsp-explica[open] > summary::before { transform: rotate(90deg); }
+
+.dsp-explica-corpo {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.dsp-explica-corpo p {
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-2);
+}
+
+.dsp-explica-corpo b { color: var(--text-1); }
+
+.dsp-acoes {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+/* o botao que dispara de verdade carrega o peso */
+.dsp-acao-principal {
+  padding: 13px 28px;
+  font-size: 14.5px;
+  font-weight: 700;
+  box-shadow: 0 0 0 1px rgba(99, 102, 241, .35), 0 8px 22px rgba(79, 70, 229, .3);
+}
+
+.dsp-acao-principal:hover {
+  box-shadow: 0 0 0 1px rgba(129, 140, 248, .5), 0 10px 26px rgba(79, 70, 229, .42);
+}
+
+/* ---------- 3. RESPONSIVO (mora no fim, depois das bases) ---------- */
+@media (max-width: 860px) {
+  .dsp-kpis { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .dsp-kpi { padding: 14px 15px; }
+  .dsp-kpi-num { font-size: 26px; }
+  .dsp-kpi.destaque { grid-column: 1 / -1; }
+  .dsp-kpi.destaque .dsp-kpi-num { font-size: 34px; }
+  .dsp-auto { grid-template-columns: 1fr 1fr; }
+  .dsp-acoes { gap: 8px; }
+  .dsp-acao-principal { order: -1; flex: 1 1 100%; padding: 14px 20px; }
+  .dsp-acoes .btn:not(.dsp-acao-principal) { flex: 1 1 calc(50% - 4px); }
+}

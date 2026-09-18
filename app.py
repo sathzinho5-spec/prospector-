@@ -16,7 +16,9 @@ from nucleo import LIVRES, PREFIXOS_LIVRES, STATE, WEB_DIR, _quem
 from scrapers import google_maps
 from storage import export_csv, export_excel, save_businesses, save_json
 
-from rotas import acesso, cnpj, crm, disparo, disparo_evolution, negocio, whatsapp
+from rotas import (acesso, cnpj, crm, disparo, disparo_conversas, disparo_copy,
+                   disparo_evolution, disparo_leads, negocio, negocio_instagram,
+                   whatsapp)
 from rotas.modelos import ScheduleRequest, SearchRequest, SettingsRequest
 
 app = FastAPI(title="Prospector - Scraping de Negócios")
@@ -125,6 +127,12 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
     if req.disparo_modo in ("auto", "manual"):
         new["disparo_modo"] = req.disparo_modo
+    if req.disparo_hora_ini:
+        new["disparo_hora_ini"] = req.disparo_hora_ini.strip()
+    if req.disparo_hora_fim:
+        new["disparo_hora_fim"] = req.disparo_hora_fim.strip()
+    if req.disparo_limite_dia is not None:
+        new["disparo_limite_dia"] = max(1, min(500, int(req.disparo_limite_dia)))
     if req.supabase_url:
         new["supabase_url"] = req.supabase_url.strip()
     if req.supabase_secret:
@@ -268,8 +276,12 @@ def api_export(format: str = "csv"):
 
 app.include_router(acesso.router)
 app.include_router(negocio.router)
+app.include_router(negocio_instagram.router)
 app.include_router(crm.router)
 app.include_router(disparo.router)
+app.include_router(disparo_copy.router)
+app.include_router(disparo_leads.router)
+app.include_router(disparo_conversas.router)
 app.include_router(disparo_evolution.router)
 app.include_router(whatsapp.router)
 app.include_router(cnpj.router)

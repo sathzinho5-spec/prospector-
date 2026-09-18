@@ -14,6 +14,15 @@ async function init() {
   renderQuickStates();
   loadLastSearch();
   loadDashboard();
+  // A aba Disparo liga por ultimo e com guarda: ela e a unica que fala com
+  // rotas que podem nao existir numa versao mais velha do servidor, e uma
+  // falha aqui nao pode derrubar o arranque do painel inteiro.
+  try {
+    if (typeof dspIniciarAba === "function") dspIniciarAba();
+    if (typeof dspIniciarGaveta === "function") dspIniciarGaveta();
+  } catch (err) {
+    console.error("Aba Disparo nao iniciou", err);
+  }
 }
 
 function on(id, ev, fn) {

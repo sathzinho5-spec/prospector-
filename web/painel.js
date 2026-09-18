@@ -107,6 +107,13 @@
   var conectar = pegar("btnConexaoConectar");
   if (conectar) {
     conectar.addEventListener("click", function () {
+      // Direto, e nao mais clicando no botao original: o btnConnectWa saiu da
+      // aba Comercial quando ela virou Disparo, e o clique simulado passou a
+      // nao fazer NADA, sem erro na tela. O clique fica so de compatibilidade.
+      if (typeof window.connectWhatsApp === "function") {
+        window.connectWhatsApp();
+        return;
+      }
       var original = pegar("btnConnectWa");
       if (original) original.click();
     });

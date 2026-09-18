@@ -1,16 +1,19 @@
-# proposito: disparo: fila, envio da mensagem, iniciar e pausar o motor
+# proposito: disparo: fila, envio da mensagem, cadencia, iniciar e pausar o motor
 from fastapi import APIRouter, HTTPException
 
 import config
 from analysis import analyzer
 from nucleo import STATE
-# Reexportado de proposito: o bloco da Evolution mudou de arquivo e estas tres
-# funcoes seguem alcancaveis como rotas.disparo._evo_cfg, como sempre foram.
+# Reexportado de proposito: o bloco da Evolution e o bloco da copy mudaram de
+# arquivo, e estes nomes seguem alcancaveis como rotas.disparo._evo_cfg e
+# rotas.disparo._mensagem_abordagem, como sempre foram. rotas/whatsapp.py
+# depende do primeiro.
+from rotas.disparo_copy import (_mensagem_abordagem, _teto_ia,  # noqa: F401
+                                api_disparo_migrar)
 from rotas.disparo_evolution import _evo_cfg, _evo_instances, _evo_provider  # noqa: F401
 from rotas.modelos import (DisparoAgoraRequest, DisparoEnqueueRequest,
-                           DisparoMensagemRequest, DisparoMigrarRequest,
-                           DisparoRefazerRequest, DisparoStartRequest,
-                           DisparoTestRequest)
+                           DisparoMensagemRequest, DisparoRefazerRequest,
+                           DisparoStartRequest, DisparoTestRequest)
 
 router = APIRouter()
 
@@ -23,96 +26,6 @@ def api_disparo_enqueue(req: DisparoEnqueueRequest):
         raise HTTPException(400, "Nenhum item recebido.")
     n = disparo.enfileirar(req.itens, origem=req.origem)
     return {"enfileirados": n}
-
-
-def _teto_ia(settings):
-    """Trave de custo: quantas mensagens da migracao podem sair da IA. A
-    migracao puxa ate 500 leads; sem teto seriam 500 chamadas pagas num
-    clique. Sem chave de IA o teto e zero e tudo cai no template local."""
-    if not str(settings.get("openai_api_key") or "").strip():
-        return 0
-    padrao = config.DEFAULT_SETTINGS.get("abordagem_ia_max", 30)
-    try:
-        teto = int(settings.get("abordagem_ia_max", padrao))
-    except (TypeError, ValueError):
-        teto = padrao
-    return max(0, min(100, teto))
-
-
-def _mensagem_abordagem(business, settings, usar_ia, exigir_ia):
-    """Mensagem de um lead da fila. Devolve (texto, engine).
-
-    Com IA configurada (exigir_ia), texto de template local NAO entra na fila:
-    o fallback local carrega copy que o fundador reprovou, e uma queda da IA
-    mandaria ela pro cliente sem aviso. Melhor o lead ficar de fora e a tela
-    dizer quantos ficaram. Sem chave de IA nada muda: tudo sai do template.
-    """
-    if usar_ia:
-        try:
-            from analysis import copy_sdr
-            seq = copy_sdr.gerar_sequencia(business, settings)
-            msg = (seq.get("abertura") or "").strip()
-            engine = seq.get("engine") or "local"
-            if msg and engine != "local":
-                return msg, engine
-        except Exception:
-            pass
-    if exigir_ia:
-        return "", "local"
-    try:
-        return (analyzer._local_pitch(business).get("whatsapp") or "").strip(), "local"
-    except Exception:
-        return "", "local"
-
-
-@router.post("/api/disparo/migrar")
-def api_disparo_migrar(req: DisparoMigrarRequest):
-    """Puxa TODOS os leads já minerados (nuvem, ou sessão) para a fila, sem repetir telefone."""
-    from scrapers import cloud_store, disparo
-
-    leads = []
-    try:
-        leads = cloud_store.listar_leads(limite=500)
-    except Exception:
-        leads = []
-    if not leads:
-        leads = STATE.get("businesses") or []
-    if not leads:
-        raise HTTPException(404, "Nenhum lead minerado encontrado.")
-
-    settings = config.load_settings()
-    teto_ia = _teto_ia(settings)
-    exigir_ia = teto_ia > 0
-    na_fila = disparo.telefones_na_fila()
-    itens = []
-    desativados = 0
-    tentativas_ia = 0
-    com_ia = 0
-    sem_mensagem = 0
-    for b in leads:
-        if not cloud_store.disparo_liberado(b):
-            desativados += 1
-            continue
-        tel = disparo._norm_phone(b.get("telefone"))
-        if not tel or tel in na_fila:
-            continue
-        usar_ia = tentativas_ia < teto_ia
-        if usar_ia:
-            tentativas_ia += 1
-        msg, engine = _mensagem_abordagem(b, settings, usar_ia, exigir_ia)
-        if not msg:
-            sem_mensagem += 1
-            continue
-        if engine != "local":
-            com_ia += 1
-        itens.append({"nome": b.get("nome", ""), "telefone": b.get("telefone", ""), "mensagem": msg})
-        na_fila.add(tel)
-
-    n = disparo.enfileirar(itens, origem=req.origem or "minerados")
-    return {"enfileirados": n, "total_minerados": len(leads),
-            "desativados": desativados, "teto_ia": teto_ia,
-            "com_ia": com_ia, "com_template": len(itens) - com_ia,
-            "sem_mensagem": sem_mensagem}
 
 
 @router.post("/api/disparo/enviar-agora")
@@ -236,20 +149,77 @@ def api_disparo_item(item_id: int):
     raise HTTPException(404, "Item não encontrado na fila.")
 
 
+def _janela_e_limite(req=None):
+    """Os dois numeros de onde a cadencia sai. Fonte: as configuracoes. Valor
+    vindo no pedido sobrescreve E fica salvo, senao o /cadencia responderia uma
+    coisa e o motor rodaria outra, que e exatamente a divergencia a evitar."""
+    s = config.load_settings()
+    novo = {}
+    if req is not None:
+        if req.hora_ini:
+            novo["disparo_hora_ini"] = str(req.hora_ini)
+        if req.hora_fim:
+            novo["disparo_hora_fim"] = str(req.hora_fim)
+        if req.limite_dia is not None:
+            novo["disparo_limite_dia"] = max(1, min(500, int(req.limite_dia)))
+    if novo:
+        s = config.save_settings(novo)
+    return (s, s.get("disparo_hora_ini") or "08:00",
+            s.get("disparo_hora_fim") or "20:00",
+            s.get("disparo_limite_dia") or 30)
+
+
+@router.get("/api/disparo/cadencia")
+def api_disparo_cadencia(hora_ini: str = "", hora_fim: str = "", limite_dia: int = 0):
+    """O intervalo que o motor usa, calculado aqui e em lugar nenhum mais.
+
+    A tela mostra este numero; ela nao o recalcula. Se recalculasse, bastaria
+    uma regra mudar de um lado pro operador passar a ler um ritmo que o motor
+    nao esta praticando. Os parametros existem so pra previa: a tela pode
+    perguntar 'e se fosse 50 por dia?' sem salvar nada.
+    """
+    from scrapers import disparo, disparo_cadencia
+
+    _, ini, fim, limite = _janela_e_limite()
+    cad = disparo_cadencia.calcular(hora_ini or ini, hora_fim or fim,
+                                    limite_dia or limite)
+    st = disparo.status()
+    cad["rodando"] = bool(st.get("rodando"))
+    cad["proximo_em"] = st.get("proximo_em")
+    cad["previa"] = bool(hora_ini or hora_fim or limite_dia)
+    return cad
+
+
+@router.get("/api/disparo/kpis")
+def api_disparo_kpis():
+    """Os quatro numeros da aba. Todos vem de quem ja os contava: nenhum
+    caminho paralelo de calculo, senao a tela e o motor discordam."""
+    from scrapers import disparo
+    from rotas.disparo_leads import montar_linhas
+
+    st = disparo.status()
+    novos = sum(1 for linha in montar_linhas() if linha["estado"] in ("sem_copy", "copy_pronta"))
+    return {
+        "leads_novos": novos,
+        "enviadas_hoje": st.get("enviados_hoje", 0),
+        "na_fila": st.get("pendentes", 0),
+        "conversas_iniciadas": st.get("conversas_iniciadas", 0),
+    }
+
+
 @router.post("/api/disparo/iniciar")
 def api_disparo_iniciar(req: DisparoStartRequest):
-    from scrapers import disparo
+    """Liga o motor. delay_min/delay_max sao aceitos e ignorados: a pausa entre
+    envios virou regra fixa. O envio avulso NAO e mais barrado pelo modo manual,
+    porque os dois caminhos convivem pela trava atomica da fila."""
+    from scrapers import disparo, disparo_cadencia
 
-    s = config.load_settings()
-    if (s.get("disparo_modo") or "auto") == "manual":
-        return {"iniciado": False, "motivo": "modo manual ativo — envie item por item", **disparo.status()}
+    s, ini, fim, limite = _janela_e_limite(req)
     cfg = {
         "provider": req.provider,
-        "delay_min": max(5, req.delay_min),
-        "delay_max": max(req.delay_min, req.delay_max),
-        "limite_dia": max(1, min(500, req.limite_dia)),
-        "hora_ini": req.hora_ini,
-        "hora_fim": req.hora_fim,
+        "limite_dia": limite,
+        "hora_ini": ini,
+        "hora_fim": fim,
         "optout": req.optout,
         "evo_url": _evo_cfg(s)["url"],
         "evo_key": _evo_cfg(s)["key"],
@@ -259,7 +229,13 @@ def api_disparo_iniciar(req: DisparoStartRequest):
         "meta_phone_id": s.get("disparo_meta_phone_id", ""),
     }
     ok = disparo.iniciar(cfg)
-    return {"iniciado": ok, **disparo.status()}
+    avisos = []
+    if req.delay_min is not None or req.delay_max is not None:
+        avisos.append("delay_min e delay_max foram ignorados: a cadencia agora "
+                      "sai da janela e do limite do dia.")
+    return {"iniciado": ok, "avisos": avisos,
+            "cadencia": disparo_cadencia.calcular(ini, fim, limite),
+            **disparo.status()}
 
 
 @router.post("/api/disparo/pausar")
