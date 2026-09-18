@@ -4,7 +4,7 @@ Mapa gerado por `Agente Orquestrador/tools/gerar_arquitetura.py`.
 Nao edite a mao: a proxima geracao sobrescreve. Pra mudar uma linha,
 mude o `proposito:` no cabecalho do arquivo.
 
-Teto por arquivo: 350 linhas. Arquivos: 74.
+Teto por arquivo: 350 linhas. Arquivos: 75.
 
 ## raiz do projeto
 
@@ -43,7 +43,7 @@ rotas/cnpj.py                     40  garimpo de empresas grandes por UF na base
 rotas/crm.py                     111  leads na nuvem e o CRM: listar, filtrar e mover de estagio
 rotas/disparo.py                 314  disparo: fila, envio da mensagem, cadencia, iniciar e pausar o motor
 rotas/disparo_conversas.py        99  conversa iniciada: marcar, desmarcar e ler qual copy converteu
-rotas/disparo_copy.py            255  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
+rotas/disparo_copy.py            272  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
 rotas/disparo_evolution.py        84  instancias da Evolution: qrcode, estado do chip e o numero pareado
 rotas/disparo_leads.py           187  a lista de leads do disparo com o estado de copy e de envio de cada um
 rotas/modelos.py                 206  os contratos de entrada da API, num lugar so
@@ -113,8 +113,9 @@ web/js/crm.js                    128  CRM: carregar leads, filtrar e montar o qu
 web/js/crm_cartao.js             288  cartao do lead, acao em massa e KPIs do CRM
 web/js/detalhe.js                157  modal de detalhe do lead, screenshot e extracao de contato
 web/js/disparo.js                323  disparo automatico: fila, migracao, envio e status
-web/js/disparo_aba.js            294  aba Disparo: os KPIs, a cadencia mostrada e a lista de leads
+web/js/disparo_aba.js            266  aba Disparo: os KPIs, a cadencia mostrada e a lista de leads
 web/js/disparo_conversao.js       54  o painel de conversao por versao do playbook, na aba Disparo
+web/js/disparo_copy_lote.js      103  criar a copy dos leads em lote, respeitando tempo de proxy e teto de IA
 web/js/disparo_gaveta.js         188  a gaveta de detalhe do lead na aba Disparo: ficha, copy e resposta
 web/js/tabela.js                 280  tabela de resultados: ordenacao, selecao, paginacao e acoes em lote
 web/js/ui.js                     140  estado compartilhado do painel e as pecas visuais reusadas

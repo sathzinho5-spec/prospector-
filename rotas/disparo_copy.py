@@ -11,7 +11,6 @@ como pronto poderia nao ser o texto que entra na fila.
 from fastapi import APIRouter, HTTPException
 
 import config
-from analysis import analyzer
 from nucleo import STATE
 from rotas.disparo_leads import leads_do_disparo
 from rotas.modelos import (DisparoCopyRequest, DisparoCriarCopyRequest,
@@ -59,7 +58,15 @@ def _mensagem_abordagem(business, settings, usar_ia, exigir_ia):
     if exigir_ia:
         return "", "local", ""
     try:
-        return (analyzer._local_pitch(business).get("whatsapp") or "").strip(), "local", "local"
+        # O fallback da ABORDAGEM e o do copy_sdr, nao o _local_pitch do
+        # copy_fechamento. Os dois escrevem coisas diferentes: um abre conversa,
+        # o outro fecha venda. Chamar o de fechamento aqui punha na abordagem
+        # justamente as duas frases que o fundador reprovou, "analise rapida e
+        # gratuita" e "sua regiao", e ainda por um caminho silencioso, so quando
+        # falta chave de IA. copy_fechamento segue intocado, como o plano manda.
+        from analysis import copy_sdr
+        seq = copy_sdr._local_sequencia(business)
+        return (seq.get("abertura") or "").strip(), "local", "local"
     except Exception:
         return "", "local", ""
 
@@ -103,6 +110,7 @@ def api_disparo_criar_copy(req: DisparoCriarCopyRequest):
     existentes = disparo_copys.mapa()
 
     criados, ja_tinham, desativados, sem_mensagem, com_ia = [], 0, 0, 0, 0
+    manuais = 0
     tentativas_ia = 0
     for b in leads:
         tel = disparo._norm_phone(b.get("telefone"))
@@ -117,7 +125,15 @@ def api_disparo_criar_copy(req: DisparoCriarCopyRequest):
         # lead ligado pra ele entrar na fila.
         if not cloud_store.disparo_liberado(b):
             desativados += 1
-        if tel in existentes and not req.refazer:
+        anterior = existentes.get(tel)
+        if anterior and (anterior.get("copy_origem") or "") == "manual":
+            # Texto escrito a mao pelo operador nao e sobrescrito pela IA, nem
+            # com refazer. Ele revisou aquilo de proposito; regerar por cima
+            # apagaria o trabalho dele sem perguntar, e sem deixar rastro. Pra
+            # trocar, ele apaga na gaveta e manda criar de novo.
+            manuais += 1
+            continue
+        if anterior and not req.refazer:
             ja_tinham += 1
             continue
         usar_ia = tentativas_ia < teto_ia
@@ -136,6 +152,7 @@ def api_disparo_criar_copy(req: DisparoCriarCopyRequest):
                         "copy_versao": versao})
 
     return {"criados": len(criados), "ja_tinham": ja_tinham,
+            "manuais_preservadas": manuais,
             "desativados": desativados, "sem_mensagem": sem_mensagem,
             "teto_ia": teto_ia, "com_ia": com_ia,
             "com_template": len(criados) - com_ia, "itens": criados}

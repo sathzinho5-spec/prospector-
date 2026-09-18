@@ -175,33 +175,6 @@ function dspTelefonesSelecionados() {
   return Object.keys(dspSelecionados);
 }
 
-async function dspCriarCopy() {
-  const btn = $("btnDspCriarCopy");
-  const alvos = dspTelefonesSelecionados();
-  if (btn) { btn.disabled = true; btn.textContent = "Criando..."; }
-  try {
-    const r = await fetch("/api/disparo/criar-copy", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // Selecao vazia = todos os que estao sem copy, que e o contrato da rota.
-      body: JSON.stringify({ telefones: alvos })
-    });
-    const d = await r.json();
-    if (!r.ok) {
-      toast(d.detail || "Nao deu pra criar a copy.", "error");
-    } else {
-      const n = d.criadas ?? d.total ?? 0;
-      toast(n ? ("Copy criada para " + n + " lead" + (n === 1 ? "" : "s") + ".")
-              : "Nenhum lead estava sem copy.", n ? "ok" : "info");
-    }
-  } catch (err) {
-    toast("Erro ao criar copy: " + err.message, "error");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Criar copy"; }
-    await dspAtualizarTudo();
-  }
-}
-
 // Os motivos que o servidor devolve em carga.fora, na lingua de quem opera.
 var DSP_MOTIVO = {
   ja_abordado: "já receberam a abordagem",
@@ -289,6 +262,5 @@ function dspIniciarAba() {
 window.dspMarcar = dspMarcar;
 window.dspMostrarCarga = dspMostrarCarga;
 window.dspLigarSelecionados = dspLigarSelecionados;
-window.dspCriarCopy = dspCriarCopy;
 window.dspAtualizarTudo = dspAtualizarTudo;
 window.dspIniciarAba = dspIniciarAba;
