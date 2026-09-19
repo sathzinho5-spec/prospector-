@@ -4,13 +4,13 @@ Mapa gerado por `Agente Orquestrador/tools/gerar_arquitetura.py`.
 Nao edite a mao: a proxima geracao sobrescreve. Pra mudar uma linha,
 mude o `proposito:` no cabecalho do arquivo.
 
-Teto por arquivo: 350 linhas. Arquivos: 80.
+Teto por arquivo: 350 linhas. Arquivos: 81.
 
 ## raiz do projeto
 
 ```
 app.py                             293  sobe o FastAPI, a porta de acesso e as rotas de busca e ajuste
-config.py                           80  caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
+config.py                           90  caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
 contas.py                          349  porta de entrada: cadastro pendente, aprovacao do dono e cookie de sessao
 eslint.config.mjs                   47  teto de 350 linhas por arquivo e checagem de erro no JS do painel
 niches.py                          121  a lista de nichos que a busca oferece
@@ -46,7 +46,7 @@ rotas/disparo_conversas.py          99  conversa iniciada: marcar, desmarcar e l
 rotas/disparo_copy.py              272  a copy de abordagem dos leads: criar quem esta sem, e migrar pra fila
 rotas/disparo_evolution.py          84  instancias da Evolution: qrcode, estado do chip e o numero pareado
 rotas/disparo_leads.py             189  a lista de leads do disparo com o estado de copy e de envio de cada um
-rotas/disparo_motor.py              65  ligar, desligar e religar o motor do disparo, lembrando entre reinicios se ele estava ligado
+rotas/disparo_motor.py              82  ligar, desligar e religar o motor do disparo, lembrando entre reinicios se ele estava ligado
 rotas/modelos.py                   206  os contratos de entrada da API, num lugar so
 rotas/negocio.py                   176  analise e copy de um lead: contato, estrategia, pitch, proposta
 rotas/negocio_instagram.py         239  prospeccao e analise de perfis do Instagram
@@ -62,7 +62,7 @@ scrapers/cnpj_store.py             106  espelho local em SQLite do CNPJ, pra qua
 scrapers/cnpj_supabase.py          234  baixa o CNPJ da Receita, filtra capital alto e sobe pro Supabase
 scrapers/disparo.py                350  o motor do disparo: janela de horario, worker em thread, iniciar e pausar
 scrapers/disparo_abordagens.py     189  o que saiu por lead e a conversa iniciada, fora do alcance da limpeza
-scrapers/disparo_cadencia.py       187  o ritmo do disparo derivado da janela de horario e do limite do dia
+scrapers/disparo_cadencia.py       190  o ritmo do disparo derivado da janela de horario e do limite do dia
 scrapers/disparo_copys.py           85  a copy de abordagem de cada lead, guardada antes de ele entrar na fila
 scrapers/disparo_db.py             191  o banco do disparo: caminho, esquema das tabelas e migracao defensiva
 scrapers/disparo_fila.py           266  a fila do disparo em SQLite, o bloqueio de telefone e o anti-duplicata
@@ -86,9 +86,10 @@ scripts/dev.js                     162  npm run dev: sobe o Prospector em Python
 
 ```
 tests/conftest.py                   41  prepara os testes: raiz do projeto no caminho, dados em pasta temporaria e banco limpo
-tests/test_disparo_cadencia.py     117  prova o plano de horarios do disparo: grade da janela, mesmo dia e limite
+tests/test_config.py                22  prova que save_settings nao perde chave sob escrita concorrente
+tests/test_disparo_cadencia.py     124  prova o plano de horarios do disparo: grade da janela, mesmo dia e limite
 tests/test_disparo_fila_plano.py    99  prova o plano gravado na fila: desconta o que saiu hoje, respeita o ultimo envio e refaz atraso
-tests/test_disparo_motor.py        149  prova o ciclo de vida do motor: ligar, desligar, religar depois do reinicio e texto sem opt-out
+tests/test_disparo_motor.py        193  prova o ciclo de vida do motor: ligar, desligar, religar depois do reinicio e texto sem opt-out
 ```
 
 ## tools/

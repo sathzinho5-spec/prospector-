@@ -115,3 +115,10 @@ def test_limite_batido_antes_da_abertura_manda_tudo_pro_dia_seguinte():
     plano = _plano(5, inicio=_em(7), ja=30)
     assert all(q.date() == (DIA + datetime.timedelta(days=1)).date() for q in plano)
     assert plano[0] >= _em(8, 1, dias=1)
+
+
+def test_sobra_do_dia_anterior_no_primeiro_minuto_da_abertura_nao_sai_na_abertura():
+    # Worker acorda em 08:00:0x com fila de ontem: o primeiro minuto apos a
+    # abertura conta como "antes dela", senao um lead sai no minuto exato.
+    plano = _plano(3, inicio=_em(8, 0, 30))
+    assert plano[0] >= _em(8, 1)

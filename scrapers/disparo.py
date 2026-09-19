@@ -96,7 +96,7 @@ def enviar_agora(item_id, provider):
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
             con.execute(
-                "UPDATE fila SET status=?, tentativas=?, erro=? WHERE id=?",
+                "UPDATE fila SET status=?, tentativas=?, erro=?, agendado_para=datetime('now','localtime','+10 minutes') WHERE id=?",
                 (status, tent, err, item_id))
         con.commit()
         return ok, err

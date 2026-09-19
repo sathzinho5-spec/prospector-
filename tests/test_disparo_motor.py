@@ -129,6 +129,50 @@ def test_piso_entre_envios_evita_rajada_de_atrasadas(banco_limpo, monkeypatch):
     assert len(espiao.enviadas) == 1
 
 
+def _mais_30min(hhmm):
+    """Desloca um horario HH:MM em 30 minutos, virando o dia se precisar."""
+    h, m = (int(p) for p in hhmm.split(":"))
+    total = (h * 60 + m + 30) % (24 * 60)
+    return "%02d:%02d" % (total // 60, total % 60)
+
+
+def test_ligar_com_motor_rodando_religa_com_a_config_nova(banco_limpo):
+    ini_a, fim_a = _janela_fechada()
+    _preparar(janela=(ini_a, fim_a))
+    disparo_motor.ligar("simulado")
+    assert _esperar_rodando()
+    # Janela B: a mesma A deslocada 30min, continua fechada no horario do teste.
+    ini_b, fim_b = _mais_30min(ini_a), _mais_30min(fim_a)
+    config.save_settings({"disparo_hora_ini": ini_b, "disparo_hora_fim": fim_b,
+                          "disparo_limite_dia": 50, "disparo_provider": "simulado"})
+    r = disparo_motor.ligar("simulado")
+    assert r["iniciado"] is True
+    assert _esperar_rodando()
+    assert disparo._worker_cfg["hora_fim"] == fim_b
+    assert disparo._worker_cfg["limite_dia"] == 50
+
+
+class _EspiaoFalha:
+    name = "espiao"
+    instance = "espiao"
+
+    def send(self, phone, message):
+        return False, "erro x"
+
+
+def test_enviar_agora_com_falha_reagenda_para_daqui_a_10_minutos(banco_limpo):
+    disparo.enfileirar([{"nome": "Lead A", "telefone": "21999990001", "mensagem": "Oi A"}],
+                       origem="teste")
+    item_id = disparo.listar(status="pendente")[0]["id"]
+    ok, err = disparo.enviar_agora(item_id, _EspiaoFalha())
+    assert ok is False and err == "erro x"
+    linha = disparo.listar()[0]
+    assert linha["status"] == "pendente"
+    assert linha["tentativas"] == 1
+    agendado = datetime.datetime.strptime(str(linha["agendado_para"])[:19], "%Y-%m-%d %H:%M:%S")
+    assert agendado > datetime.datetime.now() + datetime.timedelta(minutes=9)
+
+
 def test_rotas_iniciar_e_pausar_passam_pelo_motor(banco_limpo, monkeypatch):
     from rotas import disparo as rota
     from rotas import disparo_leads

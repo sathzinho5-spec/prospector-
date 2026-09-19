@@ -143,9 +143,12 @@ def planejar(quantidade, hora_ini=PADRAO_HORA_INI, hora_fim=PADRAO_HORA_FIM,
     ja_no_dia = max(0, int(enviados_hoje or 0))
 
     abre_hoje = _abre(agora, hora_ini)
-    if agora < abre_hoje and ja_no_dia < limite:
+    # O primeiro minuto apos a abertura conta como "antes dela": sobra do dia
+    # anterior que acorda o worker em 08:00:0x nao pode sair no minuto exato.
+    limiar = abre_hoje + datetime.timedelta(seconds=60)
+    if agora < limiar and ja_no_dia < limite:
         partida, na_abertura = abre_hoje, True
-    elif abre_hoje <= agora <= _fecha(agora, hora_ini, hora_fim) and ja_no_dia < limite:
+    elif limiar <= agora <= _fecha(agora, hora_ini, hora_fim) and ja_no_dia < limite:
         partida, na_abertura = agora, False
     else:
         partida, na_abertura = _abre(agora + datetime.timedelta(days=1), hora_ini), True

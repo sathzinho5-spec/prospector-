@@ -1,6 +1,7 @@
 # proposito: caminhos do projeto e leitura das configuracoes, com volume de dados na VPS
 import json
 import os
+import threading
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -72,9 +73,18 @@ def load_settings():
     return merged
 
 
+# Um clique em Iniciar dispara varios save_settings quase juntos. Sem trava,
+# uma thread pode ler o arquivo no meio da escrita da outra e regravar por
+# cima com um settings incompleto, apagando chave da Evolution/OpenAI/Supabase.
+_trava_settings = threading.Lock()
+
+
 def save_settings(new_settings):
-    current = load_settings()
-    current.update(new_settings)
-    with open(SETTINGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(current, f, ensure_ascii=False, indent=2)
-    return current
+    with _trava_settings:
+        current = load_settings()
+        current.update(new_settings)
+        tmp = SETTINGS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(current, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, SETTINGS_FILE)
+        return current

@@ -10,8 +10,15 @@ Por isso ligar grava no settings que o motor esta ligado, desligar grava que
 nao esta, e a subida do servidor chama retomar(), que religa com o plano refeito
 a partir da hora da volta.
 """
+import threading
+
 import config
 from rotas.disparo_evolution import _evo_cfg
+
+# Serializa ligar/desligar: um clique duplo em Iniciar, ou Pausar cruzando com
+# Iniciar, nao pode deixar duas execucoes mexendo no worker e no settings ao
+# mesmo tempo.
+_trava = threading.Lock()
 
 
 def _cfg_do_motor(s, provider):
@@ -36,24 +43,34 @@ def ligar(provider):
     """Planeja as pendentes a partir de agora, liga o motor e lembra que ligou.
 
     Replaneja mesmo com o motor ja rodando, de proposito: plano velho de uma
-    sessao anterior nao sobrevive a um clique novo.
+    sessao anterior nao sobrevive a um clique novo. Clicar Iniciar com o motor
+    JA rodando religa ele com a config nova: para a thread velha antes de
+    planejar, senao ela segue enviando com o provider, a janela e o limite
+    antigos enquanto o settings e a tela ja mostram os novos.
     """
     from scrapers import disparo
 
-    s = config.load_settings()
-    cfg = _cfg_do_motor(s, provider)
-    horarios = disparo.planejar_fila(cfg["hora_ini"], cfg["hora_fim"], cfg["limite_dia"])
-    planejados = len(horarios)
-    iniciado = disparo.iniciar(cfg)
-    config.save_settings({"disparo_motor_ligado": True, "disparo_motor_provider": provider})
-    return {"iniciado": iniciado, "planejados": planejados, "horarios": horarios}
+    with _trava:
+        s = config.load_settings()
+        cfg = _cfg_do_motor(s, provider)
+        if disparo._worker_thread is not None and disparo._worker_thread.is_alive():
+            # Para antes de planejar: planejar_fila olha o que ja saiu hoje, e
+            # isso tem que incluir o envio que a thread velha acabou de fazer.
+            disparo.pausar()
+            disparo._worker_thread.join(timeout=60)
+        horarios = disparo.planejar_fila(cfg["hora_ini"], cfg["hora_fim"], cfg["limite_dia"])
+        planejados = len(horarios)
+        iniciado = disparo.iniciar(cfg)
+        config.save_settings({"disparo_motor_ligado": True, "disparo_motor_provider": provider})
+        return {"iniciado": iniciado, "planejados": planejados, "horarios": horarios}
 
 
 def desligar():
     from scrapers import disparo
 
-    disparo.pausar()
-    config.save_settings({"disparo_motor_ligado": False})
+    with _trava:
+        disparo.pausar()
+        config.save_settings({"disparo_motor_ligado": False})
 
 
 def retomar():
