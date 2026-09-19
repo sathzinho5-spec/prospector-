@@ -2,6 +2,9 @@
 # Reexportado de proposito: o esquema e a conexao mudaram de arquivo quando o
 # disparo ganhou copy de lead e registro de abordagem, e estes quatro nomes
 # seguem alcancaveis como disparo_fila._conn, como sempre foram.
+import datetime
+
+from scrapers import disparo_cadencia
 from scrapers.disparo_abordagens import enviadas_hoje as _enviados_hoje  # noqa: F401
 from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F401
 
@@ -121,18 +124,30 @@ def ja_recebeu(con, telefone, item_id=-1):
     return bool(row)
 
 
+# Uma linha que falhou espera um cooldown proprio (tentativas>0 e agendado_para
+# no futuro, gravado pelo _worker_loop) que e mais estrito que a grade do plano.
+# Um so texto SQL pras duas leituras (replanejar e planejar_fila) porque, se
+# divergissem, uma delas ia contar ou reescrever uma linha que a outra pulou.
+_NAO_EM_ESPERA_DE_RETENTATIVA = (
+    "NOT (tentativas > 0 AND datetime(agendado_para) > datetime('now','localtime'))")
+
+
 def replanejar(horarios):
-    """Reescreve o agendado_para das linhas PENDENTES, na ordem da fila.
+    """Reescreve o agendado_para das linhas PENDENTES que nao estao em espera de
+    retentativa, na ordem da fila.
 
     Roda no clique de iniciar, com os horarios que disparo_cadencia.planejar()
     acabou de calcular. Reescrever e de proposito: o fundador pediu que a conta
     comece no momento do clique, entao plano velho de uma sessao anterior nao
-    pode sobreviver a um clique novo.
+    pode sobreviver a um clique novo. Mas quem falhou e esta esperando o
+    cooldown mantem o proprio horario: o piso do motor entre envios ja a
+    espaca das linhas recem-planejadas, e reescrever apagaria essa espera.
     """
     con = _conn()
     try:
         ids = [r[0] for r in con.execute(
-            "SELECT id FROM fila WHERE status='pendente' ORDER BY id ASC").fetchall()]
+            "SELECT id FROM fila WHERE status='pendente' AND %s "
+            "ORDER BY id ASC" % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchall()]
         n = 0
         for item_id, quando in zip(ids, horarios or []):
             con.execute("UPDATE fila SET agendado_para=? WHERE id=?",
@@ -152,6 +167,43 @@ def pendentes():
             "SELECT COUNT(*) FROM fila WHERE status='pendente'").fetchone()[0]
     finally:
         con.close()
+
+
+def planejar_fila(hora_ini, hora_fim, limite_dia, agora=None):
+    """Planeja as linhas pendentes a partir de agora, grava e devolve o plano.
+
+    Junta as duas coisas que so o banco sabe e que o planejador precisa:
+    quantas sairam hoje, porque o limite e do dia e nao do clique, e quando
+    saiu a ultima. Depois de um reinicio o motor volta e replaneja; sem o piso
+    abaixo, o primeiro envio da volta podia colar no ultimo que saiu antes.
+    """
+    agora = (agora or datetime.datetime.now()).replace(microsecond=0)
+    cad = disparo_cadencia.calcular(hora_ini, hora_fim, limite_dia)
+    con = _conn()
+    try:
+        # A mesma condicao de replanejar(): so entra no plano quem replanejar
+        # de fato vai reescrever. Contar com pendentes() planejaria de mais e
+        # sobraria horario sem linha pra receber.
+        qtd = con.execute(
+            "SELECT COUNT(*) FROM fila WHERE status='pendente' AND %s"
+            % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchone()[0]
+        ja_hoje = _enviados_hoje(con)
+        ultimo = con.execute("SELECT MAX(enviado_em) FROM abordagens").fetchone()[0]
+    finally:
+        con.close()
+    inicio = agora
+    if ultimo:
+        try:
+            quando = datetime.datetime.strptime(str(ultimo)[:19], "%Y-%m-%d %H:%M:%S")
+            piso = quando + datetime.timedelta(
+                seconds=cad["intervalo_seg"] * (1.0 - disparo_cadencia.VARIACAO))
+            inicio = max(agora, piso)
+        except ValueError:
+            pass
+    horarios = disparo_cadencia.planejar(qtd, hora_ini, hora_fim, limite_dia,
+                                         inicio=inicio, enviados_hoje=ja_hoje)
+    replanejar(horarios)
+    return horarios
 
 
 def remover_pendentes(telefones):

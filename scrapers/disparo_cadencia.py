@@ -99,56 +99,88 @@ def _fecha(dia, hora_ini, hora_fim):
     return fim if fim > abre else abre.replace(hour=23, minute=59, second=59)
 
 
+def _cabem(partida, fecha, base):
+    """Quantos envios cabem de partida ate fecha, na grade da cadencia.
+
+    O envio k mira partida + k*base e pode escorregar ate VARIACAO*base pra
+    frente. Ele so entra no dia se couber antes do fechamento ate no pior
+    sorteio: e isso que impede a variacao de empurrar alguem pro dia seguinte.
+    """
+    folga = (fecha - partida).total_seconds()
+    if folga < 0:
+        return 0
+    return 1 + max(0, int((folga - VARIACAO * base) // base))
+
+
 def planejar(quantidade, hora_ini=PADRAO_HORA_INI, hora_fim=PADRAO_HORA_FIM,
-             limite_dia=30, inicio=None, sorteio=random.uniform):
+             limite_dia=30, inicio=None, sorteio=random.uniform, enviados_hoje=0):
     """O horario de CADA envio da fila, do primeiro ao ultimo.
 
-    Esta funcao e a unica dona do ritmo. Antes ele nascia em dois lugares: a
-    fila carimbava um "melhor momento do nicho" na entrada e o motor espacava os
-    envios por conta, entao o horario que a tela mostrava nao era o que
-    acontecia. Agora o plano e calculado no clique de iniciar, gravado na fila e
+    Esta funcao e a unica dona do ritmo. O plano e calculado no clique de
+    iniciar (e na volta do motor depois de um reinicio), gravado na fila e
     apenas SEGUIDO pelo motor.
 
     As regras, na ordem em que valem:
 
-    1. O primeiro sai AGORA, se agora estiver dentro da janela. Fora dela, na
-       proxima abertura. E o que "comecar quando eu clico" quer dizer.
-    2. Os seguintes espacam pelo intervalo base com variacao, nunca caem no
-       mesmo minuto do anterior e nunca terminam em segundo redondo.
-    3. Passou do fim da janela, ou bateu o limite do dia: o resto vai pra
-       abertura do dia seguinte, e a contagem do dia recomeca.
+    1. Janela aberta: o primeiro sai AGORA. Antes da abertura: sai alguns
+       minutos depois dela, nunca no minuto exato, porque "08:00" cravado em
+       todo dia e assinatura de robo. Depois do fechamento, ou com o limite do
+       dia ja batido: tudo vai pra abertura seguinte.
+    2. Cada envio seguinte mira um ponto FIXO da grade (partida + k * base) e
+       varia em torno dele. A variacao nao se soma de um envio pro outro:
+       somada, ela empurrava o ultimo lead pro dia seguinte em 1 de cada 10
+       planos, mesmo quando a carteira cabia inteira na janela.
+    3. So entra no dia quem cabe antes do fechamento ate no pior sorteio, e
+       so ate o limite do dia, descontado o que ja saiu hoje. O resto vai pra
+       abertura do dia seguinte, com a contagem zerada.
+    4. Nunca dois envios no mesmo minuto, nunca segundo redondo.
     """
     agora = (inicio or datetime.datetime.now()).replace(microsecond=0)
     cad = calcular(hora_ini, hora_fim, limite_dia)
     base = cad["intervalo_seg"]
     limite = cad["limite_dia"]
+    restantes = max(0, int(quantidade or 0))
+    ja_no_dia = max(0, int(enviados_hoje or 0))
 
     abre_hoje = _abre(agora, hora_ini)
-    fecha_hoje = _fecha(agora, hora_ini, hora_fim)
-    if agora < abre_hoje:
-        cursor = abre_hoje
-    elif agora <= fecha_hoje:
-        cursor = agora
+    # O primeiro minuto apos a abertura conta como "antes dela": sobra do dia
+    # anterior que acorda o worker em 08:00:0x nao pode sair no minuto exato.
+    limiar = abre_hoje + datetime.timedelta(seconds=60)
+    if agora < limiar and ja_no_dia < limite:
+        partida, na_abertura = abre_hoje, True
+    elif limiar <= agora <= _fecha(agora, hora_ini, hora_fim) and ja_no_dia < limite:
+        partida, na_abertura = agora, False
     else:
-        cursor = _abre(agora + datetime.timedelta(days=1), hora_ini)
+        partida, na_abertura = _abre(agora + datetime.timedelta(days=1), hora_ini), True
+        ja_no_dia = 0
 
-    saida, anterior, no_dia = [], None, 0
-    for i in range(max(0, int(quantidade or 0))):
-        if anterior is None:
-            alvo = cursor
-        else:
-            espera = sorteio(base * (1.0 - VARIACAO), base * (1.0 + VARIACAO))
-            alvo = (anterior + datetime.timedelta(seconds=espera)).replace(microsecond=0)
-            if _minuto(alvo) <= _minuto(anterior):
+    saida = []
+    while restantes > 0:
+        fecha = _fecha(partida, hora_ini, hora_fim)
+        vagas = min(restantes, limite - ja_no_dia, _cabem(partida, fecha, base))
+        anterior = None
+        for k in range(max(1, vagas)):
+            if k == 0:
+                folga = sorteio(60.0, max(60.0, VARIACAO * base)) if na_abertura else 0.0
+                alvo = partida + datetime.timedelta(seconds=folga)
+            else:
+                desvio = sorteio(-VARIACAO * base, VARIACAO * base)
+                alvo = partida + datetime.timedelta(seconds=k * base + desvio)
+            alvo = alvo.replace(microsecond=0)
+            if anterior is not None and _minuto(alvo) <= _minuto(anterior):
                 alvo = _minuto(anterior) + datetime.timedelta(minutes=1)
-        referencia = anterior or alvo
-        if no_dia >= limite or alvo > _fecha(referencia, hora_ini, hora_fim):
-            alvo = _abre(referencia + datetime.timedelta(days=1), hora_ini)
-            no_dia = 0
-        alvo = _quebrar_segundo(alvo, sorteio)
-        saida.append(alvo)
-        anterior = alvo
-        no_dia += 1
+            alvo = _quebrar_segundo(alvo, sorteio)
+            # Trava de seguranca: o empurrao de minuto acima pode, em janela
+            # minuscula, passar do fechamento. O primeiro do dia sempre entra,
+            # senao um dia sem vaga nenhuma viraria laco infinito.
+            if k > 0 and alvo > fecha:
+                break
+            saida.append(alvo)
+            anterior = alvo
+            restantes -= 1
+        partida = _abre(partida + datetime.timedelta(days=1), hora_ini)
+        na_abertura = True
+        ja_no_dia = 0
     return saida
 
 

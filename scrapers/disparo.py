@@ -17,8 +17,9 @@ from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
                                    _enviados_hoje, _norm_phone, _reivindicar,
                                    atualizar_mensagem, enfileirar, ja_recebeu,
                                    limpar_finalizados, listar, pendentes,
-                                   registrar_abordado, remover_pendentes,
-                                   replanejar, telefones_na_fila)
+                                   planejar_fila, registrar_abordado,
+                                   remover_pendentes, replanejar,
+                                   telefones_na_fila)
 from scrapers.disparo_providers import (EvolutionProvider, MetaCloudProvider,
                                         SimuladoProvider, _build_providers,
                                         _eh_falha_conexao, _erro_amigavel,
@@ -95,7 +96,7 @@ def enviar_agora(item_id, provider):
             tent = item.get("tentativas", 0) + 1
             status = "falha" if tent >= 3 else "pendente"
             con.execute(
-                "UPDATE fila SET status=?, tentativas=?, erro=? WHERE id=?",
+                "UPDATE fila SET status=?, tentativas=?, erro=?, agendado_para=datetime('now','localtime','+10 minutes') WHERE id=?",
                 (status, tent, err, item_id))
         con.commit()
         return ok, err
@@ -117,6 +118,28 @@ def _proximo_agendado():
         return datetime.datetime.strptime(str(row[0])[:19], "%Y-%m-%d %H:%M:%S")
     except ValueError:
         return None
+
+
+# Tolerancia antes de uma linha contar como atrasada. O motor acorda no maximo a
+# cada 60s fora da janela e 300s dentro dela, entao atraso normal fica abaixo disso.
+ATRASO_MAX_MIN = 5
+
+
+def _atrasada(valor, agora):
+    """A linha devia ter saido ha mais de ATRASO_MAX_MIN? Valor ilegivel nao e
+    atraso: quem decide sobre ele e a selecao da fila, nao esta trava."""
+    try:
+        quando = datetime.datetime.strptime(str(valor)[:19], "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return False
+    return (agora - quando) > datetime.timedelta(minutes=ATRASO_MAX_MIN)
+
+
+def _falta_piso(ultimo_envio, agora, piso_seg):
+    """Segundos que ainda faltam pro piso entre dois envios; 0 quando ja passou."""
+    if ultimo_envio is None:
+        return 0.0
+    return max(0.0, piso_seg - (agora - ultimo_envio).total_seconds())
 
 
 def _in_window(now, ini, fim):
@@ -144,9 +167,10 @@ def _worker_loop():
     cadencia = disparo_cadencia.calcular(hora_ini, hora_fim, cfg.get("limite_dia", 30))
     limite_dia = cadencia["limite_dia"]
     intervalo_seg = cadencia["intervalo_seg"]
+    # Menor espaco que o proprio plano ja produz entre dois envios (grade menos
+    # a variacao): nao atrasa quem segue o plano, so trava atraso curto em rajada.
+    piso_seg = intervalo_seg * (1.0 - 2 * disparo_cadencia.VARIACAO)
     ultimo_envio = None
-    optout = bool(cfg.get("optout", True))
-    optout_txt = "\n\nResponda SAIR para não receber mais mensagens."
 
     def _escolher():
         nonlocal prov_idx
@@ -194,6 +218,22 @@ def _worker_loop():
                 except Exception:
                     pass
 
+            # Linha vencida ha mais de ATRASO_MAX_MIN quer dizer que o motor
+            # ficou parado (reinicio, pausa, chip fora). Seguir o plano velho
+            # soltaria o atraso inteiro um por segundo e queimaria o chip: o
+            # plano e refeito a partir de agora e o laco volta a escolher.
+            if _atrasada(item.get("agendado_para"), now):
+                planejar_fila(hora_ini, hora_fim, limite_dia)
+                continue
+
+            # Atraso curto (abaixo de ATRASO_MAX_MIN) pode se repetir em varias
+            # linhas: sem este piso na SELECAO elas sairiam uma por segundo.
+            falta = _falta_piso(ultimo_envio, now, piso_seg)
+            if falta > 0:
+                _worker_state["proximo_em"] = (now + datetime.timedelta(seconds=falta)).strftime("%d/%m %H:%M")
+                _worker_stop.wait(min(300.0, falta))
+                continue
+
             # trava atômica: se outro robô pegou primeiro, pula
             if not _reivindicar(item["id"]):
                 continue
@@ -217,7 +257,9 @@ def _worker_loop():
                 _worker_stop.wait(60)
                 continue
 
-            msg = item["mensagem"] + (optout_txt if optout else "")
+            # Sem frase de descadastro, a pedido do fundador (19/09/2026): ela
+            # denunciava disparo em massa numa copy escrita pra parecer pessoal.
+            msg = item["mensagem"]
             ok, err = provider.send(item["telefone"], msg)
             if not ok and _eh_falha_conexao(err):
                 ruim_ate[pi] = time.time() + 600
@@ -225,9 +267,9 @@ def _worker_loop():
             con = _conn()
             try:
                 if ok:
-                    # msg, e nao item["mensagem"]: o texto gravado tem que ser o
-                    # que o provedor recebeu, opt-out incluido. Medir conversao
-                    # por um texto diferente do que o lead leu nao mede nada.
+                    # msg e o texto exato que o provedor recebeu, e e ele que
+                    # vai pro registro: medir conversao por um texto diferente
+                    # do que o lead leu nao mede nada.
                     _gravar_sucesso(con, item, msg, provider)
                     ultimo_envio = datetime.datetime.now()
                 else:
