@@ -4,6 +4,53 @@ let waJid = "";
 let waPoll = null;
 let waChatsCache = [];
 let waLimit = 50;
+let waInstance = "";
+let waConectado = false;
+
+function waInstParam() {
+  return waInstance ? "&instance=" + encodeURIComponent(waInstance) : "";
+}
+
+function waInstQuery() {
+  return waInstance ? "?instance=" + encodeURIComponent(waInstance) : "";
+}
+
+// O chip das conversas: a aba sempre lia o Chip 1, entao numero pareado no
+// chip 2 ou 3 aparecia como "Nenhuma conversa". Salva a escolha no navegador.
+async function loadWaChips() {
+  const sel = $("waChip");
+  if (!sel) return;
+  try {
+    const d = await (await fetch("/api/disparo/instancias")).json();
+    const arr = d.instancias || [];
+    const salvos = [];
+    try { salvos.push(localStorage.getItem("waInstance") || ""); } catch { salvos.push(""); }
+    sel.innerHTML = arr.map(function (it) {
+      const nome = it.instance || "?";
+      return "<option value='" + esc(nome) + "'" +
+        (salvos[0] && salvos[0] === nome ? " selected" : "") + ">" +
+        esc(nome + (it.conectado ? " (conectado)" : "")) + "</option>";
+    }).join("") || "<option value=''>sem chip</option>";
+    if (salvos[0] && Array.prototype.some.call(sel.options, function (o) { return o.value === salvos[0]; })) {
+      waInstance = salvos[0];
+    } else {
+      waInstance = sel.value || "";
+    }
+    if (!sel.dataset.bound) {
+      sel.dataset.bound = "1";
+      sel.addEventListener("change", function () {
+        waInstance = sel.value || "";
+        try { localStorage.setItem("waInstance", waInstance); } catch { /* sem storage, esquece ao sair */ }
+        waJid = "";
+        $("waMsgs").innerHTML = "";
+        $("waReply").classList.add("hidden");
+        loadWaChats();
+      });
+    }
+  } catch {
+    /* sem instancias: segue no padrao (chip 1) */
+  }
+}
 
 function tempoRel(iso) {
   if (!iso) return "";
@@ -34,7 +81,14 @@ function renderWaChats() {
     return false;
   });
   if (!arr.length) {
-    box.innerHTML = "<p class='hint'>" + (waChatsCache.length ? "Nenhuma conversa bate com a busca." : "Nenhuma conversa.") + "</p>";
+    let dica = "Nenhuma conversa.";
+    if (!waChatsCache.length) {
+      dica = "Nenhuma conversa" + (waInstance ? " no chip " + waInstance : "") + "." +
+        "<br><span class='hint'>Se o número tem conversas no celular: confira o chip acima" +
+        (waConectado ? "" : " (este parece off)") +
+        ", aguarde a sincronização após parear, ou ative o banco na Evolution (sem ele o histórico não lista).</span>";
+    }
+    box.innerHTML = "<p class='hint'>" + dica + "</p>";
     return;
   }
   box.innerHTML = arr.map(function (c) {
@@ -56,17 +110,21 @@ async function loadWaChats() {
   const box = $("waChats");
   box.innerHTML = "<p class='hint'>Carregando conversas...</p>";
   try {
-    const r = await fetch("/api/wa/chats");
+    await loadWaChips();
+    const r = await fetch("/api/wa/chats" + waInstQuery());
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");
     waChatsCache = d.chats || [];
+    waConectado = !!d.conectado;
+    if (d.instance) waInstance = d.instance;
     const unread = waChatsCache.reduce(function (s, c) { return s + (c.nao_lidas || 0); }, 0);
     const badge = $("tabWaBadge");
     if (badge) {
       badge.textContent = unread;
       badge.classList.toggle("hidden", !unread);
     }
-    $("waStatus").textContent = waChatsCache.length + " conversas";
+    $("waStatus").textContent = waChatsCache.length + " conversas" +
+      (waInstance ? " · " + waInstance : "") + (waConectado ? "" : " (chip off?)");
     renderWaChats();
   } catch (e) {
     box.innerHTML = "<p class='status error'>Falha: " + esc(e.message) + "</p>";
@@ -125,7 +183,7 @@ function diaKey(ts) {
 async function loadWaMsgs(quiet) {
   if (!waJid) return;
   try {
-    const r = await fetch("/api/wa/mensagens?jid=" + encodeURIComponent(waJid) + "&limite=" + waLimit);
+    const r = await fetch("/api/wa/mensagens?jid=" + encodeURIComponent(waJid) + "&limite=" + waLimit + waInstParam());
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");
     const box = $("waMsgs");
@@ -166,7 +224,7 @@ async function sendWaReply() {
     const r = await fetch("/api/wa/responder", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ jid: waJid, texto: txt })
+      body: JSON.stringify({ jid: waJid, texto: txt, instance: waInstance || "" })
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.detail || "Erro");

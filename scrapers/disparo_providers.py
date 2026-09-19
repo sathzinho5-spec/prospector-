@@ -218,7 +218,14 @@ class EvolutionProvider:
             if r.status_code not in (200, 201):
                 return False, f"HTTP {r.status_code}: {r.text[:200]}", []
             data = r.json()
-            chats = data if isinstance(data, list) else data.get("chats", [])
+            if isinstance(data, list):
+                chats = data
+            elif isinstance(data, dict):
+                chats = data.get("chats") or data.get("data") or data.get("result") or []
+                if not chats:
+                    print(f"[evo] findChats formato desconhecido: chaves={list(data.keys())}")
+            else:
+                chats = []
             out = []
             for c in chats or []:
                 jid = c.get("remoteJid", "")

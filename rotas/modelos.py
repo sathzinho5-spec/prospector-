@@ -186,6 +186,7 @@ class WaResponderRequest(BaseModel):
     jid: str = ""
     telefone: str = ""
     texto: str = ""
+    instance: str = ""
 
 class CnpjGrandesRequest(BaseModel):
     uf: str = ""
