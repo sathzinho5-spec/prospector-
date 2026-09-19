@@ -8,6 +8,8 @@ copy_sdr reexporta NICHE_ANGLES, GENERICO e _angle, entao quem chamava de fora
 (inclusive o copy_fechamento) continua chamando igual.
 """
 
+import unicodedata
+
 # Angulo de dor/promessa por nicho (base do roteiro)
 NICHE_ANGLES = {
     "restaurantes": {"dor": "mesas vazias no meio da semana", "promessa": "movimento no salao e no delivery"},
@@ -71,14 +73,36 @@ APELIDOS = {
 
 def _sem_acento(texto):
     """'Salão' e 'Salao' tem que cair na mesma chave: a nuvem grava dos dois
-    jeitos, dependendo de quem digitou."""
-    pares = (("ã", "a"), ("á", "a"), ("â", "a"), ("é", "e"), ("ê", "e"),
-             ("í", "i"), ("ó", "o"), ("ô", "o"), ("õ", "o"), ("ú", "u"),
-             ("ç", "c"))
-    saida = (texto or "").lower()
-    for de, para in pares:
-        saida = saida.replace(de, para)
-    return saida
+    jeitos, dependendo de quem digitou. Por unicodedata e nao por lista de
+    pares, que era o jeito antigo e esquecia acento."""
+    normalizado = "".join(
+        c for c in unicodedata.normalize("NFD", str(texto or ""))
+        if unicodedata.category(c) != "Mn")
+    return normalizado.lower().strip()
+
+
+def nicho_de(categoria):
+    """categoria livre ('Padaria', 'Mecânica de Automóveis') -> id do nicho ou ''.
+
+    Veio de analysis/timing.py, que existia para a janela por nicho. A janela foi
+    removida a pedido do fundador; esta funcao sobreviveu porque responde a
+    pergunta generica "que nicho e este", que o aprendizado por perfil usa.
+    """
+    cat = _sem_acento(categoria)
+    if not cat:
+        return ""
+    from niches import NICHES
+
+    for n in NICHES:
+        if _sem_acento(n["id"]) == cat:
+            return n["id"]
+    for n in NICHES:
+        textos = [_sem_acento(n["id"]), _sem_acento(n["label"])]
+        textos += [_sem_acento(v) for v in n.get("variacoes", [])]
+        for t in textos:
+            if t and (t in cat or cat in t):
+                return n["id"]
+    return ""
 
 
 def _angle(niche_id, categoria):

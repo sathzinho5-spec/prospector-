@@ -88,7 +88,6 @@ _COLUNAS_NOVAS = (
     ("fila", "instancia", "TEXT"),
     ("fila", "editada_em", "TIMESTAMP"),
     ("fila", "copy_origem", "TEXT"),
-    ("fila", "timing_motivo", "TEXT DEFAULT ''"),
     # A versao do playbook que escreveu o texto. Sem ela da pra saber que a copy
     # veio da IA, mas nao QUAL conhecimento a produziu, que e o unico jeito de a
     # copywriter-expert aprender com o resultado do lote.
@@ -135,6 +134,11 @@ def _semear_abordagens(con):
 # variavel seria uma porta aberta pra apagar o que nao devia.
 _TABELAS_MORTAS = ("numeros_bloqueados",)
 
+# Coluna que saiu do projeto. Mesma regra do DROP de tabela: nome explicito, em
+# lista fechada. timing_motivo guardava o "porque" da janela por nicho, que foi
+# removida em 18/09; sem ela a coluna e peso morto em toda linha da fila.
+_COLUNAS_MORTAS = (("fila", "timing_motivo"),)
+
 
 def _derrubar_mortas(con):
     """Apaga tabela que o projeto nao usa mais. Autorizado pelo fundador em
@@ -145,6 +149,16 @@ def _derrubar_mortas(con):
             con.execute("DROP TABLE IF EXISTS %s" % tabela)
             con.commit()
         except Exception:
+            pass
+    for tabela, coluna in _COLUNAS_MORTAS:
+        try:
+            cols = [r[1] for r in con.execute("PRAGMA table_info(%s)" % tabela).fetchall()]
+            if coluna in cols:
+                con.execute("ALTER TABLE %s DROP COLUMN %s" % (tabela, coluna))
+                con.commit()
+        except Exception:
+            # SQLite antigo nao sabe DROP COLUMN. A coluna fica, inerte, e nada
+            # quebra: o projeto ja parou de escrever e de ler nela.
             pass
 
 

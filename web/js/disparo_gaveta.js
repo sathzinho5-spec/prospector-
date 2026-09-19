@@ -48,6 +48,9 @@ function dspAbrirGaveta(telefone) {
       dspFichaLinha("Avaliacoes", l.avaliacoes) +
       dspFichaLinha("Site", l.website) +
       dspFichaLinha("Disparo", l.disparo_ativo ? "ligado" : "desligado") +
+      // Mesma hora que a lista mostra, vinda da mesma funcao: se a gaveta
+      // formatasse por conta, as duas telas passariam a discordar.
+      dspFichaLinha("Sai em", l.estado === "na_fila" ? dspHorario(l) : "") +
       dspFichaLinha("Enviado em", l.enviado_em) +
       dspFichaLinha("Respondeu em", l.respondido_em) +
       dspFichaLinha("Erro", l.erro);

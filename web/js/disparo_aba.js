@@ -16,22 +16,25 @@ function dspClasseDoEstado(estado) {
   return String(estado || "").replace(/_/g, "-");
 }
 
-// "2026-09-21 15:00:00" -> "hoje 15h" | "amanha 09h" | "seg 10h". So aparece
-// quando o melhor momento ainda nao chegou: passado e "pronto pra sair".
-function dspTiming(l) {
-  if (!l.melhor_envio) return "";
-  const m = String(l.melhor_envio).match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+// "2026-09-21 15:04:37" -> "hoje 15:04" | "amanhã 09:12" | "seg 10:41".
+// O horario do plano, nao uma sugestao: e a hora em que aquele lead sai.
+function dspHorario(l) {
+  if (!l.agendado_para) return "";
+  const m = String(l.agendado_para).match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
   if (!m) return "";
   const dt = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-  if (isNaN(dt.getTime()) || dt <= new Date()) return "";
+  if (isNaN(dt.getTime())) return "";
   const hoje = new Date();
-  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-  const mesmoDia = dt.toDateString() === hoje.toDateString();
+  // Horario que ja passou quer dizer "e o proximo da vez", nao um horario
+  // futuro. Mostrar a hora vencida faria o operador achar que travou.
+  if (dt <= hoje) return "sai agora";
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const amanha = new Date(hoje);
   amanha.setDate(amanha.getDate() + 1);
-  const rotulo = mesmoDia ? "hoje" : (dt.toDateString() === amanha.toDateString() ? "amanha" : dias[dt.getDay()]);
-  const titulo = "Melhor momento: " + rotulo + " " + m[4] + "h" + (l.timing_motivo ? " (" + l.timing_motivo + ")" : "");
-  return " <span class='mini-tag' title='" + titulo.replace(/'/g, "") + "'>&#128336; " + rotulo + " " + m[4] + "h</span>";
+  let quando = dias[dt.getDay()];
+  if (dt.toDateString() === hoje.toDateString()) quando = "hoje";
+  else if (dt.toDateString() === amanha.toDateString()) quando = "amanhã";
+  return quando + " " + m[4] + ":" + m[5];
 }
 function dspEstadoDaClasse(classe) {
   return String(classe || "").replace(/-/g, "_");
@@ -111,10 +114,16 @@ function dspLinha(l) {
   const estadoCopy = (l.estado === "sem_copy" || l.estado === "copy_pronta")
     ? "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>"
     : "<span class='dsp-estado copy-pronta'>copy pronta</span>";
+  // Lead na fila mostra a HORA em que ele sai, nao o rotulo "na fila". Pedido do
+  // fundador: "na fila" ele ja sabe olhando a coluna; o que ele precisa saber e
+  // quando. Os outros estados seguem com o rotulo, porque ali ja aconteceu algo.
+  const horario = dspHorario(l);
   const estadoDisp = (l.estado === "sem_copy" || l.estado === "copy_pronta")
     ? (l.disparo_ativo ? "<span class='hint'>—</span>"
                        : "<span class='dsp-estado bloqueado'>desligado</span>")
-    : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>" + dspTiming(l);
+    : (l.estado === "na_fila" && horario
+        ? "<span class='dsp-estado na-fila'>" + esc(horario) + "</span>"
+        : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>");
 
   return "<tr class='" + classeLinha + "' data-telefone='" + esc(l.telefone) + "'>" +
     "<td class='dsp-col-check'><input type='checkbox' onchange='dspMarcar(\"" +

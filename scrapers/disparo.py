@@ -16,8 +16,9 @@ from scrapers import disparo_abordagens, disparo_cadencia
 from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
                                    _enviados_hoje, _norm_phone, _reivindicar,
                                    atualizar_mensagem, enfileirar, ja_recebeu,
-                                   limpar_finalizados, listar, registrar_abordado,
-                                   remover_pendentes, telefones_na_fila)
+                                   limpar_finalizados, listar, pendentes,
+                                   registrar_abordado, remover_pendentes,
+                                   replanejar, telefones_na_fila)
 from scrapers.disparo_providers import (EvolutionProvider, MetaCloudProvider,
                                         SimuladoProvider, _build_providers,
                                         _eh_falha_conexao, _erro_amigavel,
@@ -100,6 +101,23 @@ def enviar_agora(item_id, provider):
         return ok, err
     finally:
         con.close()
+
+def _proximo_agendado():
+    """Quando sai a proxima linha pendente, segundo o plano gravado na fila."""
+    con = _conn()
+    try:
+        row = con.execute(
+            "SELECT agendado_para FROM fila WHERE status='pendente' "
+            "ORDER BY datetime(agendado_para) ASC, id ASC LIMIT 1").fetchone()
+    finally:
+        con.close()
+    if not row or not row[0]:
+        return None
+    try:
+        return datetime.datetime.strptime(str(row[0])[:19], "%Y-%m-%d %H:%M:%S")
+    except ValueError:
+        return None
+
 
 def _in_window(now, ini, fim):
     try:
@@ -233,9 +251,19 @@ def _worker_loop():
                 except Exception:
                     pass
 
-            alvo = disparo_cadencia.proximo_envio(intervalo_seg, ultimo_envio)
-            _worker_state["proximo_em"] = alvo.strftime("%H:%M:%S")
-            _worker_stop.wait(disparo_cadencia.espera_segundos(alvo))
+            # O motor NAO espaca mais por conta: ele le o horario que o plano
+            # gravou na proxima linha e dorme ate la. Enquanto ele calculava o
+            # proprio intervalo, o horario que a tela mostrava e o que acontecia
+            # eram duas contas diferentes, e so coincidiam por sorte.
+            proximo = _proximo_agendado()
+            if proximo:
+                _worker_state["proximo_em"] = proximo.strftime("%d/%m %H:%M")
+                # Teto de 5 min por espera pra um replanejamento feito no meio
+                # do caminho valer sem precisar parar e iniciar de novo.
+                _worker_stop.wait(min(300.0, disparo_cadencia.espera_segundos(proximo)))
+            else:
+                _worker_state["proximo_em"] = "fila vazia"
+                _worker_stop.wait(15)
         except Exception as e:
             _worker_state["ultimo_erro"] = str(e)[:200]
             _worker_stop.wait(10)

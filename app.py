@@ -135,17 +135,6 @@ def api_save_settings(req: SettingsRequest):
         new["supabase_url"] = req.supabase_url.strip()
     if req.supabase_secret:
         new["supabase_secret"] = req.supabase_secret.strip()
-    if req.timing_janelas is not None:
-        limpas = {}
-        for nid, j in (req.timing_janelas or {}).items():
-            if not isinstance(j, dict):
-                continue
-            ini = str(j.get("ini") or "").strip()
-            fim = str(j.get("fim") or "").strip()
-            dias = j.get("dias") if j.get("dias") in ("uteis", "todos") else "uteis"
-            if len(ini) == 5 and len(fim) == 5 and ini[2] == ":" and fim[2] == ":":
-                limpas[str(nid)] = {"ini": ini, "fim": fim, "dias": dias}
-        new["timing_janelas"] = limpas
     saved = config.save_settings(new)
     return {
         **saved,

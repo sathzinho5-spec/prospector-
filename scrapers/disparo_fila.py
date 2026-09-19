@@ -9,12 +9,9 @@ from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F4
 def enfileirar(itens, origem=""):
     """itens: [{nome, telefone, mensagem, copy_origem, categoria}]. Retorna qtd enfileirada.
     Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando).
-    Cada item ganha agendado_para = melhor momento do nicho (analysis/timing):
-    a fila anda sozinha em ordem de horario, sem travar ninguem."""
-    import config
-    from analysis import timing
-
-    settings = config.load_settings()
+    NAO define horario: quem planeja e disparo_cadencia.planejar(), chamado no
+    clique de iniciar. Aqui a linha nasce com o agendado_para padrao (agora) e o
+    plano reescreve logo em seguida. Um lugar so decide o ritmo."""
     con = _conn()
     n = 0
     try:
@@ -35,15 +32,13 @@ def enfileirar(itens, origem=""):
                 continue
             if tel in existentes:
                 continue
-            agendado, motivo = timing.proximo_envio_em(it.get("categoria", ""), settings)
             con.execute(
                 "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem, "
-                "                  copy_versao, agendado_para, timing_motivo) "
-                "VALUES (?,?,?,?,?,?,?,?)",
+                "                  copy_versao) "
+                "VALUES (?,?,?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem,
                  str(it.get("copy_origem") or "ia").strip().lower(),
-                 str(it.get("copy_versao") or "").strip(),
-                 agendado, motivo),
+                 str(it.get("copy_versao") or "").strip()),
             )
             existentes.add(tel)
             n += 1
@@ -124,6 +119,39 @@ def ja_recebeu(con, telefone, item_id=-1):
         "SELECT 1 FROM fila WHERE telefone=? AND status='enviado' AND id<>?",
         (tel, item_id)).fetchone()
     return bool(row)
+
+
+def replanejar(horarios):
+    """Reescreve o agendado_para das linhas PENDENTES, na ordem da fila.
+
+    Roda no clique de iniciar, com os horarios que disparo_cadencia.planejar()
+    acabou de calcular. Reescrever e de proposito: o fundador pediu que a conta
+    comece no momento do clique, entao plano velho de uma sessao anterior nao
+    pode sobreviver a um clique novo.
+    """
+    con = _conn()
+    try:
+        ids = [r[0] for r in con.execute(
+            "SELECT id FROM fila WHERE status='pendente' ORDER BY id ASC").fetchall()]
+        n = 0
+        for item_id, quando in zip(ids, horarios or []):
+            con.execute("UPDATE fila SET agendado_para=? WHERE id=?",
+                        (quando.strftime("%Y-%m-%d %H:%M:%S"), item_id))
+            n += 1
+        con.commit()
+        return n
+    finally:
+        con.close()
+
+
+def pendentes():
+    """Quantas linhas esperam a vez. E o tamanho do plano a calcular."""
+    con = _conn()
+    try:
+        return con.execute(
+            "SELECT COUNT(*) FROM fila WHERE status='pendente'").fetchone()[0]
+    finally:
+        con.close()
 
 
 def remover_pendentes(telefones):

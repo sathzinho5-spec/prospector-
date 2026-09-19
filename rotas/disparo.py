@@ -190,22 +190,6 @@ def api_disparo_cadencia(hora_ini: str = "", hora_fim: str = "", limite_dia: int
     return cad
 
 
-@router.get("/api/timing/janelas")
-def api_timing_janelas():
-    """Padrao por nicho + o que o operador ajustou. A tela monta o editor com
-    isso: ela nao duplica a tabela, senao padrao e tela divergem."""
-    import niches
-    from analysis import timing
-
-    s = config.load_settings()
-    salvas = s.get("timing_janelas") or {}
-    return {
-        "nichos": [{"id": n["id"], "label": n["label"]} for n in niches.NICHES],
-        "padrao": timing.JANELAS_PADRAO,
-        "salvas": salvas,
-    }
-
-
 @router.get("/api/disparo/kpis")
 def api_disparo_kpis():
     """Os quatro numeros da aba. Todos vem de quem ja os contava: nenhum
@@ -249,8 +233,19 @@ def api_disparo_iniciar(req: DisparoStartRequest):
     # fila vazia e a nao mandar nada, sem erro nenhum. Agora "iniciar" faz o que
     # o nome promete, e quem entra e so quem a propria lista mostra como apto.
     from rotas.disparo_leads import enfileirar_aptos
+    from scrapers import disparo_cadencia
 
     carga = enfileirar_aptos(origem="iniciar")
+
+    # O PLANO NASCE AQUI, e a conta comeca AGORA. Pedido do fundador: o primeiro
+    # sai no momento do clique se a janela estiver aberta, os seguintes espacam
+    # pelo intervalo da janela, e o que nao couber ate o fim dela cai no dia
+    # seguinte. Replaneja a fila inteira de proposito, inclusive linha que ja
+    # estava la: plano de uma sessao anterior nao sobrevive a um clique novo.
+    horarios = disparo_cadencia.planejar(disparo.pendentes(), ini, fim, limite)
+    carga["planejados"] = disparo.replanejar(horarios)
+    carga["primeiro_envio"] = horarios[0].strftime("%d/%m %H:%M") if horarios else None
+    carga["ultimo_envio"] = horarios[-1].strftime("%d/%m %H:%M") if horarios else None
 
     ok = disparo.iniciar(cfg)
     avisos = []

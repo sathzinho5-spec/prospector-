@@ -73,8 +73,9 @@ def _linha(lead, tel, fila_row, copy_row, abordagem, liberado):
         "disparo_ativo": liberado,
         "apto": bool(estado == "copy_pronta" and liberado),
         "fila_id": (fila_row or {}).get("id"),
-        "melhor_envio": (fila_row or {}).get("agendado_para"),
-        "timing_motivo": (fila_row or {}).get("timing_motivo") or "",
+        # Nome igual ao da coluna: "melhor_envio" vinha da janela por nicho, que
+        # foi removida, e passaria a sugerir uma escolha que ninguem mais faz.
+        "agendado_para": (fila_row or {}).get("agendado_para"),
         "abordagem_id": (abordagem or {}).get("id"),
         "enviado_em": (abordagem or {}).get("enviado_em"),
         "respondido_em": (abordagem or {}).get("respondido_em"),

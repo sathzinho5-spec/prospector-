@@ -116,7 +116,6 @@ class SettingsRequest(BaseModel):
     supabase_url: str = ""
     supabase_secret: str = ""
     # Janelas preferidas por nicho: {nicho_id: {ini, fim, dias}}. None = nao veio.
-    timing_janelas: dict | None = None
 
 class EntrarRequest(BaseModel):
     email: str = ""

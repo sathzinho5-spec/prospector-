@@ -82,22 +82,74 @@ def _quebrar_segundo(quando, sorteio):
     return quando
 
 
-def proximo_envio(intervalo_seg, ultimo_envio=None, agora=None, sorteio=random.uniform):
-    """Instante do proximo envio, ja com as tres regras aplicadas.
+def _hora_no_dia(dia, hora, padrao):
+    m = _hora_em_minutos(hora, padrao)
+    return dia.replace(hour=m // 60, minute=m % 60, second=0, microsecond=0)
 
-    sorteio e injetavel para o comportamento poder ser exercitado sem depender
-    do acaso. Devolve sempre um datetime no futuro, em outro minuto que o do
-    ultimo envio, com segundo diferente de zero.
+
+def _abre(dia, hora_ini):
+    return _hora_no_dia(dia, hora_ini, 8 * 60)
+
+
+def _fecha(dia, hora_ini, hora_fim):
+    fim = _hora_no_dia(dia, hora_fim, 20 * 60)
+    abre = _abre(dia, hora_ini)
+    # Janela invertida (fim antes do inicio) vira "ate o fim do dia", pra o
+    # planejamento nao devolver lista vazia e o operador achar que sumiu.
+    return fim if fim > abre else abre.replace(hour=23, minute=59, second=59)
+
+
+def planejar(quantidade, hora_ini=PADRAO_HORA_INI, hora_fim=PADRAO_HORA_FIM,
+             limite_dia=30, inicio=None, sorteio=random.uniform):
+    """O horario de CADA envio da fila, do primeiro ao ultimo.
+
+    Esta funcao e a unica dona do ritmo. Antes ele nascia em dois lugares: a
+    fila carimbava um "melhor momento do nicho" na entrada e o motor espacava os
+    envios por conta, entao o horario que a tela mostrava nao era o que
+    acontecia. Agora o plano e calculado no clique de iniciar, gravado na fila e
+    apenas SEGUIDO pelo motor.
+
+    As regras, na ordem em que valem:
+
+    1. O primeiro sai AGORA, se agora estiver dentro da janela. Fora dela, na
+       proxima abertura. E o que "comecar quando eu clico" quer dizer.
+    2. Os seguintes espacam pelo intervalo base com variacao, nunca caem no
+       mesmo minuto do anterior e nunca terminam em segundo redondo.
+    3. Passou do fim da janela, ou bateu o limite do dia: o resto vai pra
+       abertura do dia seguinte, e a contagem do dia recomeca.
     """
-    agora = (agora or datetime.datetime.now()).replace(microsecond=0)
-    base = max(MIN_INTERVALO_SEG, float(intervalo_seg or MIN_INTERVALO_SEG))
-    espera = sorteio(base * (1.0 - VARIACAO), base * (1.0 + VARIACAO))
-    alvo = (agora + datetime.timedelta(seconds=espera)).replace(microsecond=0)
-    if ultimo_envio is not None and _minuto(alvo) <= _minuto(ultimo_envio):
-        alvo = _minuto(ultimo_envio) + datetime.timedelta(minutes=1)
-    if _minuto(alvo) <= _minuto(agora):
-        alvo = _minuto(agora) + datetime.timedelta(minutes=1)
-    return _quebrar_segundo(alvo, sorteio)
+    agora = (inicio or datetime.datetime.now()).replace(microsecond=0)
+    cad = calcular(hora_ini, hora_fim, limite_dia)
+    base = cad["intervalo_seg"]
+    limite = cad["limite_dia"]
+
+    abre_hoje = _abre(agora, hora_ini)
+    fecha_hoje = _fecha(agora, hora_ini, hora_fim)
+    if agora < abre_hoje:
+        cursor = abre_hoje
+    elif agora <= fecha_hoje:
+        cursor = agora
+    else:
+        cursor = _abre(agora + datetime.timedelta(days=1), hora_ini)
+
+    saida, anterior, no_dia = [], None, 0
+    for i in range(max(0, int(quantidade or 0))):
+        if anterior is None:
+            alvo = cursor
+        else:
+            espera = sorteio(base * (1.0 - VARIACAO), base * (1.0 + VARIACAO))
+            alvo = (anterior + datetime.timedelta(seconds=espera)).replace(microsecond=0)
+            if _minuto(alvo) <= _minuto(anterior):
+                alvo = _minuto(anterior) + datetime.timedelta(minutes=1)
+        referencia = anterior or alvo
+        if no_dia >= limite or alvo > _fecha(referencia, hora_ini, hora_fim):
+            alvo = _abre(referencia + datetime.timedelta(days=1), hora_ini)
+            no_dia = 0
+        alvo = _quebrar_segundo(alvo, sorteio)
+        saida.append(alvo)
+        anterior = alvo
+        no_dia += 1
+    return saida
 
 
 def espera_segundos(alvo, agora=None):

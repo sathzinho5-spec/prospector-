@@ -9,7 +9,7 @@ O historico fino mora em eventos_lead (log_evento no cloud_store). Este modulo
 usa o retrato atual pra v1; os eventos acumulam pra v2 e pra deteccao de
 resposta do follow-up.
 """
-from analysis import timing
+from analysis import nichos_angulo
 
 # Status que contam como "tocado" e como "converteu". Mesmos nomes do CRM.
 CONVERTEU = ("respondido", "negociando", "fechado")
@@ -53,7 +53,7 @@ def tem_site(b):
 
 
 def nicho(b):
-    nid = timing.nicho_de(b.get("categoria") or "")
+    nid = nichos_angulo.nicho_de(b.get("categoria") or "")
     return nid or "outros"
 
 

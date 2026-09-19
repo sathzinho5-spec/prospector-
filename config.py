@@ -50,8 +50,6 @@ DEFAULT_SETTINGS = {
     "disparo_hora_fim": "20:00",
     "disparo_limite_dia": 30,
     # Janelas preferidas por nicho: {nicho_id: {ini, fim, dias}}. Vazio usa o
-    # padrao de analysis/timing.py. Edita na tela de Configuracoes.
-    "timing_janelas": {},
     "disparo_tom": "direto",
     "disparo_meta_token": "",
     "disparo_meta_phone_id": "",
