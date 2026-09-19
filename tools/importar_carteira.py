@@ -12,10 +12,15 @@ Duas coisas que ela faz e que nao sao obvias:
    disparo_ativo nascem por migracao de SQL, nao por aqui: mudar banco em
    producao passa por quem tem a chave, nao por um importador de planilha. Este
    arquivo so CONFERE que elas existem antes de gravar.
-2. **DESATIVADO PRO DISPARO.** Com --desativado, o telefone de cada lead entra
-   na lista de numero bloqueado do disparo. Isso NAO e enfeite de tela: o
-   bloqueio e conferido na entrada da fila, no robo e no envio manual, entao o
-   lead pode ser visto, editado e movido no CRM sem nunca sair uma mensagem.
+2. **DESATIVADO PRO DISPARO.** Com --desativado, cada lead entra com
+   disparo_ativo = False. Isso NAO e enfeite de tela: o campo e conferido na
+   entrada da fila, no robo e no envio manual, entao o lead pode ser visto,
+   editado e movido no CRM sem nunca sair uma mensagem.
+
+   Ate 18/09/26 isto tambem escrevia o telefone numa lista de bloqueio paralela,
+   e foi um erro: ela nao tinha botao capaz de desfazer, e o fundador ligou os 30
+   leads pela tela, criou a copy, e o disparo seguiu barrado por uma lista
+   invisivel. A lista foi removida do projeto. O interruptor e o disparo_ativo.
 
 Uso:
     python tools/importar_carteira.py --planilha "CAMINHO.xlsx" \
@@ -143,10 +148,12 @@ def main():
     print("gravados no banco: %d" % gravados)
 
     if args.desativado:
-        for l in leads:
-            disparo.bloquear(l["telefone"], "carteira importada desativada pro disparo")
-        print("desativados pro disparo: %d numeros" % len(leads))
-        print("o bloqueio vale na entrada da fila, no robo e no envio manual.")
+        # O campo disparo_ativo, ja gravado como False no upsert acima, e a
+        # unica trava. Ate 18/09 isto tambem escrevia numa lista de bloqueio
+        # paralela, que travou os 30 leads sem botao capaz de desfazer; aquela
+        # lista foi removida do projeto no mesmo dia.
+        print("desativados pro disparo: %d leads (campo disparo_ativo)" % len(leads))
+        print("ligue na aba Disparo quando quiser disparar.")
 
 
 if __name__ == "__main__":

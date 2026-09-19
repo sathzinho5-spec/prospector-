@@ -18,24 +18,32 @@ diferentes: aqui e "que copy este lead tem", la e "o que vai sair agora".
 from scrapers.disparo_db import _conn, _norm_phone
 
 
-def salvar(telefone, mensagem, nome="", copy_origem="ia", manual=False):
-    """Grava ou troca a copy de um lead. manual=True carimba a edicao a mao."""
+def salvar(telefone, mensagem, nome="", copy_origem="ia", manual=False,
+           copy_versao=""):
+    """Grava ou troca a copy de um lead. manual=True carimba a edicao a mao.
+
+    copy_versao e a versao do playbook que escreveu o texto. Viaja junto desde
+    aqui porque e o unico ponto onde ela ainda e conhecida: da fila pra frente
+    so existe o texto pronto.
+    """
     tel = _norm_phone(telefone)
     msg = (mensagem or "").strip()
     if not tel or not msg:
         return False
     origem = "manual" if manual else (str(copy_origem or "ia").strip().lower() or "ia")
+    versao = str(copy_versao or "").strip()
     con = _conn()
     try:
         con.execute(
-            "INSERT INTO copys (telefone, nome, mensagem, copy_origem, editada_em) "
-            "VALUES (?,?,?,?, CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END) "
+            "INSERT INTO copys (telefone, nome, mensagem, copy_origem, copy_versao, editada_em) "
+            "VALUES (?,?,?,?,?, CASE WHEN ? THEN datetime('now','localtime') ELSE NULL END) "
             "ON CONFLICT(telefone) DO UPDATE SET "
             "  nome=COALESCE(NULLIF(excluded.nome,''), copys.nome), "
             "  mensagem=excluded.mensagem, "
             "  copy_origem=excluded.copy_origem, "
+            "  copy_versao=excluded.copy_versao, "
             "  editada_em=excluded.editada_em",
-            (tel, nome or "", msg, origem, 1 if manual else 0),
+            (tel, nome or "", msg, origem, versao, 1 if manual else 0),
         )
         con.commit()
         return True

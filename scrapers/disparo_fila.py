@@ -2,6 +2,9 @@
 # Reexportado de proposito: o esquema e a conexao mudaram de arquivo quando o
 # disparo ganhou copy de lead e registro de abordagem, e estes quatro nomes
 # seguem alcancaveis como disparo_fila._conn, como sempre foram.
+import datetime
+
+from scrapers import disparo_cadencia
 from scrapers.disparo_abordagens import enviadas_hoje as _enviados_hoje  # noqa: F401
 from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F401
 
@@ -9,12 +12,9 @@ from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F4
 def enfileirar(itens, origem=""):
     """itens: [{nome, telefone, mensagem, copy_origem, categoria}]. Retorna qtd enfileirada.
     Pula duplicata exata (mesmo telefone + mesma mensagem já pendente/enviando).
-    Cada item ganha agendado_para = melhor momento do nicho (analysis/timing):
-    a fila anda sozinha em ordem de horario, sem travar ninguem."""
-    import config
-    from analysis import timing
-
-    settings = config.load_settings()
+    NAO define horario: quem planeja e disparo_cadencia.planejar(), chamado no
+    clique de iniciar. Aqui a linha nasce com o agendado_para padrao (agora) e o
+    plano reescreve logo em seguida. Um lugar so decide o ritmo."""
     con = _conn()
     n = 0
     try:
@@ -28,9 +28,6 @@ def enfileirar(itens, origem=""):
         existentes.update(
             r[0] for r in con.execute("SELECT telefone FROM numeros_abordados").fetchall()
         )
-        existentes.update(
-            r[0] for r in con.execute("SELECT telefone FROM numeros_bloqueados").fetchall()
-        )
         for it in itens:
             tel = _norm_phone(it.get("telefone"))
             msg = (it.get("mensagem") or "").strip()
@@ -38,13 +35,13 @@ def enfileirar(itens, origem=""):
                 continue
             if tel in existentes:
                 continue
-            agendado, motivo = timing.proximo_envio_em(it.get("categoria", ""), settings)
             con.execute(
-                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem, agendado_para, timing_motivo) "
-                "VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO fila (nome, telefone, mensagem, origem, copy_origem, "
+                "                  copy_versao) "
+                "VALUES (?,?,?,?,?,?)",
                 (it.get("nome", ""), tel, msg, origem,
                  str(it.get("copy_origem") or "ia").strip().lower(),
-                 agendado, motivo),
+                 str(it.get("copy_versao") or "").strip()),
             )
             existentes.add(tel)
             n += 1
@@ -88,7 +85,7 @@ def _reivindicar(item_id):
     con = _conn()
     try:
         cur = con.execute(
-            "UPDATE fila SET status='enviando', agendado_para=CURRENT_TIMESTAMP "
+            "UPDATE fila SET status='enviando', agendado_para=datetime('now','localtime') "
             "WHERE id=? AND status='pendente'",
             (item_id,))
         con.commit()
@@ -103,7 +100,7 @@ def _devolver_travados(minutos=15):
     try:
         con.execute(
             "UPDATE fila SET status='pendente' WHERE status='enviando' "
-            "AND datetime(agendado_para) < datetime('now', ?)",
+            "AND datetime(agendado_para) < datetime('now','localtime', ?)",
             (f"-{int(minutos)} minutes",))
         con.commit()
     except Exception:
@@ -127,45 +124,108 @@ def ja_recebeu(con, telefone, item_id=-1):
     return bool(row)
 
 
-def bloquear(telefone, motivo=""):
-    """Desativa um numero pro disparo. Idempotente."""
-    tel = _norm_phone(telefone)
-    if not tel:
-        return False
+# Uma linha que falhou espera um cooldown proprio (tentativas>0 e agendado_para
+# no futuro, gravado pelo _worker_loop) que e mais estrito que a grade do plano.
+# Um so texto SQL pras duas leituras (replanejar e planejar_fila) porque, se
+# divergissem, uma delas ia contar ou reescrever uma linha que a outra pulou.
+_NAO_EM_ESPERA_DE_RETENTATIVA = (
+    "NOT (tentativas > 0 AND datetime(agendado_para) > datetime('now','localtime'))")
+
+
+def replanejar(horarios):
+    """Reescreve o agendado_para das linhas PENDENTES que nao estao em espera de
+    retentativa, na ordem da fila.
+
+    Roda no clique de iniciar, com os horarios que disparo_cadencia.planejar()
+    acabou de calcular. Reescrever e de proposito: o fundador pediu que a conta
+    comece no momento do clique, entao plano velho de uma sessao anterior nao
+    pode sobreviver a um clique novo. Mas quem falhou e esta esperando o
+    cooldown mantem o proprio horario: o piso do motor entre envios ja a
+    espaca das linhas recem-planejadas, e reescrever apagaria essa espera.
+    """
     con = _conn()
     try:
-        con.execute("INSERT OR IGNORE INTO numeros_bloqueados (telefone, motivo) VALUES (?,?)",
-                    (tel, motivo))
+        ids = [r[0] for r in con.execute(
+            "SELECT id FROM fila WHERE status='pendente' AND %s "
+            "ORDER BY id ASC" % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchall()]
+        n = 0
+        for item_id, quando in zip(ids, horarios or []):
+            con.execute("UPDATE fila SET agendado_para=? WHERE id=?",
+                        (quando.strftime("%Y-%m-%d %H:%M:%S"), item_id))
+            n += 1
         con.commit()
+        return n
     finally:
         con.close()
-    return True
 
 
-def desbloquear(telefone):
-    tel = _norm_phone(telefone)
+def pendentes():
+    """Quantas linhas esperam a vez. E o tamanho do plano a calcular."""
     con = _conn()
     try:
-        con.execute("DELETE FROM numeros_bloqueados WHERE telefone=?", (tel,))
-        con.commit()
+        return con.execute(
+            "SELECT COUNT(*) FROM fila WHERE status='pendente'").fetchone()[0]
     finally:
         con.close()
-    return True
 
 
-def bloqueado(con, telefone):
-    tel = _norm_phone(telefone)
-    if not tel:
-        return False
-    return bool(con.execute(
-        "SELECT 1 FROM numeros_bloqueados WHERE telefone=?", (tel,)).fetchone())
+def planejar_fila(hora_ini, hora_fim, limite_dia, agora=None):
+    """Planeja as linhas pendentes a partir de agora, grava e devolve o plano.
 
-
-def telefones_bloqueados():
+    Junta as duas coisas que so o banco sabe e que o planejador precisa:
+    quantas sairam hoje, porque o limite e do dia e nao do clique, e quando
+    saiu a ultima. Depois de um reinicio o motor volta e replaneja; sem o piso
+    abaixo, o primeiro envio da volta podia colar no ultimo que saiu antes.
+    """
+    agora = (agora or datetime.datetime.now()).replace(microsecond=0)
+    cad = disparo_cadencia.calcular(hora_ini, hora_fim, limite_dia)
     con = _conn()
     try:
-        return set(r[0] for r in con.execute(
-            "SELECT telefone FROM numeros_bloqueados").fetchall())
+        # A mesma condicao de replanejar(): so entra no plano quem replanejar
+        # de fato vai reescrever. Contar com pendentes() planejaria de mais e
+        # sobraria horario sem linha pra receber.
+        qtd = con.execute(
+            "SELECT COUNT(*) FROM fila WHERE status='pendente' AND %s"
+            % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchone()[0]
+        ja_hoje = _enviados_hoje(con)
+        ultimo = con.execute("SELECT MAX(enviado_em) FROM abordagens").fetchone()[0]
+    finally:
+        con.close()
+    inicio = agora
+    if ultimo:
+        try:
+            quando = datetime.datetime.strptime(str(ultimo)[:19], "%Y-%m-%d %H:%M:%S")
+            piso = quando + datetime.timedelta(
+                seconds=cad["intervalo_seg"] * (1.0 - disparo_cadencia.VARIACAO))
+            inicio = max(agora, piso)
+        except ValueError:
+            pass
+    horarios = disparo_cadencia.planejar(qtd, hora_ini, hora_fim, limite_dia,
+                                         inicio=inicio, enviados_hoje=ja_hoje)
+    replanejar(horarios)
+    return horarios
+
+
+def remover_pendentes(telefones):
+    """Tira da fila as linhas PENDENTES desses numeros. Retorna quantas sairam.
+
+    E o que substitui a lista de bloqueio: desligar um lead deixou de escrever
+    numa lista paralela e passou a fazer a coisa obvia, tirar ele da fila. A
+    decisao passa a morar num lugar so, e quem esta na fila e, por definicao,
+    quem foi liberado. So mexe em 'pendente': linha 'enviando' ja foi
+    reivindicada por um processo, e ja enviada e historico.
+    """
+    alvos = [t for t in (_norm_phone(x) for x in (telefones or [])) if t]
+    if not alvos:
+        return 0
+    con = _conn()
+    try:
+        marcas = ",".join("?" for _ in alvos)
+        cur = con.execute(
+            "DELETE FROM fila WHERE status='pendente' AND telefone IN (%s)" % marcas,
+            alvos)
+        con.commit()
+        return cur.rowcount or 0
     finally:
         con.close()
 
@@ -195,7 +255,7 @@ def atualizar_mensagem(item_id, mensagem, manual=False):
     con = _conn()
     try:
         if manual:
-            con.execute("UPDATE fila SET mensagem=?, editada_em=CURRENT_TIMESTAMP, "
+            con.execute("UPDATE fila SET mensagem=?, editada_em=datetime('now','localtime'), "
                         "copy_origem='manual' WHERE id=?", (mensagem, item_id))
         else:
             con.execute("UPDATE fila SET mensagem=?, editada_em=NULL, "

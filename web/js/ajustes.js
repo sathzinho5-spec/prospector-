@@ -48,50 +48,9 @@ async function loadSettings() {
       $("igChipText").textContent = "Instagram: sem sessão";
     }
 
-    loadTiming();
   } catch (e) {
     console.error("Erro ao carregar configurações", e);
   }
-}
-
-// Janelas por nicho: uma linha por nicho (inicio, fim, dias). Vazio = padrao:
-// so o que foi preenchido viaja no save, o resto continua herdando a tabela.
-async function loadTiming() {
-  const box = $("timingTable");
-  if (!box) return;
-  try {
-    const r = await fetch("/api/timing/janelas");
-    const d = await r.json();
-    const padrao = d.padrao || {};
-    const salvas = d.salvas || {};
-    box.innerHTML = (d.nichos || []).map(function (n) {
-      const p = padrao[n.id] || {};
-      const s = salvas[n.id] || {};
-      const dica = p.ini ? ("Padrão: " + p.ini + "–" + p.fim) : "Padrão: janela geral";
-      return "<div class='timing-row' data-nicho='" + esc(n.id) + "'>" +
-        "<span class='timing-nome' title='" + esc(dica) + "'>" + esc(n.label) + "</span>" +
-        "<input type='time' class='timing-ini' value='" + esc(s.ini || "") + "' aria-label='Início " + esc(n.label) + "'>" +
-        "<input type='time' class='timing-fim' value='" + esc(s.fim || "") + "' aria-label='Fim " + esc(n.label) + "'>" +
-        "<select class='timing-dias' aria-label='Dias " + esc(n.label) + "'>" +
-        "<option value=''>(padrão)</option>" +
-        "<option value='uteis'" + (s.dias === "uteis" ? " selected" : "") + ">seg–sex</option>" +
-        "<option value='todos'" + (s.dias === "todos" ? " selected" : "") + ">todos</option>" +
-        "</select></div>";
-    }).join("");
-  } catch (e) {
-    box.innerHTML = "<p class='hint'>Não deu pra carregar as janelas.</p>";
-  }
-}
-
-function collectTiming() {
-  const out = {};
-  document.querySelectorAll("#timingTable .timing-row").forEach(function (row) {
-    const ini = row.querySelector(".timing-ini").value;
-    const fim = row.querySelector(".timing-fim").value;
-    const dias = row.querySelector(".timing-dias").value;
-    if (ini && fim) out[row.dataset.nicho] = { ini: ini, fim: fim, dias: dias || "uteis" };
-  });
-  return out;
 }
 
 async function saveSettings() {
@@ -118,7 +77,6 @@ async function saveSettings() {
   }
   if ($("sbUrl") && $("sbUrl").value.trim()) body.supabase_url = $("sbUrl").value.trim();
   if ($("sbSecret") && $("sbSecret").value.trim()) body.supabase_secret = $("sbSecret").value.trim();
-  body.timing_janelas = collectTiming();
   try {
     const r = await fetch("/api/settings", {
       method: "POST",

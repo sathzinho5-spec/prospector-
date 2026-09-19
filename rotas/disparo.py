@@ -190,22 +190,6 @@ def api_disparo_cadencia(hora_ini: str = "", hora_fim: str = "", limite_dia: int
     return cad
 
 
-@router.get("/api/timing/janelas")
-def api_timing_janelas():
-    """Padrao por nicho + o que o operador ajustou. A tela monta o editor com
-    isso: ela nao duplica a tabela, senao padrao e tela divergem."""
-    import niches
-    from analysis import timing
-
-    s = config.load_settings()
-    salvas = s.get("timing_janelas") or {}
-    return {
-        "nichos": [{"id": n["id"], "label": n["label"]} for n in niches.NICHES],
-        "padrao": timing.JANELAS_PADRAO,
-        "salvas": salvas,
-    }
-
-
 @router.get("/api/disparo/kpis")
 def api_disparo_kpis():
     """Os quatro numeros da aba. Todos vem de quem ja os contava: nenhum
@@ -227,38 +211,65 @@ def api_disparo_kpis():
 def api_disparo_iniciar(req: DisparoStartRequest):
     """Liga o motor. delay_min/delay_max sao aceitos e ignorados: a pausa entre
     envios virou regra fixa. O envio avulso NAO e mais barrado pelo modo manual,
-    porque os dois caminhos convivem pela trava atomica da fila."""
-    from scrapers import disparo, disparo_cadencia
+    porque os dois caminhos convivem pela trava atomica da fila. O campo optout
+    e aceito e ignorado: a frase de descadastro saiu das mensagens a pedido do
+    fundador."""
+    from scrapers import disparo
 
-    s, ini, fim, limite = _janela_e_limite(req)
-    cfg = {
-        "provider": req.provider,
-        "limite_dia": limite,
-        "hora_ini": ini,
-        "hora_fim": fim,
-        "optout": req.optout,
-        "evo_url": _evo_cfg(s)["url"],
-        "evo_key": _evo_cfg(s)["key"],
-        "evo_instance": s.get("disparo_evo_instance", ""),
-        "evo_instances": [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()],
-        "meta_token": s.get("disparo_meta_token", ""),
-        "meta_phone_id": s.get("disparo_meta_phone_id", ""),
-    }
-    ok = disparo.iniciar(cfg)
+    # A janela e o limite que vieram da tela sao salvos aqui; o motor le do
+    # settings, entao o que a tela mostra e o que ele pratica.
+    _janela_e_limite(req)
+
+    # A FILA NASCE AQUI. Antes ela so era carregada pelo botao "enfileirar", que
+    # saiu da tela quando a aba virou Disparo: o motor passou a ligar em cima de
+    # fila vazia e a nao mandar nada, sem erro nenhum. Agora "iniciar" faz o que
+    # o nome promete, e quem entra e so quem a propria lista mostra como apto.
+    from rotas import disparo_motor
+    from rotas.disparo_leads import enfileirar_aptos
+
+    carga = enfileirar_aptos(origem="iniciar")
+
+    # O PLANO NASCE AQUI, e a conta comeca AGORA, dentro de disparo_motor.ligar,
+    # que tambem grava que o motor esta ligado pra ele voltar sozinho depois de
+    # um reinicio do servidor.
+    ligado = disparo_motor.ligar(req.provider)
+    horarios = ligado["horarios"]
+    carga["planejados"] = ligado["planejados"]
+    carga["primeiro_envio"] = horarios[0].strftime("%d/%m %H:%M") if horarios else None
+    carga["ultimo_envio"] = horarios[-1].strftime("%d/%m %H:%M") if horarios else None
+
+    ok = ligado["iniciado"]
     avisos = []
     if req.delay_min is not None or req.delay_max is not None:
         avisos.append("delay_min e delay_max foram ignorados: a cadencia agora "
                       "sai da janela e do limite do dia.")
-    return {"iniciado": ok, "avisos": avisos,
-            "cadencia": disparo_cadencia.calcular(ini, fim, limite),
+    if (req.provider or "").lower() == "simulado":
+        avisos.append("Modo ensaio: o provedor esta em 'simulado', nada sai de "
+                      "verdade e nenhum lead e consumido. Troque o provedor em "
+                      "Ajustes para disparar pra valer.")
+    if not carga["aptos"]:
+        # Sem o detalhe de proposito: quem escreve os motivos por extenso e a
+        # tela, que tem os rotulos em portugues. Repetir aqui produzia a mesma
+        # conta duas vezes na mesma frase e com grafias diferentes, "30
+        # bloqueados" ao lado de "30 bloqueado".
+        avisos.append("Nenhum lead apto entrou na fila. Veja o motivo de cada um "
+                      "logo abaixo dos botoes.")
+    # A cadencia sai do status e NAO de uma conta refeita aqui. O recalculo que
+    # existia nesta linha era apagado pelo **status() logo abaixo, que tem a
+    # mesma chave: a rota prometia um objeto e entregava a string do motor, sem
+    # ninguem perceber. Ficou a do motor de proposito, que e a que ele pratica.
+    return {"iniciado": ok, "avisos": avisos, "carga": carga,
             **disparo.status()}
 
 
 @router.post("/api/disparo/pausar")
 def api_disparo_pausar():
+    from rotas import disparo_motor
     from scrapers import disparo
 
-    disparo.pausar()
+    # desligar, e nao so pausar: pausar sem esquecer faria o motor voltar
+    # sozinho no proximo reinicio, contra a vontade de quem pausou.
+    disparo_motor.desligar()
     return disparo.status()
 
 

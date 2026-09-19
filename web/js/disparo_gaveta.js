@@ -48,6 +48,9 @@ function dspAbrirGaveta(telefone) {
       dspFichaLinha("Avaliacoes", l.avaliacoes) +
       dspFichaLinha("Site", l.website) +
       dspFichaLinha("Disparo", l.disparo_ativo ? "ligado" : "desligado") +
+      // Mesma hora que a lista mostra, vinda da mesma funcao: se a gaveta
+      // formatasse por conta, as duas telas passariam a discordar.
+      dspFichaLinha("Sai em", l.estado === "na_fila" ? dspHorario(l) : "") +
       dspFichaLinha("Enviado em", l.enviado_em) +
       dspFichaLinha("Respondeu em", l.respondido_em) +
       dspFichaLinha("Erro", l.erro);
@@ -66,6 +69,13 @@ function dspAbrirGaveta(telefone) {
   }
   if ($("btnDspSalvarMensagem")) $("btnDspSalvarMensagem").disabled = jaSaiu;
   if ($("btnDspEnviarAgora")) $("btnDspEnviarAgora").disabled = !l.fila_id;
+  const liga = $("btnDspLigarLead");
+  if (liga) {
+    // O botao diz o que vai FAZER, nao o estado atual: rotulo que descreve o
+    // estado faz quem opera clicar achando que esta confirmando.
+    liga.textContent = l.disparo_ativo ? "Desligar disparo" : "Ligar disparo";
+    liga.disabled = jaSaiu;
+  }
   if ($("btnDspConversaIniciada")) {
     $("btnDspConversaIniciada").disabled = !jaSaiu || l.estado === "respondeu";
   }
@@ -77,6 +87,26 @@ function dspFecharGaveta() {
   if ($("dspGaveta")) $("dspGaveta").classList.add("hidden");
   dspLeadAberto = null;
 }
+
+async function dspLigarLead() {
+  if (!dspLeadAberto || !dspLeadAberto.id) return;
+  const ativo = !dspLeadAberto.disparo_ativo;
+  try {
+    const r = await fetch("/api/crm/disparo-ativo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [dspLeadAberto.id], ativo: ativo })
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(d.detail || "Não deu pra gravar.", "error"); return; }
+    toast("Disparo " + (ativo ? "ligado" : "desligado") + " para este lead.", "ok");
+    dspFecharGaveta();
+    await dspAtualizarTudo();
+  } catch (err) {
+    toast("Erro: " + err.message, "error");
+  }
+}
+
 
 async function dspSalvarMensagem() {
   if (!dspLeadAberto) return;
@@ -148,6 +178,7 @@ function dspIniciarGaveta() {
   if ($("btnDspSalvarMensagem")) $("btnDspSalvarMensagem").addEventListener("click", dspSalvarMensagem);
   if ($("btnDspConversaIniciada")) $("btnDspConversaIniciada").addEventListener("click", dspMarcarConversa);
   if ($("btnDspEnviarAgora")) $("btnDspEnviarAgora").addEventListener("click", dspEnviarAgora);
+  if ($("btnDspLigarLead")) $("btnDspLigarLead").addEventListener("click", dspLigarLead);
   document.addEventListener("keydown", function (ev) {
     if (ev.key === "Escape" && $("dspGaveta") && !$("dspGaveta").classList.contains("hidden")) {
       dspFecharGaveta();

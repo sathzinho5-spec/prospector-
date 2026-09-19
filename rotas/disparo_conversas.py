@@ -71,3 +71,29 @@ def api_disparo_conversas(apenas_respondidas: bool = False, limite: int = 200):
             limite=min(1000, max(1, int(limite))),
             apenas_respondidas=bool(apenas_respondidas)),
     }
+
+
+@router.get("/api/disparo/conversao")
+def api_disparo_conversao():
+    """O relatorio que treina o playbook: taxa por VERSAO do conhecimento.
+
+    Separado de /api/disparo/conversas de proposito. Aquele responde "o que
+    aconteceu com cada lead" e carrega a lista inteira; este responde "qual
+    versao do playbook converte melhor" e cabe numa tela. Quem le este aqui e a
+    copywriter-expert, antes de escrever a versao seguinte.
+    """
+    from analysis import playbook_sdr
+    from scrapers import disparo_abordagens
+
+    por_versao = disparo_abordagens.resumo_por_versao()
+    enviadas = sum(l["enviadas"] for l in por_versao)
+    respondidas = sum(l["respondidas"] for l in por_versao)
+    return {
+        "versao_no_ar": playbook_sdr.versao(),
+        "playbook_disponivel": playbook_sdr.disponivel(),
+        "enviadas": enviadas,
+        "conversas_iniciadas": respondidas,
+        "taxa": round(100.0 * respondidas / enviadas, 1) if enviadas else 0.0,
+        "por_versao": por_versao,
+        "por_origem": disparo_abordagens.resumo_por_copy(),
+    }

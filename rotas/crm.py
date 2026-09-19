@@ -49,15 +49,33 @@ def api_crm_leads(busca: str = "", uf: str = "", status: str = "", min_score: in
 
 @router.post("/api/crm/disparo-ativo")
 def api_crm_disparo_ativo(req: DisparoAtivoRequest):
-    """Liga ou desliga o disparo de um lead ou de varios de uma vez."""
-    from scrapers import cloud_store
+    """Liga ou desliga o disparo de um lead ou de varios de uma vez.
+
+    Este e o UNICO interruptor. A lista de bloqueio paralela acabou em 18/09:
+    duas maneiras de tomar a mesma decisao travaram a carteira num estado sem
+    volta pela ferramenta, porque a tela so alcancava uma delas.
+
+    Desligar TIRA o lead da fila. Antes a flag valia so na entrada, entao um
+    lead ja enfileirado e desligado depois continuava saindo. Agora a fila
+    carrega a decisao: quem esta nela e quem foi liberado, e nao ha segunda
+    lista pra conferir contra.
+    """
+    from scrapers import cloud_store, disparo
 
     if not req.ids:
         raise HTTPException(400, "Informe pelo menos um lead.")
     n = cloud_store.set_disparo_ativo(req.ids, req.ativo)
     if not n:
         raise HTTPException(502, "Nao deu pra gravar na nuvem. Tente de novo.")
-    return {"ok": True, "atualizados": n, "ativo": bool(req.ativo)}
+
+    tirados_da_fila = 0
+    if not req.ativo:
+        alvos = set(str(i) for i in req.ids)
+        telefones = [l.get("telefone") for l in cloud_store.listar_leads(limite=500)
+                     if str(l.get("id")) in alvos]
+        tirados_da_fila = disparo.remover_pendentes(telefones)
+    return {"ok": True, "atualizados": n, "ativo": bool(req.ativo),
+            "tirados_da_fila": tirados_da_fila}
 
 
 @router.post("/api/crm/status")

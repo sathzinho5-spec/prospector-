@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS fila (
   mensagem TEXT NOT NULL,
   status TEXT DEFAULT 'pendente',
   tentativas INTEGER DEFAULT 0,
-  agendado_para TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  agendado_para TIMESTAMP DEFAULT (datetime('now','localtime')),
   enviado_em TIMESTAMP,
   erro TEXT,
   origem TEXT
@@ -35,18 +35,19 @@ CREATE INDEX IF NOT EXISTS idx_fila_status ON fila(status);
 -- sem ninguem perceber.
 CREATE TABLE IF NOT EXISTS numeros_abordados (
   telefone TEXT PRIMARY KEY,
-  primeiro_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  primeiro_envio TIMESTAMP DEFAULT (datetime('now','localtime'))
 );
 
--- Numero desativado pro disparo por decisao de quem opera. Diferente do
--- abordado: aqui nao houve envio nenhum, e a pessoa escolheu que nao ha de
--- haver. Mora fora da fila pelo mesmo motivo: limpar a fila nao pode reabrir
--- o envio pra quem foi desativado de proposito.
-CREATE TABLE IF NOT EXISTS numeros_bloqueados (
-  telefone TEXT PRIMARY KEY,
-  motivo TEXT,
-  bloqueado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- A tabela numeros_bloqueados foi REMOVIDA em 18/09/26, a pedido do fundador.
+-- Ela era um segundo mecanismo para a mesma decisao que o campo disparo_ativo
+-- ja tomava, e travou a carteira num estado sem volta pela ferramenta: a
+-- importacao escreveu 30 numeros nela, o operador ligou os leads pelo unico
+-- interruptor que a tela tinha, e o disparo continuou barrado por uma lista
+-- invisivel. Decisao que se toma em dois lugares e decisao que diverge.
+--
+-- O que ela protegia nao se perdeu: numeros_abordados ja garante uma abordagem
+-- por numero pra sempre, e desligar um lead agora TIRA ele da fila, entao a
+-- fila carrega a decisao em vez de ser conferida contra uma lista paralela.
 
 -- A copy de abordagem de um lead, escrita ANTES de ele entrar na fila. Mora
 -- fora da fila pelo mesmo motivo das duas de cima: limpar a fila nao pode
@@ -56,7 +57,8 @@ CREATE TABLE IF NOT EXISTS copys (
   nome TEXT,
   mensagem TEXT NOT NULL,
   copy_origem TEXT DEFAULT 'ia',
-  criada_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  copy_versao TEXT,
+  criada_em TIMESTAMP DEFAULT (datetime('now','localtime')),
   editada_em TIMESTAMP
 );
 
@@ -70,9 +72,10 @@ CREATE TABLE IF NOT EXISTS abordagens (
   nome TEXT,
   mensagem TEXT NOT NULL,
   copy_origem TEXT,
+  copy_versao TEXT,
   instancia TEXT,
   origem TEXT,
-  enviado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  enviado_em TIMESTAMP DEFAULT (datetime('now','localtime')),
   respondido_em TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_abordagens_telefone ON abordagens(telefone);
@@ -85,7 +88,12 @@ _COLUNAS_NOVAS = (
     ("fila", "instancia", "TEXT"),
     ("fila", "editada_em", "TIMESTAMP"),
     ("fila", "copy_origem", "TEXT"),
-    ("fila", "timing_motivo", "TEXT DEFAULT ''"),
+    # A versao do playbook que escreveu o texto. Sem ela da pra saber que a copy
+    # veio da IA, mas nao QUAL conhecimento a produziu, que e o unico jeito de a
+    # copywriter-expert aprender com o resultado do lote.
+    ("fila", "copy_versao", "TEXT"),
+    ("copys", "copy_versao", "TEXT"),
+    ("abordagens", "copy_versao", "TEXT"),
 )
 
 _migrado = False
@@ -108,11 +116,12 @@ def _semear_abordagens(con):
     """
     con.execute(
         "INSERT INTO abordagens "
-        "  (telefone, nome, mensagem, copy_origem, instancia, origem, enviado_em) "
+        "  (telefone, nome, mensagem, copy_origem, copy_versao, instancia, origem, enviado_em) "
         "SELECT f.telefone, f.nome, f.mensagem, "
         "       CASE WHEN f.editada_em IS NOT NULL THEN 'manual' "
         "            ELSE COALESCE(f.copy_origem, 'desconhecida') END, "
-        "       f.instancia, f.origem, COALESCE(f.enviado_em, CURRENT_TIMESTAMP) "
+        "       f.copy_versao, "
+        "       f.instancia, f.origem, COALESCE(f.enviado_em, datetime('now','localtime')) "
         "  FROM fila f "
         " WHERE f.status='enviado' "
         "   AND NOT EXISTS (SELECT 1 FROM abordagens a WHERE a.telefone = f.telefone)"
@@ -120,8 +129,42 @@ def _semear_abordagens(con):
     con.commit()
 
 
+# Tabela que saiu do projeto e precisa sair tambem do banco que ja rodava. O
+# DROP e por nome explicito e em lista: migracao destrutiva que aceitasse nome
+# variavel seria uma porta aberta pra apagar o que nao devia.
+_TABELAS_MORTAS = ("numeros_bloqueados",)
+
+# Coluna que saiu do projeto. Mesma regra do DROP de tabela: nome explicito, em
+# lista fechada. timing_motivo guardava o "porque" da janela por nicho, que foi
+# removida em 18/09; sem ela a coluna e peso morto em toda linha da fila.
+_COLUNAS_MORTAS = (("fila", "timing_motivo"),)
+
+
+def _derrubar_mortas(con):
+    """Apaga tabela que o projeto nao usa mais. Autorizado pelo fundador em
+    18/09/26 pra numeros_bloqueados, que virou dado inerte quando a lista de
+    bloqueio foi removida."""
+    for tabela in _TABELAS_MORTAS:
+        try:
+            con.execute("DROP TABLE IF EXISTS %s" % tabela)
+            con.commit()
+        except Exception:
+            pass
+    for tabela, coluna in _COLUNAS_MORTAS:
+        try:
+            cols = [r[1] for r in con.execute("PRAGMA table_info(%s)" % tabela).fetchall()]
+            if coluna in cols:
+                con.execute("ALTER TABLE %s DROP COLUMN %s" % (tabela, coluna))
+                con.commit()
+        except Exception:
+            # SQLite antigo nao sabe DROP COLUMN. A coluna fica, inerte, e nada
+            # quebra: o projeto ja parou de escrever e de ler nela.
+            pass
+
+
 def _migrar(con):
     """Roda uma vez por processo, na primeira conexao."""
+    _derrubar_mortas(con)
     for tabela, coluna, tipo in _COLUNAS_NOVAS:
         try:
             cols = [r[1] for r in con.execute("PRAGMA table_info(%s)" % tabela).fetchall()]

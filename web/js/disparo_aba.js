@@ -16,22 +16,25 @@ function dspClasseDoEstado(estado) {
   return String(estado || "").replace(/_/g, "-");
 }
 
-// "2026-09-21 15:00:00" -> "hoje 15h" | "amanha 09h" | "seg 10h". So aparece
-// quando o melhor momento ainda nao chegou: passado e "pronto pra sair".
-function dspTiming(l) {
-  if (!l.melhor_envio) return "";
-  const m = String(l.melhor_envio).match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+// "2026-09-21 15:04:37" -> "hoje 15:04" | "amanhã 09:12" | "seg 10:41".
+// O horario do plano, nao uma sugestao: e a hora em que aquele lead sai.
+function dspHorario(l) {
+  if (!l.agendado_para) return "";
+  const m = String(l.agendado_para).match(/(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
   if (!m) return "";
   const dt = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]);
-  if (isNaN(dt.getTime()) || dt <= new Date()) return "";
+  if (isNaN(dt.getTime())) return "";
   const hoje = new Date();
-  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
-  const mesmoDia = dt.toDateString() === hoje.toDateString();
+  // Horario que ja passou quer dizer "e o proximo da vez", nao um horario
+  // futuro. Mostrar a hora vencida faria o operador achar que travou.
+  if (dt <= hoje) return "sai agora";
+  const dias = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
   const amanha = new Date(hoje);
   amanha.setDate(amanha.getDate() + 1);
-  const rotulo = mesmoDia ? "hoje" : (dt.toDateString() === amanha.toDateString() ? "amanha" : dias[dt.getDay()]);
-  const titulo = "Melhor momento: " + rotulo + " " + m[4] + "h" + (l.timing_motivo ? " (" + l.timing_motivo + ")" : "");
-  return " <span class='mini-tag' title='" + titulo.replace(/'/g, "") + "'>&#128336; " + rotulo + " " + m[4] + "h</span>";
+  let quando = dias[dt.getDay()];
+  if (dt.toDateString() === hoje.toDateString()) quando = "hoje";
+  else if (dt.toDateString() === amanha.toDateString()) quando = "amanhã";
+  return quando + " " + m[4] + ":" + m[5];
 }
 function dspEstadoDaClasse(classe) {
   return String(classe || "").replace(/-/g, "_");
@@ -77,6 +80,18 @@ async function dspCarregarKpis() {
   } catch { /* KPI que nao carrega nao pode derrubar a aba */ }
 }
 
+// Os campos da janela nascem com o valor fixo do HTML (08:00 as 20:00). Sem
+// ler o que esta salvo, recarregar a pagina e clicar em Iniciar gravava o
+// valor do HTML por cima da janela escolhida, e o motor passava a seguir ela.
+async function dspCarregarJanelaSalva() {
+  try {
+    const c = await (await fetch("/api/disparo/cadencia")).json();
+    if ($("dispHoraIni") && c.hora_ini) $("dispHoraIni").value = c.hora_ini;
+    if ($("dispHoraFim") && c.hora_fim) $("dispHoraFim").value = c.hora_fim;
+    if ($("dispLimite") && c.limite_dia) $("dispLimite").value = c.limite_dia;
+  } catch { /* sem o salvo, os campos seguem com o padrao do HTML */ }
+}
+
 async function dspCarregarCadencia() {
   const alvo = $("dspIntervalo");
   if (!alvo) return;
@@ -111,10 +126,16 @@ function dspLinha(l) {
   const estadoCopy = (l.estado === "sem_copy" || l.estado === "copy_pronta")
     ? "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>"
     : "<span class='dsp-estado copy-pronta'>copy pronta</span>";
+  // Lead na fila mostra a HORA em que ele sai, nao o rotulo "na fila". Pedido do
+  // fundador: "na fila" ele ja sabe olhando a coluna; o que ele precisa saber e
+  // quando. Os outros estados seguem com o rotulo, porque ali ja aconteceu algo.
+  const horario = dspHorario(l);
   const estadoDisp = (l.estado === "sem_copy" || l.estado === "copy_pronta")
     ? (l.disparo_ativo ? "<span class='hint'>—</span>"
                        : "<span class='dsp-estado bloqueado'>desligado</span>")
-    : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>" + dspTiming(l);
+    : (l.estado === "na_fila" && horario
+        ? "<span class='dsp-estado na-fila'>" + esc(horario) + "</span>"
+        : "<span class='dsp-estado " + cls + "'>" + esc(rot) + "</span>");
 
   return "<tr class='" + classeLinha + "' data-telefone='" + esc(l.telefone) + "'>" +
     "<td class='dsp-col-check'><input type='checkbox' onchange='dspMarcar(\"" +
@@ -175,35 +196,68 @@ function dspTelefonesSelecionados() {
   return Object.keys(dspSelecionados);
 }
 
-async function dspCriarCopy() {
-  const btn = $("btnDspCriarCopy");
+// Os motivos que o servidor devolve em carga.fora, na lingua de quem opera.
+var DSP_MOTIVO = {
+  ja_abordado: "já receberam a abordagem",
+  ja_na_fila: "já estavam na fila",
+  // Sobra de linha de fila anterior a 18/09, quando existia lista de bloqueio.
+  // O servidor ainda conta isso; rótulo que falta aqui some da mensagem calado.
+  bloqueado: "com linha de fila antiga (limpe a fila)",
+  desligado: "com o disparo desligado",
+  sem_copy: "sem copy pronta"
+};
+
+function dspMostrarCarga(resposta) {
+  const alvo = $("dspCargaInfo");
+  if (!alvo) return;
+  const c = (resposta || {}).carga;
+  if (!c) { alvo.textContent = ""; return; }
+  const fora = Object.keys(DSP_MOTIVO)
+    .filter(function (k) { return (c.fora || {})[k]; })
+    .map(function (k) { return c.fora[k] + " " + DSP_MOTIVO[k]; });
+  let txt = c.enfileirados + " lead" + (c.enfileirados === 1 ? "" : "s") + " na fila";
+  if (fora.length) txt += ". Fora: " + fora.join(", ") + ".";
+  // Aviso do servidor vem junto: e onde o modo ensaio se anuncia.
+  const avisos = (resposta.avisos || []).join(" ");
+  alvo.textContent = avisos ? txt + " " + avisos : txt;
+}
+
+async function dspLigarSelecionados(ativo) {
   const alvos = dspTelefonesSelecionados();
-  if (btn) { btn.disabled = true; btn.textContent = "Criando..."; }
+  if (!alvos.length) {
+    toast("Marque pelo menos um lead na lista.", "info");
+    return;
+  }
+  // A rota trabalha por id do lead, nao por telefone: e a mesma que o CRM usa.
+  const ids = dspLeads
+    .filter(function (l) { return dspSelecionados[l.telefone]; })
+    .map(function (l) { return l.id; })
+    .filter(Boolean);
+  if (!ids.length) { toast("Não achei o id desses leads.", "error"); return; }
   try {
-    const r = await fetch("/api/disparo/criar-copy", {
+    const r = await fetch("/api/crm/disparo-ativo", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // Selecao vazia = todos os que estao sem copy, que e o contrato da rota.
-      body: JSON.stringify({ telefones: alvos })
+      body: JSON.stringify({ ids: ids, ativo: !!ativo })
     });
     const d = await r.json();
-    if (!r.ok) {
-      toast(d.detail || "Nao deu pra criar a copy.", "error");
-    } else {
-      const n = d.criadas ?? d.total ?? 0;
-      toast(n ? ("Copy criada para " + n + " lead" + (n === 1 ? "" : "s") + ".")
-              : "Nenhum lead estava sem copy.", n ? "ok" : "info");
-    }
-  } catch (err) {
-    toast("Erro ao criar copy: " + err.message, "error");
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "Criar copy"; }
+    if (!r.ok) { toast(d.detail || "Não deu pra gravar.", "error"); return; }
+    toast((d.atualizados || 0) + " lead(s) com disparo " +
+          (ativo ? "ligado" : "desligado") + ".", "ok");
     await dspAtualizarTudo();
+  } catch (err) {
+    toast("Erro: " + err.message, "error");
   }
 }
 
 async function dspAtualizarTudo() {
-  await Promise.all([dspCarregarKpis(), dspCarregarLeads(), dspCarregarCadencia()]);
+  const tarefas = [dspCarregarKpis(), dspCarregarLeads(), dspCarregarCadencia()];
+  // A conversao mora em outro arquivo e pode nao estar carregada: guarda em vez
+  // de assumir, pelo mesmo motivo de todo o resto desta aba.
+  if (typeof window.dspCarregarConversao === "function") {
+    tarefas.push(window.dspCarregarConversao());
+  }
+  await Promise.all(tarefas);
 }
 
 function dspIniciarAba() {
@@ -211,6 +265,12 @@ function dspIniciarAba() {
   if ($("dspFiltroEstado")) $("dspFiltroEstado").addEventListener("change", dspCarregarLeads);
   if ($("btnDspAtualizar")) $("btnDspAtualizar").addEventListener("click", dspAtualizarTudo);
   if ($("btnDspCriarCopy")) $("btnDspCriarCopy").addEventListener("click", dspCriarCopy);
+  if ($("btnDspLigar")) {
+    $("btnDspLigar").addEventListener("click", function () { dspLigarSelecionados(true); });
+  }
+  if ($("btnDspDesligar")) {
+    $("btnDspDesligar").addEventListener("click", function () { dspLigarSelecionados(false); });
+  }
   if ($("dspSelTodos")) {
     $("dspSelTodos").addEventListener("change", function () { dspMarcarTodos(this.checked); });
   }
@@ -219,10 +279,13 @@ function dspIniciarAba() {
   ["dispHoraIni", "dispHoraFim", "dispLimite"].forEach(function (id) {
     if ($(id)) $(id).addEventListener("change", dspCarregarCadencia);
   });
-  dspAtualizarTudo();
+  // A janela salva entra nos campos ANTES da primeira conta do ritmo, senao o
+  // "Ritmo calculado" nasce com a janela do HTML e so corrige no proximo clique.
+  dspCarregarJanelaSalva().then(dspAtualizarTudo);
 }
 
 window.dspMarcar = dspMarcar;
-window.dspCriarCopy = dspCriarCopy;
+window.dspMostrarCarga = dspMostrarCarga;
+window.dspLigarSelecionados = dspLigarSelecionados;
 window.dspAtualizarTudo = dspAtualizarTudo;
 window.dspIniciarAba = dspIniciarAba;

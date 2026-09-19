@@ -17,13 +17,21 @@ from scrapers import google_maps
 from storage import export_csv, export_excel, save_businesses, save_json
 
 from rotas import (acesso, cnpj, crm, disparo, disparo_conversas, disparo_copy,
-                   disparo_evolution, disparo_leads, negocio, negocio_instagram,
-                   whatsapp)
+                   disparo_evolution, disparo_leads, disparo_motor, negocio,
+                   negocio_instagram, whatsapp)
 from rotas.modelos import ScheduleRequest, SearchRequest, SettingsRequest
 
 app = FastAPI(title="Prospector - Scraping de Negócios")
 
 scheduler.start_scheduler()
+
+# O motor do disparo vive numa thread deste processo e todo deploy reinicia o
+# container. Sem isto, um push de madrugada deixaria a fila parada no dia
+# seguinte, sem aviso nenhum. Falha aqui nunca derruba a subida do servidor.
+try:
+    disparo_motor.retomar()
+except Exception as e:
+    print("[disparo] nao consegui religar o motor:", e)
 
 
 @app.middleware("http")
@@ -125,8 +133,6 @@ def api_save_settings(req: SettingsRequest):
         new["disparo_meta_token"] = req.disparo_meta_token.strip()
     if req.disparo_meta_phone_id:
         new["disparo_meta_phone_id"] = req.disparo_meta_phone_id.strip()
-    if req.disparo_modo in ("auto", "manual"):
-        new["disparo_modo"] = req.disparo_modo
     if req.disparo_hora_ini:
         new["disparo_hora_ini"] = req.disparo_hora_ini.strip()
     if req.disparo_hora_fim:
@@ -137,17 +143,6 @@ def api_save_settings(req: SettingsRequest):
         new["supabase_url"] = req.supabase_url.strip()
     if req.supabase_secret:
         new["supabase_secret"] = req.supabase_secret.strip()
-    if req.timing_janelas is not None:
-        limpas = {}
-        for nid, j in (req.timing_janelas or {}).items():
-            if not isinstance(j, dict):
-                continue
-            ini = str(j.get("ini") or "").strip()
-            fim = str(j.get("fim") or "").strip()
-            dias = j.get("dias") if j.get("dias") in ("uteis", "todos") else "uteis"
-            if len(ini) == 5 and len(fim) == 5 and ini[2] == ":" and fim[2] == ":":
-                limpas[str(nid)] = {"ini": ini, "fim": fim, "dias": dias}
-        new["timing_janelas"] = limpas
     saved = config.save_settings(new)
     return {
         **saved,

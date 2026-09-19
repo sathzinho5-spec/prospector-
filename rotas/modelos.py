@@ -60,6 +60,8 @@ class DisparoStartRequest(BaseModel):
     limite_dia: int | None = None
     hora_ini: str | None = None
     hora_fim: str | None = None
+    # DEPRECADO: aceito e IGNORADO. A frase de descadastro saiu das mensagens a
+    # pedido do fundador em 19/09/2026; o campo fica pra chamador antigo nao quebrar.
     optout: bool = True
 
 
@@ -109,7 +111,6 @@ class SettingsRequest(BaseModel):
     disparo_tom: str = ""
     disparo_meta_token: str = ""
     disparo_meta_phone_id: str = ""
-    disparo_modo: str = ""
     # Janela e limite: os dois numeros de onde a cadencia e derivada.
     disparo_hora_ini: str = ""
     disparo_hora_fim: str = ""
@@ -117,7 +118,6 @@ class SettingsRequest(BaseModel):
     supabase_url: str = ""
     supabase_secret: str = ""
     # Janelas preferidas por nicho: {nicho_id: {ini, fim, dias}}. None = nao veio.
-    timing_janelas: dict | None = None
 
 class EntrarRequest(BaseModel):
     email: str = ""

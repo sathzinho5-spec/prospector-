@@ -1,28 +1,11 @@
 // proposito: disparo automatico: fila, migracao, envio e status
 // ===== DISPARO AUTOMÁTICO =====
 let dispPoll = null;
-let dispModo = "auto";
 
-function paintModo() {
-  document.querySelectorAll("#modoSeg .seg-btn").forEach(function (b) {
-    b.classList.toggle("active", b.dataset.modo === dispModo);
-  });
-  $("modoHint").textContent = dispModo === "auto"
-    ? "O robô envia sozinho respeitando pausas, limite e horário."
-    : "Você envia um por um pelo botão Enviar de cada linha.";
-}
-
-async function setModo(modo) {
-  dispModo = modo;
-  paintModo();
-  try {
-    await fetch("/api/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ disparo_modo: modo })
-    });
-  } catch { /* silencioso */ }
-}
+// O seletor "Modo: automatico / manual" saiu a pedido do fundador. Ele nao
+// controlava nada: o motor nunca leu o valor, e o envio avulso deixou de ser
+// barrado pelo modo manual quando a trava atomica da fila passou a fazer os dois
+// caminhos conviverem. Era um interruptor que so pintava um texto na tela.
 
 async function migrarMinerados() {
   showLoader("Puxando todos os leads minerados para a fila...");
@@ -205,11 +188,6 @@ async function refreshDisparo() {
       window._instLast = Date.now();
       refreshInstances();
     }
-    const s = await (await fetch("/api/settings")).json();
-    if (s.disparo_modo) {
-      dispModo = s.disparo_modo;
-      paintModo();
-    }
     const r = await fetch("/api/disparo/status");
     const st = await r.json();
 
@@ -254,8 +232,7 @@ async function startDisp() {
     provider: "simulado",
     limite_dia: parseInt($("dispLimite").value, 10) || 30,
     hora_ini: $("dispHoraIni").value || "08:00",
-    hora_fim: $("dispHoraFim").value || "20:00",
-    optout: true
+    hora_fim: $("dispHoraFim").value || "20:00"
   };
   try {
     const s = await (await fetch("/api/settings")).json();
@@ -267,14 +244,24 @@ async function startDisp() {
     body: JSON.stringify(body)
   });
   const d = await r.json();
+  // A fila nasce no mesmo clique, entao o resultado dela e a primeira coisa que
+  // quem opera precisa ver: "rodando" com fila vazia nao manda nada, e antes
+  // disso nao havia nada na tela dizendo que ninguem tinha entrado.
+  if (typeof window.dspMostrarCarga === "function") window.dspMostrarCarga(d);
+  const entraram = ((d.carga || {}).enfileirados) || 0;
   if (d.iniciado || d.rodando) {
-    showStatus("searchStatus", "Disparo rodando no modo " + body.provider + "! Acompanhe aqui.", "ok");
+    showStatus("searchStatus",
+      entraram
+        ? "Disparo rodando no modo " + body.provider + " com " + entraram + " na fila."
+        : "Disparo ligado, mas nenhum lead entrou na fila. Veja o aviso na aba.",
+      entraram ? "ok" : "info");
   } else if (d.motivo) {
     showStatus("searchStatus", d.motivo + ". Use o botão Enviar de cada linha.", "info");
   } else {
     showStatus("searchStatus", "Disparo já estava rodando.", "info");
   }
   refreshDisparo();
+  if (typeof window.dspAtualizarTudo === "function") window.dspAtualizarTudo();
 }
 
 async function pauseDisp() {
