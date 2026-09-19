@@ -53,3 +53,6 @@ node_modules/
 # Documentos de trabalho da Dodo, nao fazem parte do produto
 Resumo do projeto/
 .pytest_cache/
+# A suite de testes do pytest vive em tests/ e precisa ir pro repositorio. A
+# regra test_*.py acima e dos scripts soltos de depuracao na raiz.
+!tests/test_*.py
