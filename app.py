@@ -17,13 +17,21 @@ from scrapers import google_maps
 from storage import export_csv, export_excel, save_businesses, save_json
 
 from rotas import (acesso, cnpj, crm, disparo, disparo_conversas, disparo_copy,
-                   disparo_evolution, disparo_leads, negocio, negocio_instagram,
-                   whatsapp)
+                   disparo_evolution, disparo_leads, disparo_motor, negocio,
+                   negocio_instagram, whatsapp)
 from rotas.modelos import ScheduleRequest, SearchRequest, SettingsRequest
 
 app = FastAPI(title="Prospector - Scraping de Negócios")
 
 scheduler.start_scheduler()
+
+# O motor do disparo vive numa thread deste processo e todo deploy reinicia o
+# container. Sem isto, um push de madrugada deixaria a fila parada no dia
+# seguinte, sem aviso nenhum. Falha aqui nunca derruba a subida do servidor.
+try:
+    disparo_motor.retomar()
+except Exception as e:
+    print("[disparo] nao consegui religar o motor:", e)
 
 
 @app.middleware("http")
