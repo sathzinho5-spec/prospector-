@@ -109,3 +109,9 @@ def test_minutos_quebrados_e_distintos_na_manha():
     minutos = [q.strftime("%H:%M") for q in plano]
     assert len(set(minutos)) == 30
     assert "08:00" not in minutos
+
+
+def test_limite_batido_antes_da_abertura_manda_tudo_pro_dia_seguinte():
+    plano = _plano(5, inicio=_em(7), ja=30)
+    assert all(q.date() == (DIA + datetime.timedelta(days=1)).date() for q in plano)
+    assert plano[0] >= _em(8, 1, dias=1)
