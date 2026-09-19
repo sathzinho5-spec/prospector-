@@ -17,8 +17,9 @@ from scrapers.disparo_fila import (DB_PATH, _SCHEMA, _conn, _devolver_travados,
                                    _enviados_hoje, _norm_phone, _reivindicar,
                                    atualizar_mensagem, enfileirar, ja_recebeu,
                                    limpar_finalizados, listar, pendentes,
-                                   registrar_abordado, remover_pendentes,
-                                   replanejar, telefones_na_fila)
+                                   planejar_fila, registrar_abordado,
+                                   remover_pendentes, replanejar,
+                                   telefones_na_fila)
 from scrapers.disparo_providers import (EvolutionProvider, MetaCloudProvider,
                                         SimuladoProvider, _build_providers,
                                         _eh_falha_conexao, _erro_amigavel,
@@ -119,6 +120,21 @@ def _proximo_agendado():
         return None
 
 
+# Tolerancia antes de uma linha contar como atrasada. O motor acorda no maximo a
+# cada 60s fora da janela e 300s dentro dela, entao atraso normal fica abaixo disso.
+ATRASO_MAX_MIN = 5
+
+
+def _atrasada(valor, agora):
+    """A linha devia ter saido ha mais de ATRASO_MAX_MIN? Valor ilegivel nao e
+    atraso: quem decide sobre ele e a selecao da fila, nao esta trava."""
+    try:
+        quando = datetime.datetime.strptime(str(valor)[:19], "%Y-%m-%d %H:%M:%S")
+    except (TypeError, ValueError):
+        return False
+    return (agora - quando) > datetime.timedelta(minutes=ATRASO_MAX_MIN)
+
+
 def _in_window(now, ini, fim):
     try:
         h = now.hour + now.minute / 60.0
@@ -191,6 +207,14 @@ def _worker_loop():
                     con.close()
                 except Exception:
                     pass
+
+            # Linha vencida ha mais de ATRASO_MAX_MIN quer dizer que o motor
+            # ficou parado (reinicio, pausa, chip fora). Seguir o plano velho
+            # soltaria o atraso inteiro um por segundo e queimaria o chip: o
+            # plano e refeito a partir de agora e o laco volta a escolher.
+            if _atrasada(item.get("agendado_para"), now):
+                planejar_fila(hora_ini, hora_fim, limite_dia)
+                continue
 
             # trava atômica: se outro robô pegou primeiro, pula
             if not _reivindicar(item["id"]):

@@ -38,13 +38,12 @@ def ligar(provider):
     Replaneja mesmo com o motor ja rodando, de proposito: plano velho de uma
     sessao anterior nao sobrevive a um clique novo.
     """
-    from scrapers import disparo, disparo_cadencia
+    from scrapers import disparo
 
     s = config.load_settings()
     cfg = _cfg_do_motor(s, provider)
-    horarios = disparo_cadencia.planejar(disparo.pendentes(), cfg["hora_ini"],
-                                         cfg["hora_fim"], cfg["limite_dia"])
-    planejados = disparo.replanejar(horarios)
+    horarios = disparo.planejar_fila(cfg["hora_ini"], cfg["hora_fim"], cfg["limite_dia"])
+    planejados = len(horarios)
     iniciado = disparo.iniciar(cfg)
     config.save_settings({"disparo_motor_ligado": True, "disparo_motor_provider": provider})
     return {"iniciado": iniciado, "planejados": planejados, "horarios": horarios}

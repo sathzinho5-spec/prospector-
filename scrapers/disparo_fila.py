@@ -2,6 +2,9 @@
 # Reexportado de proposito: o esquema e a conexao mudaram de arquivo quando o
 # disparo ganhou copy de lead e registro de abordagem, e estes quatro nomes
 # seguem alcancaveis como disparo_fila._conn, como sempre foram.
+import datetime
+
+from scrapers import disparo_cadencia
 from scrapers.disparo_abordagens import enviadas_hoje as _enviados_hoje  # noqa: F401
 from scrapers.disparo_db import DB_PATH, _SCHEMA, _conn, _norm_phone  # noqa: F401
 
@@ -152,6 +155,37 @@ def pendentes():
             "SELECT COUNT(*) FROM fila WHERE status='pendente'").fetchone()[0]
     finally:
         con.close()
+
+
+def planejar_fila(hora_ini, hora_fim, limite_dia, agora=None):
+    """Planeja as linhas pendentes a partir de agora, grava e devolve o plano.
+
+    Junta as duas coisas que so o banco sabe e que o planejador precisa:
+    quantas sairam hoje, porque o limite e do dia e nao do clique, e quando
+    saiu a ultima. Depois de um reinicio o motor volta e replaneja; sem o piso
+    abaixo, o primeiro envio da volta podia colar no ultimo que saiu antes.
+    """
+    agora = (agora or datetime.datetime.now()).replace(microsecond=0)
+    cad = disparo_cadencia.calcular(hora_ini, hora_fim, limite_dia)
+    con = _conn()
+    try:
+        ja_hoje = _enviados_hoje(con)
+        ultimo = con.execute("SELECT MAX(enviado_em) FROM abordagens").fetchone()[0]
+    finally:
+        con.close()
+    inicio = agora
+    if ultimo:
+        try:
+            quando = datetime.datetime.strptime(str(ultimo)[:19], "%Y-%m-%d %H:%M:%S")
+            piso = quando + datetime.timedelta(
+                seconds=cad["intervalo_seg"] * (1.0 - disparo_cadencia.VARIACAO))
+            inicio = max(agora, piso)
+        except ValueError:
+            pass
+    horarios = disparo_cadencia.planejar(pendentes(), hora_ini, hora_fim, limite_dia,
+                                         inicio=inicio, enviados_hoje=ja_hoje)
+    replanejar(horarios)
+    return horarios
 
 
 def remover_pendentes(telefones):
