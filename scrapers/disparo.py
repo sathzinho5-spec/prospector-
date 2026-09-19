@@ -135,6 +135,13 @@ def _atrasada(valor, agora):
     return (agora - quando) > datetime.timedelta(minutes=ATRASO_MAX_MIN)
 
 
+def _falta_piso(ultimo_envio, agora, piso_seg):
+    """Segundos que ainda faltam pro piso entre dois envios; 0 quando ja passou."""
+    if ultimo_envio is None:
+        return 0.0
+    return max(0.0, piso_seg - (agora - ultimo_envio).total_seconds())
+
+
 def _in_window(now, ini, fim):
     try:
         h = now.hour + now.minute / 60.0
@@ -160,6 +167,9 @@ def _worker_loop():
     cadencia = disparo_cadencia.calcular(hora_ini, hora_fim, cfg.get("limite_dia", 30))
     limite_dia = cadencia["limite_dia"]
     intervalo_seg = cadencia["intervalo_seg"]
+    # Menor espaco que o proprio plano ja produz entre dois envios (grade menos
+    # a variacao): nao atrasa quem segue o plano, so trava atraso curto em rajada.
+    piso_seg = intervalo_seg * (1.0 - 2 * disparo_cadencia.VARIACAO)
     ultimo_envio = None
 
     def _escolher():
@@ -214,6 +224,14 @@ def _worker_loop():
             # plano e refeito a partir de agora e o laco volta a escolher.
             if _atrasada(item.get("agendado_para"), now):
                 planejar_fila(hora_ini, hora_fim, limite_dia)
+                continue
+
+            # Atraso curto (abaixo de ATRASO_MAX_MIN) pode se repetir em varias
+            # linhas: sem este piso na SELECAO elas sairiam uma por segundo.
+            falta = _falta_piso(ultimo_envio, now, piso_seg)
+            if falta > 0:
+                _worker_state["proximo_em"] = (now + datetime.timedelta(seconds=falta)).strftime("%d/%m %H:%M")
+                _worker_stop.wait(min(300.0, falta))
                 continue
 
             # trava atômica: se outro robô pegou primeiro, pula

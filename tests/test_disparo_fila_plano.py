@@ -67,3 +67,33 @@ def test_atrasada_so_depois_da_tolerancia():
     assert disparo._atrasada("2026-09-19 10:30:00", agora) is False
     assert disparo._atrasada(None, agora) is False
     assert disparo._atrasada("lixo", agora) is False
+
+
+def test_falta_piso_pura():
+    agora = datetime.datetime(2026, 9, 19, 10, 0, 0)
+    assert disparo._falta_piso(None, agora, 60.0) == 0.0
+    assert disparo._falta_piso(agora - datetime.timedelta(seconds=10), agora, 60.0) == 50.0
+    assert disparo._falta_piso(agora - datetime.timedelta(seconds=70), agora, 60.0) == 0.0
+
+
+def test_replanejar_pula_linha_em_espera_de_retentativa(banco_limpo):
+    _enfileirar(3)
+    con = _conn()
+    try:
+        primeiro = con.execute("SELECT id FROM fila ORDER BY id ASC").fetchone()[0]
+        agendado = (datetime.datetime.now()
+                    + datetime.timedelta(minutes=10)).replace(microsecond=0)
+        con.execute("UPDATE fila SET tentativas=1, agendado_para=? WHERE id=?",
+                    (agendado.strftime("%Y-%m-%d %H:%M:%S"), primeiro))
+        con.commit()
+    finally:
+        con.close()
+    agora = datetime.datetime.now().replace(hour=1, minute=5, second=0, microsecond=0)
+    horarios = disparo.planejar_fila("08:00", "14:00", 30, agora=agora)
+    assert len(horarios) == 2
+    con = _conn()
+    try:
+        row = con.execute("SELECT agendado_para FROM fila WHERE id=?", (primeiro,)).fetchone()
+    finally:
+        con.close()
+    assert row[0] == agendado.strftime("%Y-%m-%d %H:%M:%S")

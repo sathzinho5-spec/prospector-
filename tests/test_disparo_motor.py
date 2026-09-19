@@ -107,6 +107,28 @@ def test_motor_envia_o_texto_da_copy_sem_a_frase_sair(banco_limpo, monkeypatch):
     assert "SAIR" not in mensagem
 
 
+def test_piso_entre_envios_evita_rajada_de_atrasadas(banco_limpo, monkeypatch):
+    """Duas linhas nascem vencidas (agendado_para=now, sem passar por planejar_fila).
+    Limite 500 numa janela de quase 24h da um piso de ~86s entre envios: a
+    segunda nao pode sair 1s depois da primeira so porque ambas ja venceram."""
+    espiao = _Espiao()
+    monkeypatch.setattr(disparo, "_build_providers", lambda cfg: [espiao])
+    config.save_settings({"disparo_hora_ini": "00:00", "disparo_hora_fim": "23:59",
+                          "disparo_limite_dia": 500, "disparo_provider": "simulado"})
+    disparo.enfileirar([
+        {"nome": "Lead A", "telefone": "21999990001", "mensagem": "Oi A"},
+        {"nome": "Lead B", "telefone": "21999990002", "mensagem": "Oi B"},
+    ], origem="teste")
+    cfg = disparo_motor._cfg_do_motor(config.load_settings(), "simulado")
+    disparo.iniciar(cfg)
+    limite = time.time() + 10
+    while not espiao.enviadas and time.time() < limite:
+        time.sleep(0.2)
+    assert espiao.enviadas, "o motor nao enviou nada em 10s"
+    time.sleep(3)
+    assert len(espiao.enviadas) == 1
+
+
 def test_rotas_iniciar_e_pausar_passam_pelo_motor(banco_limpo, monkeypatch):
     from rotas import disparo as rota
     from rotas import disparo_leads

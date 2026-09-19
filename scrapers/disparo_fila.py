@@ -124,18 +124,30 @@ def ja_recebeu(con, telefone, item_id=-1):
     return bool(row)
 
 
+# Uma linha que falhou espera um cooldown proprio (tentativas>0 e agendado_para
+# no futuro, gravado pelo _worker_loop) que e mais estrito que a grade do plano.
+# Um so texto SQL pras duas leituras (replanejar e planejar_fila) porque, se
+# divergissem, uma delas ia contar ou reescrever uma linha que a outra pulou.
+_NAO_EM_ESPERA_DE_RETENTATIVA = (
+    "NOT (tentativas > 0 AND datetime(agendado_para) > datetime('now','localtime'))")
+
+
 def replanejar(horarios):
-    """Reescreve o agendado_para das linhas PENDENTES, na ordem da fila.
+    """Reescreve o agendado_para das linhas PENDENTES que nao estao em espera de
+    retentativa, na ordem da fila.
 
     Roda no clique de iniciar, com os horarios que disparo_cadencia.planejar()
     acabou de calcular. Reescrever e de proposito: o fundador pediu que a conta
     comece no momento do clique, entao plano velho de uma sessao anterior nao
-    pode sobreviver a um clique novo.
+    pode sobreviver a um clique novo. Mas quem falhou e esta esperando o
+    cooldown mantem o proprio horario: o piso do motor entre envios ja a
+    espaca das linhas recem-planejadas, e reescrever apagaria essa espera.
     """
     con = _conn()
     try:
         ids = [r[0] for r in con.execute(
-            "SELECT id FROM fila WHERE status='pendente' ORDER BY id ASC").fetchall()]
+            "SELECT id FROM fila WHERE status='pendente' AND %s "
+            "ORDER BY id ASC" % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchall()]
         n = 0
         for item_id, quando in zip(ids, horarios or []):
             con.execute("UPDATE fila SET agendado_para=? WHERE id=?",
@@ -169,6 +181,12 @@ def planejar_fila(hora_ini, hora_fim, limite_dia, agora=None):
     cad = disparo_cadencia.calcular(hora_ini, hora_fim, limite_dia)
     con = _conn()
     try:
+        # A mesma condicao de replanejar(): so entra no plano quem replanejar
+        # de fato vai reescrever. Contar com pendentes() planejaria de mais e
+        # sobraria horario sem linha pra receber.
+        qtd = con.execute(
+            "SELECT COUNT(*) FROM fila WHERE status='pendente' AND %s"
+            % _NAO_EM_ESPERA_DE_RETENTATIVA).fetchone()[0]
         ja_hoje = _enviados_hoje(con)
         ultimo = con.execute("SELECT MAX(enviado_em) FROM abordagens").fetchone()[0]
     finally:
@@ -182,7 +200,7 @@ def planejar_fila(hora_ini, hora_fim, limite_dia, agora=None):
             inicio = max(agora, piso)
         except ValueError:
             pass
-    horarios = disparo_cadencia.planejar(pendentes(), hora_ini, hora_fim, limite_dia,
+    horarios = disparo_cadencia.planejar(qtd, hora_ini, hora_fim, limite_dia,
                                          inicio=inicio, enviados_hoje=ja_hoje)
     replanejar(horarios)
     return horarios
