@@ -80,6 +80,18 @@ async function dspCarregarKpis() {
   } catch { /* KPI que nao carrega nao pode derrubar a aba */ }
 }
 
+// Os campos da janela nascem com o valor fixo do HTML (08:00 as 20:00). Sem
+// ler o que esta salvo, recarregar a pagina e clicar em Iniciar gravava o
+// valor do HTML por cima da janela escolhida, e o motor passava a seguir ela.
+async function dspCarregarJanelaSalva() {
+  try {
+    const c = await (await fetch("/api/disparo/cadencia")).json();
+    if ($("dispHoraIni") && c.hora_ini) $("dispHoraIni").value = c.hora_ini;
+    if ($("dispHoraFim") && c.hora_fim) $("dispHoraFim").value = c.hora_fim;
+    if ($("dispLimite") && c.limite_dia) $("dispLimite").value = c.limite_dia;
+  } catch { /* sem o salvo, os campos seguem com o padrao do HTML */ }
+}
+
 async function dspCarregarCadencia() {
   const alvo = $("dspIntervalo");
   if (!alvo) return;
@@ -267,7 +279,9 @@ function dspIniciarAba() {
   ["dispHoraIni", "dispHoraFim", "dispLimite"].forEach(function (id) {
     if ($(id)) $(id).addEventListener("change", dspCarregarCadencia);
   });
-  dspAtualizarTudo();
+  // A janela salva entra nos campos ANTES da primeira conta do ritmo, senao o
+  // "Ritmo calculado" nasce com a janela do HTML e so corrige no proximo clique.
+  dspCarregarJanelaSalva().then(dspAtualizarTudo);
 }
 
 window.dspMarcar = dspMarcar;
