@@ -52,3 +52,4 @@ node_modules/
 
 # Documentos de trabalho da Dodo, nao fazem parte do produto
 Resumo do projeto/
+.pytest_cache/
