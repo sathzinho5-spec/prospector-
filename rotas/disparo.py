@@ -211,43 +211,34 @@ def api_disparo_kpis():
 def api_disparo_iniciar(req: DisparoStartRequest):
     """Liga o motor. delay_min/delay_max sao aceitos e ignorados: a pausa entre
     envios virou regra fixa. O envio avulso NAO e mais barrado pelo modo manual,
-    porque os dois caminhos convivem pela trava atomica da fila."""
+    porque os dois caminhos convivem pela trava atomica da fila. O campo optout
+    e aceito e ignorado: a frase de descadastro saiu das mensagens a pedido do
+    fundador."""
     from scrapers import disparo
 
-    s, ini, fim, limite = _janela_e_limite(req)
-    cfg = {
-        "provider": req.provider,
-        "limite_dia": limite,
-        "hora_ini": ini,
-        "hora_fim": fim,
-        "optout": req.optout,
-        "evo_url": _evo_cfg(s)["url"],
-        "evo_key": _evo_cfg(s)["key"],
-        "evo_instance": s.get("disparo_evo_instance", ""),
-        "evo_instances": [i.strip() for i in str(s.get("disparo_evo_instances") or "").split(",") if i.strip()],
-        "meta_token": s.get("disparo_meta_token", ""),
-        "meta_phone_id": s.get("disparo_meta_phone_id", ""),
-    }
+    # A janela e o limite que vieram da tela sao salvos aqui; o motor le do
+    # settings, entao o que a tela mostra e o que ele pratica.
+    _janela_e_limite(req)
+
     # A FILA NASCE AQUI. Antes ela so era carregada pelo botao "enfileirar", que
     # saiu da tela quando a aba virou Disparo: o motor passou a ligar em cima de
     # fila vazia e a nao mandar nada, sem erro nenhum. Agora "iniciar" faz o que
     # o nome promete, e quem entra e so quem a propria lista mostra como apto.
+    from rotas import disparo_motor
     from rotas.disparo_leads import enfileirar_aptos
-    from scrapers import disparo_cadencia
 
     carga = enfileirar_aptos(origem="iniciar")
 
-    # O PLANO NASCE AQUI, e a conta comeca AGORA. Pedido do fundador: o primeiro
-    # sai no momento do clique se a janela estiver aberta, os seguintes espacam
-    # pelo intervalo da janela, e o que nao couber ate o fim dela cai no dia
-    # seguinte. Replaneja a fila inteira de proposito, inclusive linha que ja
-    # estava la: plano de uma sessao anterior nao sobrevive a um clique novo.
-    horarios = disparo_cadencia.planejar(disparo.pendentes(), ini, fim, limite)
-    carga["planejados"] = disparo.replanejar(horarios)
+    # O PLANO NASCE AQUI, e a conta comeca AGORA, dentro de disparo_motor.ligar,
+    # que tambem grava que o motor esta ligado pra ele voltar sozinho depois de
+    # um reinicio do servidor.
+    ligado = disparo_motor.ligar(req.provider)
+    horarios = ligado["horarios"]
+    carga["planejados"] = ligado["planejados"]
     carga["primeiro_envio"] = horarios[0].strftime("%d/%m %H:%M") if horarios else None
     carga["ultimo_envio"] = horarios[-1].strftime("%d/%m %H:%M") if horarios else None
 
-    ok = disparo.iniciar(cfg)
+    ok = ligado["iniciado"]
     avisos = []
     if req.delay_min is not None or req.delay_max is not None:
         avisos.append("delay_min e delay_max foram ignorados: a cadencia agora "
@@ -273,9 +264,12 @@ def api_disparo_iniciar(req: DisparoStartRequest):
 
 @router.post("/api/disparo/pausar")
 def api_disparo_pausar():
+    from rotas import disparo_motor
     from scrapers import disparo
 
-    disparo.pausar()
+    # desligar, e nao so pausar: pausar sem esquecer faria o motor voltar
+    # sozinho no proximo reinicio, contra a vontade de quem pausou.
+    disparo_motor.desligar()
     return disparo.status()
 
 

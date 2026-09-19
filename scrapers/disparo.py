@@ -145,8 +145,6 @@ def _worker_loop():
     limite_dia = cadencia["limite_dia"]
     intervalo_seg = cadencia["intervalo_seg"]
     ultimo_envio = None
-    optout = bool(cfg.get("optout", True))
-    optout_txt = "\n\nResponda SAIR para não receber mais mensagens."
 
     def _escolher():
         nonlocal prov_idx
@@ -217,7 +215,9 @@ def _worker_loop():
                 _worker_stop.wait(60)
                 continue
 
-            msg = item["mensagem"] + (optout_txt if optout else "")
+            # Sem frase de descadastro, a pedido do fundador (19/09/2026): ela
+            # denunciava disparo em massa numa copy escrita pra parecer pessoal.
+            msg = item["mensagem"]
             ok, err = provider.send(item["telefone"], msg)
             if not ok and _eh_falha_conexao(err):
                 ruim_ate[pi] = time.time() + 600
@@ -225,9 +225,9 @@ def _worker_loop():
             con = _conn()
             try:
                 if ok:
-                    # msg, e nao item["mensagem"]: o texto gravado tem que ser o
-                    # que o provedor recebeu, opt-out incluido. Medir conversao
-                    # por um texto diferente do que o lead leu nao mede nada.
+                    # msg e o texto exato que o provedor recebeu, e e ele que
+                    # vai pro registro: medir conversao por um texto diferente
+                    # do que o lead leu nao mede nada.
                     _gravar_sucesso(con, item, msg, provider)
                     ultimo_envio = datetime.datetime.now()
                 else:

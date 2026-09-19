@@ -60,6 +60,8 @@ class DisparoStartRequest(BaseModel):
     limite_dia: int | None = None
     hora_ini: str | None = None
     hora_fim: str | None = None
+    # DEPRECADO: aceito e IGNORADO. A frase de descadastro saiu das mensagens a
+    # pedido do fundador em 19/09/2026; o campo fica pra chamador antigo nao quebrar.
     optout: bool = True
 
 

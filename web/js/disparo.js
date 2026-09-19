@@ -232,8 +232,7 @@ async function startDisp() {
     provider: "simulado",
     limite_dia: parseInt($("dispLimite").value, 10) || 30,
     hora_ini: $("dispHoraIni").value || "08:00",
-    hora_fim: $("dispHoraFim").value || "20:00",
-    optout: true
+    hora_fim: $("dispHoraFim").value || "20:00"
   };
   try {
     const s = await (await fetch("/api/settings")).json();
