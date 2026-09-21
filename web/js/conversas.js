@@ -83,7 +83,7 @@ function renderWaChats() {
   if (!arr.length) {
     let dica = "Nenhuma conversa.";
     if (!waChatsCache.length) {
-      dica = "Nenhuma conversa" + (waInstance ? " no chip " + waInstance : "") + "." +
+      dica = "Nenhuma conversa" + (waInstance ? " no chip " + esc(waInstance) : "") + "." +
         "<br><span class='hint'>Se o número tem conversas no celular: confira o chip acima" +
         (waConectado ? "" : " (este parece off)") +
         ", aguarde a sincronização após parear, ou ative o banco na Evolution (sem ele o histórico não lista).</span>";

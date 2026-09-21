@@ -154,7 +154,6 @@ window.switchTab = function (name) {
     document.querySelector(".content").classList.remove("empty");
   }
   if (name === "comercial") {
-    renderQueue();
     renderPerformance();
     refreshDisparo();
   }

@@ -197,29 +197,6 @@ async function refreshDisparo() {
       : "parado · " + st.pendentes + " na fila · " + st.enviados + " enviados";
     line.className = "tag" + (st.rodando ? " on" : "");
 
-    const r2 = await fetch("/api/disparo/fila?limite=50");
-    const d2 = await r2.json();
-    const rows = (d2.fila || []).map(function (f) {
-      const action = f.status === "pendente"
-        ? "<button class='btn small wa' onclick='enviarAgora(" + f.id + ")'>Enviar</button>" +
-          "<button class='btn small' onclick='refazerMensagem(" + f.id + ", this, " + (f.editada_em ? "true" : "false") + ")'>Refazer IA</button>"
-        : "";
-      return "<tr><td>" + esc(f.nome) + "</td><td>" + esc(f.telefone) + "</td>" +
-        "<td class='st-" + f.status + "'>" + f.status + "</td>" +
-        "<td>" + (f.instancia ? esc(f.instancia) : "<span class='hint'>—</span>") + "</td>" +
-        "<td>" + (f.editada_em ? "<span class='pill open' style='margin-right:6px;'>sua</span>" : "") +
-        esc((f.mensagem || "").slice(0, 60)) + "…</td>" +
-        "<td><div class='row-actions'><button class='btn small' onclick='verMensagem(" + f.id + ")'>Ver</button>" + action + "</div></td></tr>";
-    }).join("");
-    // A tabela da fila virou a lista de leads da aba Disparo, em disparo_aba.js.
-    // A guarda fica porque o poll logo abaixo depende desta funcao chegar ao fim.
-    const tabelaVelha = $("disparoTable");
-    if (tabelaVelha) {
-      tabelaVelha.innerHTML = rows
-        ? "<table class='disp-table'><tbody>" + rows + "</tbody></table>"
-        : "<p class='hint'>Fila vazia.</p>";
-    }
-
     clearInterval(dispPoll);
     if (st.rodando) {
       dispPoll = setInterval(refreshDisparo, 5000);

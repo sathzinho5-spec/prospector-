@@ -49,7 +49,6 @@ window.openWhatsApp = async function (i) {
     if (!isContacted(b.nome)) {
       toggleContacted(b.nome);
       renderResults(bizCache);
-      renderQueue();
     }
   } catch (e) {
     hideLoader();
@@ -57,60 +56,10 @@ window.openWhatsApp = async function (i) {
   }
 };
 
-// ===== FILA DE CONTATO =====
-window.renderQueue = function () {
-  const list = $("queueList");
-  if (!list) return;
-  const arr = bizCache.slice().sort(function (a, b) {
-    const ca = isContacted(a.nome) ? 1 : 0;
-    const cb = isContacted(b.nome) ? 1 : 0;
-    if (ca !== cb) return ca - cb;
-    const ua = a._urg ? (a._urg.nivel === "alta" ? 0 : 1) : 2;
-    const ub = b._urg ? (b._urg.nivel === "alta" ? 0 : 1) : 2;
-    if (ua !== ub) return ua - ub;
-    return (b.score_oportunidade || -1) - (a.score_oportunidade || -1);
-  });
-
-  const pend = arr.filter(function (b) { return !isContacted(b.nome); }).length;
-  $("queueStats").textContent = pend + " pendentes · " + (arr.length - pend) + " contatados";
-  const qb = $("tabQueueBadge");
-  if (qb) {
-    qb.textContent = pend;
-    qb.classList.toggle("hidden", !pend);
-  }
-
-  if (!arr.length) {
-    list.innerHTML = "<p class='hint'>Nenhum lead carregado. Faça uma busca primeiro.</p>";
-    return;
-  }
-
-  list.innerHTML = arr.map(function (b) {
-    const i = bizCache.indexOf(b);
-    const cont = isContacted(b.nome);
-    const phone = waPhone(b);
-    const u = b._urg || computeUrgency(b);
-    return (
-      "<div class='queue-item " + (cont ? "done" : "") + "'>" +
-      "<div class='queue-info'>" +
-      "<div class='biz-name'><span>" + esc(b.nome) + "</span>" + urgencyPill(b) + scorePill(b) + "</div>" +
-      "<div class='biz-sub2'>" + esc(u.motivo) + "</div>" +
-      "</div>" +
-      "<div class='biz-actions'>" +
-      (phone
-        ? "<button class='btn small wa' onclick='openWhatsApp(" + i + ")'>" + (cont ? "Reabrir WA" : "Abrir WhatsApp") + "</button>"
-        : "<span class='mini-tag'>sem telefone</span>") +
-      "<button class='btn small " + (cont ? "" : "primary") + "' onclick='event.stopPropagation();toggleAndRender(" + i + ")'>" + (cont ? "Reabrir" : "Marcar contatado") + "</button>" +
-      "</div>" +
-      "</div>"
-    );
-  }).join("");
-};
-
 window.toggleAndRender = function (i) {
   const b = bizCache[i];
   if (!b) return;
   toggleContacted(b.nome);
   renderResults(bizCache);
-  renderQueue();
 };
 
