@@ -1,8 +1,6 @@
 // proposito: tabela de resultados: ordenacao, selecao, paginacao e acoes em lote
 let tableState = { page: 1, perPage: 25, sortKey: "", sortDir: 1 };
 let selectedKeys = {};
-let leadsCache = [];
-let leadsState = { page: 1, perPage: 25, q: "", uf: "" };
 
 function bizKey(b) {
   return String(b.nome || "") + "|" + String(b.telefone || "") + "|" + String(b.endereco || "");

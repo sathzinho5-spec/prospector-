@@ -40,10 +40,6 @@
         <svg viewBox="0 0 24 24" class="painel-icone"><circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/></svg>
         <span class="painel-nome">Prospecção</span><span id="tabResultsBadge" class="badge hidden">0</span>
       </button>
-      <button class="tabbtn painel-item" data-tab="leads">
-        <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 6h16v12H4z"/><path d="M4 7l8 5 8-5"/></svg>
-        <span class="painel-nome">Leads</span><span id="tabLeadsBadge" class="badge hidden">0</span>
-      </button>
       <button class="tabbtn painel-item" data-tab="crm">
         <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 19V9"/><path d="M10 19V5"/><path d="M16 19v-7"/></svg>
         <span class="painel-nome">Pipeline</span><span id="tabCrmBadge" class="badge hidden">0</span>
@@ -63,6 +59,10 @@
       <button class="tabbtn painel-item" data-tab="metricas">
         <svg viewBox="0 0 24 24" class="painel-icone"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-8"/><path d="M2 20h20"/></svg>
         <span class="painel-nome">Métricas</span>
+      </button>
+      <button class="tabbtn painel-item" data-tab="configuracoes">
+        <svg viewBox="0 0 24 24" class="painel-icone"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.07-.4.1-.8.1-1.2z"/></svg>
+        <span class="painel-nome">Configurações</span>
       </button>
     </nav>
 
@@ -95,15 +95,12 @@
         <span id="resultsCount" class="badge hidden">0</span>
       </div>
       <div class="toolbar-right">
-        <div class="chip" id="iaChip"><span class="dot"></span><span id="iaChipText">IA: ...</span></div>
-        <div class="chip" id="cloudChip"><span class="dot"></span><span id="cloudChipText">Nuvem: ...</span></div>
         <div class="export-group hidden" id="exportGroup">
           <span class="hint">Exportar:</span>
           <button class="btn small" data-export="csv">CSV</button>
           <button class="btn small" data-export="xlsx">Excel</button>
           <button class="btn small" data-export="json">JSON</button>
         </div>
-        <button class="btn small" id="btnSettings">Configurações</button>
       </div>
     </div>
 
@@ -135,7 +132,6 @@
             </div>
             <div class="quick-actions">
               <button class="btn primary" data-goto="results">Nova busca</button>
-              <button class="btn" data-goto="leads">Ver leads</button>
               <button class="btn" data-goto="crm">Abrir pipeline</button>
               <button class="btn" data-goto="comercial">Fila de disparo</button>
             </div>
@@ -328,41 +324,6 @@
 
       </div><!-- /secResults -->
 
-      <!-- ===== LEADS (BASE NUVEM) ===== -->
-      <div class="tabsec hidden" id="secLeads">
-        <section class="panel" id="leadsCard">
-          <div class="card-head">
-            <h3 style="margin-bottom:0;">Leads coletados</h3>
-            <span class="hint" id="leadsInfo"></span>
-          </div>
-          <div class="filter-bar">
-            <input id="leadSearch" placeholder="Buscar nome, cidade, categoria..." autocomplete="off">
-            <select id="leadUf"><option value="">UF: todas</option></select>
-            <select id="leadScore">
-              <option value="0">Score: qualquer</option>
-              <option value="45">45+</option>
-              <option value="70">70+</option>
-            </select>
-            <button class="btn small primary" id="btnLeadsRefresh">Atualizar</button>
-          </div>
-          <div class="table-wrap">
-            <table class="table" id="leadsTable">
-              <thead>
-                <tr>
-                  <th>Empresa</th>
-                  <th>Cidade/UF</th>
-                  <th>Telefone</th>
-                  <th>Score</th>
-                  <th>Status</th>
-                  <th class="col-actions">Ações</th>
-                </tr>
-              </thead>
-              <tbody id="leadsBody"></tbody>
-            </table>
-          </div>
-          <div class="pager" id="leadsPager"></div>
-        </section>
-      </div><!-- /secLeads -->
 
       <!-- ===== PIPELINE (CRM) ===== -->
       <div class="tabsec hidden" id="secCrm">
@@ -440,17 +401,12 @@
             <span class="dsp-kpi-rotulo">Leads novos</span>
           </div>
           <div class="dsp-kpi">
-            <span class="dsp-kpi-num" id="dspKpiEnviadas">0</span>
-            <span class="dsp-kpi-rotulo">Enviadas hoje</span>
+            <span class="dsp-kpi-num" id="dspKpiDisparados">0</span>
+            <span class="dsp-kpi-rotulo">Disparados</span>
           </div>
           <div class="dsp-kpi">
-            <span class="dsp-kpi-num" id="dspKpiFila">0</span>
-            <span class="dsp-kpi-rotulo">Na fila</span>
-          </div>
-          <div class="dsp-kpi destaque">
-            <span class="dsp-kpi-num" id="dspKpiConversas">0</span>
-            <span class="dsp-kpi-rotulo">Conversas iniciadas</span>
-            <span class="dsp-kpi-nota" id="dspKpiConversasNota"></span>
+            <span class="dsp-kpi-num" id="dspKpiBloqueados">0</span>
+            <span class="dsp-kpi-rotulo">Bloqueados</span>
           </div>
         </div>
 
@@ -596,6 +552,157 @@
         </section>
       </div><!-- /secMetricas -->
 
+      <!-- ===== CONFIGURAÇÕES ===== -->
+      <div class="tabsec hidden" id="secConfiguracoes">
+        <section class="panel" id="cfgIaCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">IA — Provedor e chave</h3>
+            <span id="iaStatusLine" class="hint"></span>
+          </div>
+          <div class="field">
+            <label for="provider">Provedor de IA</label>
+            <select id="provider">
+              <option value="">Personalizado / atual</option>
+              <option value="groq">Groq (rápido, grátis)</option>
+              <option value="gemini">Gemini (Google — cota grátis generosa)</option>
+              <option value="openai">OpenAI (pago)</option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <a id="btnPegarChave" class="btn primary" href="https://console.groq.com/keys" target="_blank" rel="noopener">Pegar chave grátis</a>
+          </div>
+          <p class="hint" id="keyHint">Abre a página oficial pra gerar a chave, depois cola abaixo.</p>
+          <div class="field">
+            <label for="apiKey">Chave da API (OpenAI/Groq/Gemini)</label>
+            <input id="apiKey" type="password" placeholder="sk-... / gsk-... / AIza... (opcional)">
+            <p class="hint">Sem chave, a análise local gratuita é usada automaticamente.</p>
+          </div>
+          <div class="field">
+            <label for="baseUrl">Base URL</label>
+            <input id="baseUrl" type="text" placeholder="https://api.groq.com/openai/v1">
+          </div>
+          <div class="field">
+            <label for="model">Modelo</label>
+            <input id="model" type="text" placeholder="groq/compound">
+          </div>
+          <div class="field">
+            <label for="igSession">Cookie de sessão do Instagram (sessionid)</label>
+            <input id="igSession" type="password" placeholder="Opcional - dados do Instagram">
+            <p class="hint">F12 → Application → Cookies → instagram.com → valor de "sessionid".</p>
+          </div>
+        </section>
+
+        <section class="panel" id="cfgDispCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Disparo automático</h3>
+          </div>
+          <div class="field">
+            <label for="dispProvider">Provedor de envio</label>
+            <select id="dispProvider">
+              <option value="simulado">Simulado (teste, não envia)</option>
+              <option value="evolution">Evolution API (QR code)</option>
+              <option value="meta">Meta Cloud API (oficial)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dispEvoUrl">Evolution — URL base</label>
+            <input id="dispEvoUrl" type="text" placeholder="http://localhost:8080">
+          </div>
+          <div class="field">
+            <label for="dispEvoKey">Evolution — API key</label>
+            <input id="dispEvoKey" type="password" placeholder="sua apikey">
+          </div>
+          <div class="field">
+            <label for="dispEvoInstance">Evolution - Chip 1 (principal)</label>
+            <input id="dispEvoInstance" type="text" placeholder="nome da instancia">
+          </div>
+          <div class="field">
+            <label for="dispEvoChip2">Evolution - Chip 2 (opcional)</label>
+            <input id="dispEvoChip2" type="text" placeholder="segundo chip">
+          </div>
+          <div class="field">
+            <label for="dispEvoChip3">Evolution - Chip 3 (opcional)</label>
+            <input id="dispEvoChip3" type="text" placeholder="terceiro chip">
+          </div>
+          <div class="field">
+            <label for="dispTom">Tom das mensagens (skill copywriter)</label>
+            <select id="dispTom">
+              <option value="direto">Direto e objetivo</option>
+              <option value="consultivo">Consultivo e parceiro</option>
+              <option value="agressivo">Agressivo (resposta direta)</option>
+              <option value="amigavel">Amigável e caloroso</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="dispPrompt">Prompt do disparador (opcional, sobrescreve a skill)</label>
+            <textarea id="dispPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+            <p class="hint">Responda sempre em JSON: whatsapp, email_assunto, email_corpo.</p>
+          </div>
+          <div class="field">
+            <label for="abordPrompt">Prompt da abordagem (opcional, sobrescreve a skill)</label>
+            <textarea id="abordPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
+            <p class="hint">Vale para a fila do disparo e para a copy por negócio. Responda sempre em JSON: alavanca, abertura, followup, fechamento.</p>
+          </div>
+          <div class="field">
+            <label for="abordIaMax">Máximo de mensagens com IA por carregamento da fila</label>
+            <input id="abordIaMax" type="number" min="0" max="100" placeholder="30">
+            <p class="hint">Trave de custo: o carregamento puxa até 500 leads. Acima deste número o lead fica de fora da fila e a tela avisa. Zero desliga a IA no carregamento.</p>
+          </div>
+          <div class="field">
+            <label for="dispMetaToken">Meta — Token</label>
+            <input id="dispMetaToken" type="password" placeholder="token permanente">
+          </div>
+          <div class="field">
+            <label for="dispMetaPhone">Meta — Phone Number ID</label>
+            <input id="dispMetaPhone" type="text" placeholder="1234567890">
+          </div>
+        </section>
+
+        <section class="panel" id="cfgNuvemCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Nuvem (Supabase)</h3>
+            <span id="cloudStatusLine" class="hint"></span>
+          </div>
+          <div class="field">
+            <label for="sbUrl">Project URL</label>
+            <input id="sbUrl" type="text" placeholder="https://xyz.supabase.co">
+          </div>
+          <div class="field">
+            <label for="sbSecret">Service role key (secret)</label>
+            <input id="sbSecret" type="password" placeholder="sb_secret_... (opcional)">
+            <p class="hint">Conecta leads, análises e disparo à nuvem. Rode antes o supabase_schema.sql no SQL Editor.</p>
+          </div>
+        </section>
+
+        <section class="panel" id="cfgAgendaCard">
+          <div class="card-head">
+            <h3 style="margin-bottom:0;">Busca agendada automática</h3>
+          </div>
+          <div class="field">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--text);">
+              <input type="checkbox" id="schedEnabled" style="width:auto;accent-color:var(--accent);">
+              Ativar busca automática diária
+            </label>
+          </div>
+          <div class="field">
+            <label for="schedTime">Horário</label>
+            <input id="schedTime" type="time" value="08:00">
+          </div>
+          <div class="field">
+            <label>Nichos da busca agendada</label>
+            <div class="state-box" id="schedNiches"><p class="hint">Carregando nichos...</p></div>
+          </div>
+          <div class="field">
+            <label for="schedStates">Estados (separados por vírgula)</label>
+            <input id="schedStates" placeholder="Ex: São Paulo, Rio de Janeiro">
+          </div>
+          <div class="btn-row">
+            <button id="btnSaveSettings" class="btn primary">Salvar</button>
+          </div>
+          <div id="settingsStatus" class="status hidden"></div>
+        </section>
+      </div><!-- /secConfiguracoes -->
+
       <!-- ===== CONVERSAS ===== -->
       <div class="tabsec hidden" id="secConversas">
 
@@ -663,152 +770,6 @@
 
     </div>
   </section>
-</div>
-
-<!-- Modal: Configuracoes -->
-<div id="modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h2>Configurações</h2>
-      <button id="btnCloseModal" class="modal-close">&times;</button>
-    </div>
-
-    <div class="field">
-      <label for="provider">Provedor de IA</label>
-      <select id="provider">
-        <option value="">Personalizado / atual</option>
-        <option value="groq">Groq (rápido, grátis)</option>
-        <option value="gemini">Gemini (Google — cota grátis generosa)</option>
-        <option value="openai">OpenAI (pago)</option>
-      </select>
-      <p class="hint">Escolher preenche Base URL e Modelo automaticamente. Chave do Google: aistudio.google.com → "Get API key" (grátis).</p>
-    </div>
-
-    <div class="field">
-      <label for="apiKey">Chave da API (OpenAI/Groq/Gemini)</label>
-      <input id="apiKey" type="password" placeholder="sk-... / gsk-... / AIza... (opcional)">
-      <p class="hint">Sem chave, a análise local gratuita é usada automaticamente.</p>
-    </div>
-
-    <div class="field">
-      <label for="baseUrl">Base URL</label>
-      <input id="baseUrl" type="text" placeholder="https://api.groq.com/openai/v1">
-    </div>
-
-    <div class="field">
-      <label for="model">Modelo</label>
-      <input id="model" type="text" placeholder="groq/compound">
-    </div>
-
-    <div class="field">
-      <label for="igSession">Cookie de sessão do Instagram (sessionid)</label>
-      <input id="igSession" type="password" placeholder="Opcional - dados do Instagram">
-      <p class="hint">F12 → Application → Cookies → instagram.com → valor de "sessionid".</p>
-    </div>
-
-    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Disparo automático</h4>
-
-    <div class="field">
-      <label for="dispProvider">Provedor de envio</label>
-      <select id="dispProvider">
-        <option value="simulado">Simulado (teste, não envia)</option>
-        <option value="evolution">Evolution API (QR code)</option>
-        <option value="meta">Meta Cloud API (oficial)</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="dispEvoUrl">Evolution — URL base</label>
-      <input id="dispEvoUrl" type="text" placeholder="http://localhost:8080">
-    </div>
-    <div class="field">
-      <label for="dispEvoKey">Evolution — API key</label>
-      <input id="dispEvoKey" type="password" placeholder="sua apikey">
-    </div>
-    <div class="field">
-      <label for="dispEvoInstance">Evolution - Chip 1 (principal)</label>
-      <input id="dispEvoInstance" type="text" placeholder="nome da instancia">
-    </div>
-    <div class="field">
-      <label for="dispEvoChip2">Evolution - Chip 2 (opcional)</label>
-      <input id="dispEvoChip2" type="text" placeholder="segundo chip">
-    </div>
-    <div class="field">
-      <label for="dispEvoChip3">Evolution - Chip 3 (opcional)</label>
-      <input id="dispEvoChip3" type="text" placeholder="terceiro chip">
-      <p class="hint">Até 3 chips. O disparo reveza sozinho entre os conectados.</p>
-    </div>
-    <div class="field">
-      <label for="dispTom">Tom das mensagens (skill copywriter)</label>
-      <select id="dispTom">
-        <option value="direto">Direto e objetivo</option>
-        <option value="consultivo">Consultivo e parceiro</option>
-        <option value="agressivo">Agressivo (resposta direta)</option>
-        <option value="amigavel">Amigável e caloroso</option>
-      </select>
-    </div>
-    <div class="field">
-      <label for="dispPrompt">Prompt do disparador (opcional, sobrescreve a skill)</label>
-      <textarea id="dispPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
-      <p class="hint">Responda sempre em JSON: whatsapp, email_assunto, email_corpo.</p>
-    </div>
-    <div class="field">
-      <label for="abordPrompt">Prompt da abordagem (opcional, sobrescreve a skill)</label>
-      <textarea id="abordPrompt" rows="4" placeholder="Deixe vazio para usar o prompt da skill. Use {dados} onde entram os dados do lead." style="width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:8px;font-size:13px;resize:vertical;"></textarea>
-      <p class="hint">Vale para a fila do disparo e para a copy por negócio. Responda sempre em JSON: alavanca, abertura, followup, fechamento.</p>
-    </div>
-    <div class="field">
-      <label for="abordIaMax">Máximo de mensagens com IA por carregamento da fila</label>
-      <input id="abordIaMax" type="number" min="0" max="100" placeholder="30">
-      <p class="hint">Trave de custo: o carregamento puxa até 500 leads. Acima deste número o lead fica de fora da fila e a tela avisa. Zero desliga a IA no carregamento.</p>
-    </div>
-
-    <div class="field">
-      <label for="dispMetaToken">Meta — Token</label>
-      <input id="dispMetaToken" type="password" placeholder="token permanente">
-    </div>
-    <div class="field">
-      <label for="dispMetaPhone">Meta — Phone Number ID</label>
-      <input id="dispMetaPhone" type="text" placeholder="1234567890">
-    </div>
-
-    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Nuvem (Supabase)</h4>
-
-    <div class="field">
-      <label for="sbUrl">Project URL</label>
-      <input id="sbUrl" type="text" placeholder="https://xyz.supabase.co">
-    </div>
-    <div class="field">
-      <label for="sbSecret">Service role key (secret)</label>
-      <input id="sbSecret" type="password" placeholder="sb_secret_... (opcional)">
-      <p class="hint">Conecta leads, análises e disparo à nuvem. Rode antes o supabase_schema.sql no SQL Editor.</p>
-    </div>
-
-    <h4 style="margin:20px 0 12px;color:var(--accent);font-size:12px;text-transform:uppercase;letter-spacing:1.5px;">Busca agendada automática</h4>
-
-    <div class="field">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;text-transform:none;font-size:13px;color:var(--text);">
-        <input type="checkbox" id="schedEnabled" style="width:auto;accent-color:var(--accent);">
-        Ativar busca automática diária
-      </label>
-    </div>
-    <div class="field">
-      <label for="schedTime">Horário</label>
-      <input id="schedTime" type="time" value="08:00">
-    </div>
-    <div class="field">
-      <label for="schedNiche">Nicho da busca agendada</label>
-      <select id="schedNiche"></select>
-    </div>
-    <div class="field">
-      <label for="schedStates">Estados (separados por vírgula)</label>
-      <input id="schedStates" placeholder="Ex: São Paulo, Rio de Janeiro">
-    </div>
-
-    <div class="btn-row">
-      <button id="btnSaveSettings" class="btn primary">Salvar</button>
-    </div>
-    <div id="settingsStatus" class="status hidden"></div>
-  </div>
 </div>
 
 <!-- Modal: QR WhatsApp -->

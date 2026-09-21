@@ -32,6 +32,7 @@ class ScheduleRequest(BaseModel):
     enabled: bool = False
     time: str = "08:00"
     niche: str = "restaurantes"
+    niches: list = []
     states: list = []
     max: int = 10
 

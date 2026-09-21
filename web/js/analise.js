@@ -261,7 +261,7 @@ async function loadDashboard() {
         "<div><div class='perf-num'>" + value + "</div><div class='perf-label'>" + label + "</div></div></div>";
     }
     grid.innerHTML =
-      stat("Empresas na base", leads.length, "", "leads") +
+      stat("Empresas na base", leads.length, "", "crm") +
       stat("Leads novos", novos, "", "crm") +
       stat("Em andamento", andamento, "", "crm") +
       stat("Score médio IA", media != null ? media + "%" : "—") +

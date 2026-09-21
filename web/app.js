@@ -35,8 +35,6 @@ function bindEvents() {
   on("btnReference", "click", doReference);
   on("btnAnalyzeIg", "click", function () { doInstagram(""); });
   on("btnStrategy", "click", doStrategy);
-  on("btnSettings", "click", function () { $("modal").classList.remove("hidden"); });
-  on("btnCloseModal", "click", function () { $("modal").classList.add("hidden"); });
   on("btnCloseDetail", "click", function () { $("detailModal").classList.add("hidden"); });
   on("btnCloseMsg", "click", function () { $("msgModal").classList.add("hidden"); });
   on("btnSaveSettings", "click", saveSettings);
@@ -96,6 +94,7 @@ function bindEvents() {
       $("baseUrl").value = p.url;
       $("model").value = p.model;
     }
+    if (typeof atualizarLinkChave === "function") atualizarLinkChave();
   });
   on("fSite", "change", function () { filters.site = this.value; renderResults(bizCache); });
   on("fNota", "change", function () { filters.nota = parseFloat(this.value) || 0; renderResults(bizCache); });
@@ -108,10 +107,7 @@ function bindEvents() {
   on("btnBulkEnqueue", "click", bulkEnqueue);
   on("btnBulkExport", "click", bulkExportCsv);
   on("btnBulkClear", "click", clearSelection);
-  on("btnLeadsRefresh", "click", function () { loadLeadsView(1); });
   on("btnAprRecalc", "click", recalcAprendizado);
-  on("leadSearch", "input", function () { leadsState.q = this.value; loadLeadsView(1); });
-  on("leadUf", "change", function () { leadsState.uf = this.value; loadLeadsView(1); });
   on("btnMenu", "click", function () {
     $("sidebar").classList.toggle("open");
     $("backdrop").classList.toggle("hidden");
@@ -131,16 +127,16 @@ function bindEvents() {
 var TAB_TITLES = {
   home: "Dashboard",
   results: "Prospecção",
-  leads: "Leads",
   crm: "Pipeline",
   comercial: "Disparo",
   conversas: "Conversas",
   conexao: "Conexão do número",
-  metricas: "Métricas"
+  metricas: "Métricas",
+  configuracoes: "Configurações"
 };
 
 window.switchTab = function (name) {
-  ["home", "results", "leads", "crm", "comercial", "conversas", "conexao", "metricas"].forEach(function (t) {
+  ["home", "results", "crm", "comercial", "conversas", "conexao", "metricas", "configuracoes"].forEach(function (t) {
     const sec = $("sec" + t.charAt(0).toUpperCase() + t.slice(1));
     if (sec) sec.classList.toggle("hidden", t !== name);
   });
@@ -167,9 +163,6 @@ window.switchTab = function (name) {
   }
   if (name === "conversas") {
     loadWaChats();
-  }
-  if (name === "leads") {
-    loadLeadsView(1);
   }
   if (name === "metricas") {
     renderPerformance();

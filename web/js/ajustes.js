@@ -1,4 +1,33 @@
 // proposito: ajustes do painel: ler e salvar as configuracoes
+var KEY_URLS = {
+  groq: "https://console.groq.com/keys",
+  gemini: "https://aistudio.google.com/apikey",
+  openai: "https://platform.openai.com/api-keys"
+};
+
+function provedorAtual() {
+  const sel = $("provider") ? $("provider").value : "";
+  if (sel && KEY_URLS[sel]) return sel;
+  const base = String($("baseUrl") ? $("baseUrl").value : "");
+  if (base.includes("gemini")) return "gemini";
+  if (base.includes("groq")) return "groq";
+  if (base.includes("openai")) return "openai";
+  return "";
+}
+
+// O botao "Pegar chave" acompanha o provedor: cada IA tem a pagina dela.
+function atualizarLinkChave() {
+  const a = $("btnPegarChave");
+  if (!a) return;
+  const p = provedorAtual();
+  if (p && KEY_URLS[p]) {
+    a.href = KEY_URLS[p];
+    a.style.display = "";
+  } else {
+    a.style.display = "none";
+  }
+}
+
 async function loadSettings() {
   try {
     const r = await fetch("/api/settings");
@@ -10,19 +39,27 @@ async function loadSettings() {
 
     $("schedEnabled").checked = !!s.schedule_enabled;
     $("schedTime").value = s.schedule_time || "08:00";
-    $("schedNiche").value = s.schedule_niche || "restaurantes";
+    (function () {
+      const salvos = s.schedule_niches && s.schedule_niches.length ? s.schedule_niches
+        : (s.schedule_niche ? [s.schedule_niche] : []);
+      document.querySelectorAll("#schedNiches input").forEach(function (cb) {
+        cb.checked = salvos.indexOf(cb.value) !== -1;
+        cb.closest(".state-pill").classList.toggle("checked", cb.checked);
+      });
+    })();
     $("schedStates").value = (s.schedule_states || []).join(", ");
 
-    const iaChip = $("iaChip");
-    if (s.openai_api_key) {
-      iaChip.classList.add("on"); iaChip.classList.remove("off");
-      const providerName = String(s.openai_base_url || "").includes("gemini") ? "Gemini"
-        : String(s.openai_base_url || "").includes("groq") ? "Groq" : "OpenAI";
-      $("iaChipText").textContent = "IA: " + providerName;
-    } else {
-      iaChip.classList.add("off");
-      $("iaChipText").textContent = "IA local";
+    const iaLine = $("iaStatusLine");
+    if (iaLine) {
+      if (s.openai_api_key) {
+        const providerName = String(s.openai_base_url || "").includes("gemini") ? "Gemini"
+          : String(s.openai_base_url || "").includes("groq") ? "Groq" : "OpenAI";
+        iaLine.textContent = "Ativa: " + providerName + " (" + (s.openai_model || "modelo padrão") + ")";
+      } else {
+        iaLine.textContent = "Sem chave: usando análise local gratuita.";
+      }
     }
+    atualizarLinkChave();
 
     const abordIaMax = $("abordIaMax");
     if (abordIaMax) abordIaMax.value = (s.abordagem_ia_max === undefined || s.abordagem_ia_max === null) ? "" : s.abordagem_ia_max;
@@ -88,7 +125,8 @@ async function saveSettings() {
     const schedBody = {
       enabled: $("schedEnabled").checked,
       time: $("schedTime").value || "08:00",
-      niche: $("schedNiche").value,
+      niche: "",
+      niches: selectedSchedNiches(),
       states: $("schedStates").value.split(",").map(function (x) { return x.trim(); }).filter(Boolean),
       max: parseInt($("maxResults").value, 10) || 10
     };
@@ -129,15 +167,9 @@ async function saveSettings() {
 
     try {
       fetch("/api/cloud/status").then(function (r) { return r.json(); }).then(function (cs) {
-        const cc = $("cloudChip");
-        if (!cc) return;
-        if (cs.online) {
-          cc.classList.add("on"); cc.classList.remove("off");
-          $("cloudChipText").textContent = "Nuvem: conectada";
-        } else {
-          cc.classList.add("off"); cc.classList.remove("on");
-          $("cloudChipText").textContent = "Nuvem: local";
-        }
+        const cl = $("cloudStatusLine");
+        if (!cl) return;
+        cl.textContent = cs.online ? "Conectada." : "Modo local (sem nuvem).";
       }).catch(function () { /* mantém padrão */ });
     } catch { /* mantém padrão */ }
       await loadSettings();

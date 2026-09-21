@@ -229,6 +229,8 @@ h4 {
 
 .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; align-items: center; }
 
+a.btn { text-decoration: none; display: inline-block; }
+
 .icon-btn {
   display: none;
   background: var(--surface-2);

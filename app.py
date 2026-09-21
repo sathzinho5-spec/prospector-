@@ -219,10 +219,14 @@ def api_results():
 @app.get("/api/schedule")
 def api_schedule_status():
     s = config.load_settings()
+    niches = [x.strip() for x in (s.get("schedule_niches") or []) if x.strip()]
+    if not niches and (s.get("schedule_niche") or "").strip():
+        niches = [s.get("schedule_niche").strip()]
     return {
         "enabled": s.get("schedule_enabled", False),
         "time": s.get("schedule_time", "08:00"),
-        "niche": s.get("schedule_niche", "restaurantes"),
+        "niche": niches[0] if niches else "restaurantes",
+        "niches": niches,
         "states": s.get("schedule_states", []),
         "max": s.get("schedule_max", 10),
         "last_run": s.get("schedule_last_run", ""),
@@ -233,10 +237,14 @@ def api_schedule_status():
 
 @app.post("/api/schedule")
 def api_schedule_save(req: ScheduleRequest):
+    niches = [str(x).strip() for x in (req.niches or []) if str(x or "").strip()]
+    if not niches and (req.niche or "").strip():
+        niches = [req.niche.strip()]
     config.save_settings({
         "schedule_enabled": req.enabled,
         "schedule_time": req.time.strip() or "08:00",
-        "schedule_niche": req.niche.strip() or "restaurantes",
+        "schedule_niche": niches[0] if niches else "restaurantes",
+        "schedule_niches": niches,
         "schedule_states": [x.strip() for x in (req.states or []) if x.strip()],
         "schedule_max": max(1, min(60, req.max)),
     })

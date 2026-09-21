@@ -26,6 +26,7 @@ DEFAULT_SETTINGS = {
     "schedule_enabled": False,
     "schedule_time": "08:00",
     "schedule_niche": "restaurantes",
+    "schedule_niches": [],
     "schedule_states": [],
     "schedule_max": 10,
     "schedule_last_run": "",

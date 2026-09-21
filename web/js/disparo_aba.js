@@ -55,9 +55,8 @@ async function dspCarregarKpis() {
   try {
     const k = await (await fetch("/api/disparo/kpis")).json();
     if ($("dspKpiNovos")) $("dspKpiNovos").textContent = k.leads_novos ?? 0;
-    if ($("dspKpiEnviadas")) $("dspKpiEnviadas").textContent = k.enviadas_hoje ?? 0;
-    if ($("dspKpiFila")) $("dspKpiFila").textContent = k.na_fila ?? 0;
-    if ($("dspKpiConversas")) $("dspKpiConversas").textContent = k.conversas_iniciadas ?? 0;
+    if ($("dspKpiDisparados")) $("dspKpiDisparados").textContent = k.enviados_total ?? 0;
+    if ($("dspKpiBloqueados")) $("dspKpiBloqueados").textContent = k.desligados ?? 0;
 
     // O badge da aba na barra lateral era alimentado pela fila antiga, que saiu
     // da tela. Sem isto ele congela no ultimo valor e passa a mentir.
@@ -66,16 +65,6 @@ async function dspCarregarKpis() {
       const naFila = Number(k.na_fila || 0);
       badge.textContent = naFila;
       badge.classList.toggle("hidden", naFila === 0);
-    }
-
-    // A conta embaixo do destaque so aparece quando ha denominador: "3 de 0
-    // enviadas" nao informa nada e ainda parece defeito.
-    const nota = $("dspKpiConversasNota");
-    if (nota) {
-      const env = Number(k.enviadas_hoje || 0);
-      nota.textContent = env > 0
-        ? (k.conversas_iniciadas || 0) + " de " + env + " enviadas hoje"
-        : "";
     }
   } catch { /* KPI que nao carrega nao pode derrubar a aba */ }
 }

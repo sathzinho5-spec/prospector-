@@ -39,15 +39,28 @@ def _save_results(all_results, new_results, today):
 
 def run_scheduled():
     s = load_settings()
-    niche = s.get("schedule_niche") or "restaurantes"
+    niches = [x.strip() for x in (s.get("schedule_niches") or []) if x.strip()]
+    if not niches and (s.get("schedule_niche") or "").strip():
+        niches = [s.get("schedule_niche").strip()]
     states = s.get("schedule_states") or []
     max_r = int(s.get("schedule_max") or 10)
-    if not states:
+    if not niches or not states:
         return 0, 0
 
     from scrapers import google_maps
 
-    results = asyncio.run(google_maps.search_places(niche, locations=states, max_results=max_r))
+    results = []
+    vistos = set()
+    for niche in niches:
+        try:
+            parcial = asyncio.run(google_maps.search_places(niche, locations=states, max_results=max_r))
+        except Exception as e:
+            print(f"[agendador] nicho {niche} falhou: {e}")
+            continue
+        for b in parcial:
+            if _key(b) not in vistos:
+                vistos.add(_key(b))
+                results.append(b)
 
     prev = _load_prev_keys()
     new = [b for b in results if _key(b) not in prev]

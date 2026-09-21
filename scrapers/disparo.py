@@ -336,7 +336,7 @@ def status():
     con = _conn()
     try:
         pend = con.execute("SELECT COUNT(*) FROM fila WHERE status IN ('pendente','enviando')").fetchone()[0]
-        env = con.execute("SELECT COUNT(*) FROM fila WHERE status='enviado'").fetchone()[0]
+        env = con.execute("SELECT COUNT(*) FROM abordagens").fetchone()[0]  # abordagens, nao fila: limpar apaga 'enviado' e o total mentiria
         falha = con.execute("SELECT COUNT(*) FROM fila WHERE status='falha'").fetchone()[0]
         hoje = _enviados_hoje(con)
         # Fora da fila de proposito: e o unico numero que sobrevive a limpeza.

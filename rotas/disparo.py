@@ -192,15 +192,19 @@ def api_disparo_cadencia(hora_ini: str = "", hora_fim: str = "", limite_dia: int
 
 @router.get("/api/disparo/kpis")
 def api_disparo_kpis():
-    """Os quatro numeros da aba. Todos vem de quem ja os contava: nenhum
+    """Os tres numeros da aba. Todos vem de quem ja os contava: nenhum
     caminho paralelo de calculo, senao a tela e o motor discordam."""
     from scrapers import disparo
     from rotas.disparo_leads import montar_linhas
 
     st = disparo.status()
-    novos = sum(1 for linha in montar_linhas() if linha["estado"] in ("sem_copy", "copy_pronta"))
+    linhas = montar_linhas()
+    novos = sum(1 for linha in linhas if linha["estado"] in ("sem_copy", "copy_pronta"))
+    desligados = sum(1 for linha in linhas if not linha["disparo_ativo"])
     return {
         "leads_novos": novos,
+        "enviados_total": st.get("enviados", 0),
+        "desligados": desligados,
         "enviadas_hoje": st.get("enviados_hoje", 0),
         "na_fila": st.get("pendentes", 0),
         "conversas_iniciadas": st.get("conversas_iniciadas", 0),

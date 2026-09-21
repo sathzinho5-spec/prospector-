@@ -94,12 +94,30 @@ async function loadNiches() {
       }
     });
 
-    $("schedNiche").innerHTML = data.nichos
-      .map(function (n) { return '<option value="' + esc(n.id) + '">' + esc(n.label) + "</option>"; })
-      .join("");
+    const schedBox = $("schedNiches");
+    if (schedBox) {
+      schedBox.innerHTML = data.nichos
+        .map(function (n) {
+          return '<label class="state-pill">' +
+            '<input type="checkbox" value="' + esc(n.id) + '">' +
+            "<span>" + esc(n.label) + "</span></label>";
+        })
+        .join("");
+      schedBox.addEventListener("change", function (ev) {
+        if (ev.target && ev.target.tagName === "INPUT") {
+          ev.target.closest(".state-pill").classList.toggle("checked", ev.target.checked);
+        }
+      });
+    }
   } catch (e) {
     console.error("Erro ao carregar nichos", e);
   }
+}
+
+function selectedSchedNiches() {
+  return Array.prototype.slice.call(
+    document.querySelectorAll("#schedNiches input:checked")
+  ).map(function (cb) { return cb.value; });
 }
 
 function selectedStates() {
@@ -245,78 +263,6 @@ function filteredBusinesses() {
   }
   return arr;
 }
-
-async function loadLeadsView(page) {
-  leadsState.page = page || 1;
-  const body = $("leadsBody");
-  if (!body) return;
-  body.innerHTML = "<tr><td colspan='6'><div class='skel' style='width:40%'></div><div class='skel' style='width:60%'></div><div class='skel' style='width:50%'></div></td></tr>";
-  try {
-    const r = await fetch("/api/crm/leads?limite=500");
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.detail || "Erro");
-    let arr = d.leads || [];
-    const q = (leadsState.q || "").trim().toLowerCase();
-    if (q) {
-      arr = arr.filter(function (l) {
-        return String(l.nome || "").toLowerCase().indexOf(q) !== -1 ||
-          String(l.cidade || "").toLowerCase().indexOf(q) !== -1 ||
-          String(l.categoria || "").toLowerCase().indexOf(q) !== -1;
-      });
-    }
-    if (leadsState.uf) {
-      arr = arr.filter(function (l) { return String(l.estado || "").toUpperCase() === leadsState.uf; });
-    }
-    $("leadsInfo").textContent = arr.length + " leads na base";
-    const tb = $("tabLeadsBadge");
-    if (tb) {
-      tb.textContent = arr.length;
-      tb.classList.toggle("hidden", !arr.length);
-    }
-    const perPage = leadsState.perPage;
-    const pages = Math.max(1, Math.ceil(arr.length / perPage));
-    if (leadsState.page > pages) leadsState.page = pages;
-    const rows = arr.slice((leadsState.page - 1) * perPage, leadsState.page * perPage);
-    if (!rows.length) {
-      body.innerHTML = "<tr><td colspan='6'><div class='empty-box'><b>Nenhum lead encontrado</b><span>Ajuste os filtros ou rode uma busca.</span></div></td></tr>";
-    } else {
-      body.innerHTML = rows.map(function (l) {
-        const st = String(l.contato_status || "novo");
-        return "<tr>" +
-          "<td><div class='cell-main'><div style='min-width:0;'><div class='cell-name'>" + esc(l.nome) + "</div>" +
-          "<div class='cell-sub'>" + esc(l.categoria || "—") + "</div></div></div></td>" +
-          "<td>" + esc([l.cidade, l.estado].filter(Boolean).join(" - ") || "—") + "</td>" +
-          "<td class='nowrap'>" + (esc(l.telefone) || "—") + "</td>" +
-          "<td>" + (scoreOf(l) != null ? "<span class='pill " + (scoreOf(l) >= 70 ? "high" : (scoreOf(l) < 45 ? "low" : "med")) + "'" + (l.score_motivo ? " title='Ajustado pelo aprendizado: " + esc(l.score_motivo) + "'" : "") + ">" + scoreOf(l) + "%" + (l.score_ajustado != null && l.score_ajustado !== l.score_oportunidade ? " ✦" : "") + "</span>" : "—") + "</td>" +
-          "<td><span class='pill'>" + esc(st) + "</span></td>" +
-          "<td><button class='btn small' onclick='viewCloudLead(\"" + String(l.id || "").replace(/"/g, "") + "\")'>Ver</button></td>" +
-          "</tr>";
-      }).join("");
-    }
-    const pg = renderPager(arr.length, leadsState.page, perPage, "gotoLeadsPage");
-    leadsState.page = pg.page;
-    $("leadsPager").innerHTML = pg.html;
-  } catch (e) {
-    body.innerHTML = "<tr><td colspan='6'><div class='empty-box'><b>Falha ao carregar leads</b><span>" +
-      esc(e.message) + "</span><button class='btn small primary' onclick='loadLeadsView(1)'>Tentar de novo</button></div></td></tr>";
-    $("leadsPager").innerHTML = "";
-  }
-}
-
-window.gotoLeadsPage = function (p) {
-  loadLeadsView(p);
-};
-
-window.viewCloudLead = async function (id) {
-  try {
-    const r = await fetch("/api/crm/leads?limite=500");
-    const d = await r.json();
-    const lead = (d.leads || []).find(function (l) { return String(l.id) === String(id); });
-    if (lead) openDetailModal(lead);
-  } catch {
-    toast("Falha ao abrir lead", "error");
-  }
-};
 
 async function exportData(format) {
   const r = await fetch("/api/export?format=" + format);

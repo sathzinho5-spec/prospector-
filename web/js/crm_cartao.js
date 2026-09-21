@@ -200,8 +200,6 @@ function renderCrmKpis(arr) {
   const novos = by("novo"), fech = by("fechado"), perd = by("perdido");
   const andamento = Math.max(0, total - novos - fech - perd);
   const taxa = total ? Math.round(fech / total * 100) : 0;
-  const scored = arr.filter(function (l) { return scoreOf(l) != null; });
-  const media = scored.length ? Math.round(scored.reduce(function (s, l) { return s + scoreOf(l); }, 0) / scored.length) : 0;
 
   function stat(label, value, cls, icon) {
     return "<div class='perf-stat " + (cls || "") + "'>" + kpiIcon(ICO[icon] || ICO.total) +
@@ -213,7 +211,6 @@ function renderCrmKpis(arr) {
     stat("Em andamento", andamento, "", "andamento") +
     stat("Fechados", fech, fech > 0 ? "ok" : "", "fechado") +
     stat("Taxa fechamento", taxa + "%", taxa >= 20 ? "ok" : "", "taxa") +
-    stat("Score médio", scored.length ? media + "%" : "—", "", "score") +
     stat("Com telefone", arr.filter(function (l) { return l.telefone; }).length, "", "fone") +
     stat("Com site", arr.filter(function (l) { return l.website; }).length, "", "site");
 
