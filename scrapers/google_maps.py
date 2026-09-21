@@ -17,10 +17,12 @@ async def _collect_cards(page, feed, target):
         cards = feed.locator('a[href*="/maps/place/"]')
 
     # rolagem profunda: tenta carregar bem além do alvo (o Maps pagina aos poucos)
-    teto = max(target * 2, 40)
+    # teto com folga pequena: antes era 2x (40 cards pra visitar 10), e cada
+    # rolagem extra custa 0,8s sem trazer nada util.
+    teto = max(target + 8, 15)
     ultima_contagem = -1
     repeticoes_iguais = 0
-    for _ in range(30):
+    for _ in range(22):
         count = await cards.count()
         if count >= teto:
             break
@@ -36,7 +38,7 @@ async def _collect_cards(page, feed, target):
             await feed.first.evaluate("el => el.scrollTo(0, el.scrollHeight)")
         except Exception:
             pass
-        await page.wait_for_timeout(1200)
+        await page.wait_for_timeout(800)
 
     found = []
     seen_urls = set()
@@ -63,28 +65,28 @@ async def _visit_place(page, card, location, seen_keys, businesses, delay):
     key = card["url"].split("?")[0]
     for attempt in range(2):
         try:
-            await page.goto(card["url"], timeout=60000, wait_until="domcontentloaded")
+            await page.goto(card["url"], timeout=45000, wait_until="domcontentloaded")
             if await _is_blocked(page):
                 if attempt == 0:
-                    await page.wait_for_timeout(4000)
+                    await page.wait_for_timeout(2500)
                     continue
                 return
             try:
-                await page.wait_for_selector("div.F7nice, h1, div[role='main']", timeout=20000)
+                await page.wait_for_selector("div.F7nice, h1, div[role='main']", timeout=12000)
             except Exception:
                 pass
-            await page.wait_for_timeout(int(_jitter(2200, 0.3)))
+            await page.wait_for_timeout(int(_jitter(1000, 0.3)))
             info = await _extract_place(page, card["nome"])
             if info["nome"] and key not in seen_keys:
                 info["consulta"] = location
                 businesses.append(info)
                 seen_keys.add(key)
-            await page.wait_for_timeout(int(_jitter(delay * 600, 0.4)))
+            await page.wait_for_timeout(int(_jitter(delay * 400, 0.4)))
             return
         except Exception:
             if attempt == 1:
                 return
-            await page.wait_for_timeout(2500)
+            await page.wait_for_timeout(1500)
 
 
 async def search_places(query, locations=None, max_results=15, headless=None, delay=1.5, termos=None):
@@ -127,7 +129,7 @@ async def search_places(query, locations=None, max_results=15, headless=None, de
                 await _accept_consent(page)
 
                 if await _is_blocked(page):
-                    await page.wait_for_timeout(5000)
+                    await page.wait_for_timeout(2500)
                     try:
                         await page.goto(url, timeout=60000, wait_until="domcontentloaded")
                     except Exception:
@@ -135,7 +137,7 @@ async def search_places(query, locations=None, max_results=15, headless=None, de
 
                 feed = page.locator('div[role="feed"]')
                 try:
-                    await feed.first.wait_for(timeout=30000)
+                    await feed.first.wait_for(timeout=20000)
                 except Exception:
                     continue
 
@@ -157,4 +159,6 @@ async def search_places(query, locations=None, max_results=15, headless=None, de
             pass
 
         await browser.close()
+
+    return businesses
 
