@@ -96,7 +96,18 @@ function bindEvents() {
     }
     if (typeof atualizarLinkChave === "function") atualizarLinkChave();
   });
-  on("fSite", "change", function () { filters.site = this.value; renderResults(bizCache); });
+  on("fSite", "change", function () {
+    filters.site = this.value;
+    const cb = $("onlyNoSite");
+    if (cb) cb.checked = this.value === "sem";
+    renderResults(bizCache);
+  });
+  on("onlyNoSite", "change", function () {
+    filters.site = this.checked ? "sem" : "all";
+    const fs = $("fSite");
+    if (fs) fs.value = filters.site;
+    renderResults(bizCache);
+  });
   on("fNota", "change", function () { filters.nota = parseFloat(this.value) || 0; renderResults(bizCache); });
   on("fReviews", "input", function () { filters.reviews = parseInt(this.value, 10) || 0; renderResults(bizCache); });
   on("fSort", "change", function () { filters.sort = this.value; renderResults(bizCache); });
