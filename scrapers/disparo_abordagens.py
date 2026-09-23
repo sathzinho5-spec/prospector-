@@ -38,10 +38,13 @@ def registrar(con, item, texto_enviado, instancia=""):
     texto = (texto_enviado or "").strip()
     if not tel or not texto:
         return False
+    # enviado_em explicito, nunca o DEFAULT: o banco de producao nasceu com
+    # DEFAULT CURRENT_TIMESTAMP (UTC) e o CREATE TABLE IF NOT EXISTS nao corrige
+    # tabela existente. Pelo DEFAULT, o envio saia gravado 3h adiantado.
     con.execute(
         "INSERT INTO abordagens "
-        "  (telefone, nome, mensagem, copy_origem, copy_versao, instancia, origem) "
-        "VALUES (?,?,?,?,?,?,?)",
+        "  (telefone, nome, mensagem, copy_origem, copy_versao, instancia, origem, enviado_em) "
+        "VALUES (?,?,?,?,?,?,?, datetime('now','localtime'))",
         (tel, (item or {}).get("nome", ""), texto, _origem_da_copy(item),
          str((item or {}).get("copy_versao") or ""),
          str(instancia or ""), (item or {}).get("origem", "")),

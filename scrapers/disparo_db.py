@@ -129,6 +129,29 @@ def _semear_abordagens(con):
     con.commit()
 
 
+def _corrigir_fuso_abordagens(con):
+    """Envio gravado em UTC pelo DEFAULT antigo volta pra hora local.
+
+    A fila guarda a hora certa do mesmo envio, gravada na mesma transacao, entao
+    ela e a referencia. So mexe onde a diferenca e de 3h (o erro do fuso), o que
+    torna a correcao idempotente e deixa intocado o que ja esta certo. Registro
+    sem linha na fila (fila ja limpa) fica como esta: sem referencia, nao se chuta.
+    """
+    con.execute(
+        "UPDATE abordagens SET enviado_em = ("
+        "  SELECT f.enviado_em FROM fila f "
+        "   WHERE f.telefone = abordagens.telefone AND f.status='enviado' "
+        "     AND f.enviado_em IS NOT NULL LIMIT 1) "
+        " WHERE EXISTS ("
+        "  SELECT 1 FROM fila f "
+        "   WHERE f.telefone = abordagens.telefone AND f.status='enviado' "
+        "     AND f.enviado_em IS NOT NULL "
+        "     AND (julianday(abordagens.enviado_em) - julianday(f.enviado_em)) * 24 "
+        "         BETWEEN 2.9 AND 3.1)"
+    )
+    con.commit()
+
+
 # Tabela que saiu do projeto e precisa sair tambem do banco que ja rodava. O
 # DROP e por nome explicito e em lista: migracao destrutiva que aceitasse nome
 # variavel seria uma porta aberta pra apagar o que nao devia.
@@ -175,6 +198,10 @@ def _migrar(con):
             pass
     try:
         _semear_abordagens(con)
+    except Exception:
+        pass
+    try:
+        _corrigir_fuso_abordagens(con)
     except Exception:
         pass
 
